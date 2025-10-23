@@ -258,7 +258,7 @@ interface MemoTemplate {
   - コードフォーマッター
   - https://github.com/prettier/prettier
 
-その他の開発依存関係については、`v0/package.json`をご参照ください。
+その他の開発依存関係については、`package.json`をご参照ください。
 
 ### ライセンス遵守について
 

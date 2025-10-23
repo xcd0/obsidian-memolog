@@ -1,8 +1,8 @@
-# memolog v0.x
+# memolog
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-Obsidian上でメモを素早く記録・整理・回顧するプラグイン
+Obsidian上でメモを素早く記録・整理・回顧するプラグイン (v0.8)
 
 ## 概要
 
@@ -51,14 +51,12 @@ memologは、Obsidianでメモを効率的に管理するためのプラグイ�
 ### 開発版
 
 1. このリポジトリをクローン
-2. v0/ディレクトリに移動
-3. `npm install` で依存関係をインストール
-4. `npm run dev` で開発モード起動
+2. `npm install` で依存関係をインストール
+3. `npm run dev` で開発モード起動
 
 ### ビルド
 
 ```bash
-cd v0
 npm run build
 ```
 
@@ -67,7 +65,7 @@ npm run build
 ### ディレクトリ構造
 
 ```
-v0/
+obsidian-memolog/
 ├── src/
 │   ├── ui/        # UI層
 │   ├── core/      # ロジック層
@@ -77,7 +75,9 @@ v0/
 ├── test/          # テストコード
 ├── docs/          # ドキュメント
 ├── main.ts        # エントリーポイント
-└── manifest.json  # プラグイン定義
+├── manifest.json  # プラグイン定義
+├── SPEC.md        # 仕様書
+└── TODO.md        # 実装計画
 ```
 
 ### スクリプト

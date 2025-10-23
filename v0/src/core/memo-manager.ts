@@ -47,7 +47,8 @@ export class MemoManager {
 				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
 				: "";
 
-		return `${timestamp}\n${content}${attachments}\n`;
+		//! IDをHTMLコメントとして埋め込む。
+		return `<!-- memo-id: ${memo.id} -->\n${timestamp}\n${content}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -58,13 +59,24 @@ export class MemoManager {
 			return null;
 		}
 
-		//! 最初の行をタイトル/タイムスタンプとして扱う。
-		const firstLine = lines[0];
-		const timestampMatch = firstLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
+		//! IDをHTMLコメントから抽出。
+		const idMatch = text.match(/<!-- memo-id: (.+?) -->/);
+		const id = idMatch ? idMatch[1] : uuidv4();
+
+		//! HTMLコメント行をスキップしてタイムスタンプを探す。
+		let timestampLine = lines[0];
+		let contentStartIndex = 1;
+
+		if (lines[0].startsWith("<!--")) {
+			timestampLine = lines[1] || "";
+			contentStartIndex = 2;
+		}
+
+		const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
 		const timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
 
 		//! 残りの行を本文として扱う。
-		const content = lines.slice(1).join("\n").trim();
+		const content = lines.slice(contentStartIndex).join("\n").trim();
 
 		//! 添付ファイルを抽出（[[filename]]形式）。
 		const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g);
@@ -73,7 +85,7 @@ export class MemoManager {
 			: undefined;
 
 		return {
-			id: uuidv4(),
+			id,
 			category,
 			timestamp,
 			content,
@@ -121,16 +133,16 @@ export class MemoManager {
 		return memo;
 	}
 
-	//! メモを削除する（内容で検索して削除）。
+	//! メモを削除する（IDで検索して削除）。
 	async deleteMemo(filePath: string, category: string, memoId: string): Promise<boolean> {
 		const content = await this.vaultHandler.getCategoryContent(filePath, category);
 		if (!content) {
 			return false;
 		}
 
-		//! メモを分割（簡易的な実装）。
-		const memos = content.split(/(?=##\s+\d{4}-\d{2}-\d{2})/);
-		const filtered = memos.filter((memo) => !memo.includes(memoId));
+		//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+		const memos = content.split(/(?=<!-- memo-id:)/);
+		const filtered = memos.filter((memo) => !memo.includes(`<!-- memo-id: ${memoId} -->`));
 
 		if (filtered.length === memos.length) {
 			//! 削除対象が見つからなかった。
@@ -151,8 +163,8 @@ export class MemoManager {
 			return [];
 		}
 
-		//! メモを分割（簡易的な実装）。
-		const memoTexts = content.split(/(?=##\s+\d{4}-\d{2}-\d{2})/).filter((t) => t.trim());
+		//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+		const memoTexts = content.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 
 		//! メモエントリに変換。
 		const memos: MemoEntry[] = [];

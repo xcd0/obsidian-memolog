@@ -16,6 +16,8 @@ module.exports = {
 	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 	moduleNameMapper: {
 		"^@/(.*)$": "<rootDir>/src/$1",
+		"^obsidian$": "<rootDir>/test/__mocks__/obsidian.ts",
+		"^uuid$": "<rootDir>/test/__mocks__/uuid.ts",
 	},
 	globals: {
 		"ts-jest": {

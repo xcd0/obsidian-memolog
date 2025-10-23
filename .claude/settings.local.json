@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\ndocs: プロジェクト仕様書と実装計画TODOリストを追加\n\n- readme.md: memolog v0.8仕様書を追加\n- TODO.md: バージョン別実装計画と開発ガイドラインを追加\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(npm install)",
+      "Bash(git commit:*)",
+      "Bash(git mv:*)",
+      "Bash(tree:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

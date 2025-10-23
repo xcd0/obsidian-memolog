@@ -6,6 +6,7 @@ import { MemoList } from "./components/memo-list";
 import { InputForm } from "./components/input-form";
 import { ButtonBar } from "./components/button-bar";
 import { CategoryTabs } from "./components/category-tabs";
+import { CalendarView } from "./components/calendar-view";
 import { PathGenerator } from "../utils/path-generator";
 
 //! サイドバーのビュータイプ。
@@ -21,6 +22,7 @@ export class MemologSidebar extends ItemView {
 
 	//! UIコンポーネント。
 	private categoryTabs: CategoryTabs | null = null;
+	private calendarView: CalendarView | null = null;
 	private memoList: MemoList | null = null;
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
@@ -28,6 +30,7 @@ export class MemologSidebar extends ItemView {
 	//! 現在の状態。
 	private currentCategory: string = "";
 	private currentOrder: SortOrder = "asc";
+	private selectedDate: Date | null = null;
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
@@ -79,6 +82,9 @@ export class MemologSidebar extends ItemView {
 		//! ヘッダー部分を作成。
 		const header = this.createHeader(container);
 
+		//! カレンダー領域を作成。
+		const calendarArea = this.createCalendarArea(container);
+
 		//! メモ表示領域を作成。
 		const listArea = this.createMemoListArea(container);
 
@@ -86,7 +92,7 @@ export class MemologSidebar extends ItemView {
 		const inputArea = this.createInputArea(container);
 
 		//! コンポーネントを初期化。
-		this.initializeComponents(categoryTabsArea, header, listArea, inputArea);
+		this.initializeComponents(categoryTabsArea, header, calendarArea, listArea, inputArea);
 
 		//! 初期データを読み込む。
 		await this.loadMemos();
@@ -103,6 +109,12 @@ export class MemologSidebar extends ItemView {
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
 		return categoryTabsArea;
+	}
+
+	//! カレンダー領域を作成する。
+	private createCalendarArea(container: HTMLElement): HTMLElement {
+		const calendarArea = container.createDiv({ cls: "memolog-calendar-area" });
+		return calendarArea;
 	}
 
 	//! ヘッダー部分を作成する。
@@ -135,6 +147,7 @@ export class MemologSidebar extends ItemView {
 	private initializeComponents(
 		categoryTabsAreaEl: HTMLElement,
 		buttonBarEl: HTMLElement,
+		calendarAreaEl: HTMLElement,
 		listAreaEl: HTMLElement,
 		inputAreaEl: HTMLElement
 	): void {
@@ -159,6 +172,12 @@ export class MemologSidebar extends ItemView {
 			onRefreshClick: () => void this.handleRefresh(),
 		});
 		this.buttonBar.render(this.currentOrder);
+
+		//! カレンダーを初期化。
+		this.calendarView = new CalendarView(calendarAreaEl, {
+			onDateSelect: (date) => void this.handleDateSelect(date),
+		});
+		this.calendarView.render();
 
 		//! メモリストを初期化。
 		this.memoList = new MemoList(listAreaEl, this.memos, {
@@ -202,14 +221,42 @@ export class MemologSidebar extends ItemView {
 				this.memos = [];
 			}
 
+			//! 日付でフィルタリング。
+			let displayMemos = this.memos;
+			if (this.selectedDate) {
+				displayMemos = this.filterMemosByDate(this.memos, this.selectedDate);
+			}
+
+			//! メモリストを更新。
 			if (this.memoList) {
-				this.memoList.updateMemos(this.memos);
+				this.memoList.updateMemos(displayMemos);
+			}
+
+			//! カレンダーのメモカウントを更新。
+			if (this.calendarView) {
+				const timestamps = this.memos.map((memo) => memo.timestamp);
+				this.calendarView.updateMemoCounts(timestamps);
 			}
 		} catch (error) {
 			console.error("メモ読み込みエラー:", error);
 			new Notice("メモの読み込みに失敗しました");
 			this.memos = [];
 		}
+	}
+
+	//! 日付でメモをフィルタリングする。
+	private filterMemosByDate(memos: MemoEntry[], date: Date): MemoEntry[] {
+		const targetDate = new Date(date.getTime());
+		targetDate.setHours(0, 0, 0, 0);
+
+		const nextDate = new Date(targetDate.getTime());
+		nextDate.setDate(nextDate.getDate() + 1);
+
+		return memos.filter((memo) => {
+			const memoDate = new Date(memo.timestamp);
+			memoDate.setHours(0, 0, 0, 0);
+			return memoDate.getTime() === targetDate.getTime();
+		});
 	}
 
 	//! メモをソートする。
@@ -224,6 +271,12 @@ export class MemologSidebar extends ItemView {
 	//! カテゴリ変更処理。
 	private async handleCategoryChange(category: string): Promise<void> {
 		this.currentCategory = category;
+		await this.loadMemos();
+	}
+
+	//! 日付選択処理。
+	private async handleDateSelect(date: Date | null): Promise<void> {
+		this.selectedDate = date;
 		await this.loadMemos();
 	}
 

@@ -78,6 +78,140 @@
 	gap: 0.5rem;
 }
 
+/* カレンダー */
+.memolog-calendar-area {
+	padding: 1rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.memolog-calendar {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.memolog-calendar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0;
+}
+
+.memolog-calendar-month-year {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.memolog-calendar-nav-button {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	cursor: pointer;
+	color: var(--text-muted);
+	transition: all 0.2s ease;
+}
+
+.memolog-calendar-nav-button:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.memolog-calendar-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+	margin-bottom: 0.25rem;
+}
+
+.memolog-calendar-weekday {
+	text-align: center;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	padding: 0.25rem;
+}
+
+.memolog-calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+}
+
+.memolog-calendar-cell {
+	aspect-ratio: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	border-radius: 4px;
+	cursor: pointer;
+	background-color: var(--background-secondary);
+	transition: all 0.2s ease;
+	padding: 0.25rem;
+}
+
+.memolog-calendar-cell-empty {
+	cursor: default;
+	background-color: transparent;
+}
+
+.memolog-calendar-cell:not(.memolog-calendar-cell-empty):hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-calendar-cell-today {
+	background-color: var(--interactive-accent-hover);
+	font-weight: 600;
+}
+
+.memolog-calendar-cell-selected {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.memolog-calendar-day-number {
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+
+.memolog-calendar-cell-selected .memolog-calendar-day-number {
+	color: var(--text-on-accent);
+}
+
+.memolog-calendar-memo-indicator {
+	position: absolute;
+	bottom: 2px;
+	right: 2px;
+	font-size: 0.6rem;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-radius: 50%;
+	min-width: 14px;
+	height: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 3px;
+	font-weight: 600;
+}
+
+.memolog-calendar-cell-selected .memolog-calendar-memo-indicator {
+	background-color: var(--background-primary);
+	color: var(--interactive-accent);
+}
+
+.memolog-calendar-show-all {
+	display: flex;
+	justify-content: center;
+	padding-top: 0.5rem;
+}
+
 /* メモリスト表示領域 */
 .memolog-list-area {
 	flex: 1;

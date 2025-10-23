@@ -89,34 +89,54 @@ export class TagManager {
 		return pairs;
 	}
 
-	//! タグペアの整合性をチェックする。
-	static validateTagPairs(content: string): { valid: boolean; errors: string[] } {
+	//! タグペアの整合性をチェックする（強化版）。
+	static validateTagPairs(content: string): { valid: boolean; errors: string[]; warnings: string[] } {
 		const lines = content.split("\n");
 		const errors: string[] = [];
-		let openTags = 0;
+		const warnings: string[] = [];
+		const stack: Array<{ category: string; line: number }> = [];
+		const categories = new Set<string>();
 
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
 
-			if (TagManager.START_TAG_PATTERN.test(line)) {
-				openTags++;
+			//! startタグを検出。
+			const startMatch = line.match(TagManager.START_TAG_PATTERN);
+			if (startMatch) {
+				const category = startMatch[1];
+
+				//! 重複カテゴリチェック。
+				if (categories.has(category)) {
+					warnings.push(`Line ${i + 1}: duplicate category "${category}"`);
+				}
+				categories.add(category);
+
+				stack.push({ category, line: i });
+				continue;
 			}
 
-			if (TagManager.END_TAG_PATTERN.test(line)) {
-				openTags--;
-				if (openTags < 0) {
+			//! endタグを検出。
+			const endMatch = line.match(TagManager.END_TAG_PATTERN);
+			if (endMatch) {
+				if (stack.length === 0) {
 					errors.push(`Line ${i + 1}: end tag without matching start tag`);
+				} else {
+					stack.pop();
 				}
 			}
 		}
 
-		if (openTags > 0) {
-			errors.push(`${openTags} unclosed start tag(s)`);
+		//! 未閉鎖のstartタグをチェック。
+		for (const openTag of stack) {
+			errors.push(
+				`Line ${openTag.line + 1}: unclosed start tag for category "${openTag.category}"`
+			);
 		}
 
 		return {
 			valid: errors.length === 0,
 			errors,
+			warnings,
 		};
 	}
 
@@ -172,4 +192,75 @@ export class TagManager {
 
 		return newContent;
 	}
+
+	//! 壊れたタグペアを自動修復する。
+	static repairTagPairs(content: string): { content: string; repaired: boolean; fixes: string[] } {
+		const validation = TagManager.validateTagPairs(content);
+		const fixes: string[] = [];
+		let repaired = false;
+
+		//! エラーがない場合は何もしない。
+		if (validation.valid) {
+			return { content, repaired: false, fixes: [] };
+		}
+
+		const lines = content.split("\n");
+		const stack: Array<{ category: string; line: number }> = [];
+		const newLines: string[] = [];
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+
+			//! startタグを検出。
+			const startMatch = line.match(TagManager.START_TAG_PATTERN);
+			if (startMatch) {
+				stack.push({ category: startMatch[1], line: i });
+				newLines.push(line);
+				continue;
+			}
+
+			//! endタグを検出。
+			const endMatch = line.match(TagManager.END_TAG_PATTERN);
+			if (endMatch) {
+				if (stack.length === 0) {
+					//! 孤立したendタグを削除。
+					fixes.push(`Removed orphaned end tag at line ${i + 1}`);
+					repaired = true;
+					continue;
+				} else {
+					stack.pop();
+					newLines.push(line);
+				}
+				continue;
+			}
+
+			newLines.push(line);
+		}
+
+		//! 未閉鎖のstartタグにendタグを追加。
+		for (const openTag of stack) {
+			newLines.push(TagManager.createEndTag());
+			fixes.push(`Added missing end tag for category "${openTag.category}"`);
+			repaired = true;
+		}
+
+		return {
+			content: newLines.join("\n"),
+			repaired,
+			fixes,
+		};
+	}
+
+	//! 全てのタグペアを取得する（複数カテゴリ対応）。
+	static getAllTagPairs(content: string): Map<string, TagPair> {
+		const pairs = TagManager.parseTagPairs(content);
+		const pairMap = new Map<string, TagPair>();
+
+		for (const pair of pairs) {
+			pairMap.set(pair.category, pair);
+		}
+
+		return pairMap;
+	}
 }
+

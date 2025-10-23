@@ -173,4 +173,97 @@ Work content
 			expect(result).toContain('category="hobby"');
 		});
 	});
+
+	describe("repairTagPairs", () => {
+		test("should repair orphaned end tag", () => {
+			const content = `
+Content
+<!-- memolog: end -->
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(true);
+			expect(result.fixes.length).toBeGreaterThan(0);
+			expect(result.content).not.toContain("<!-- memolog: end -->");
+		});
+
+		test("should add missing end tag", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Content without end tag
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(true);
+			expect(result.content).toContain("<!-- memolog: end -->");
+			expect(result.fixes).toContain('Added missing end tag for category "work"');
+		});
+
+		test("should not modify valid content", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Valid content
+<!-- memolog: end -->
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(false);
+			expect(result.fixes).toHaveLength(0);
+		});
+	});
+
+	describe("getAllTagPairs", () => {
+		test("should get all tag pairs as map", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Work content
+<!-- memolog: end -->
+
+<!-- memolog: start category="hobby" -->
+Hobby content
+<!-- memolog: end -->
+`;
+			const pairMap = TagManager.getAllTagPairs(content);
+			expect(pairMap.size).toBe(2);
+			expect(pairMap.has("work")).toBe(true);
+			expect(pairMap.has("hobby")).toBe(true);
+			expect(pairMap.get("work")?.content).toBe("Work content");
+			expect(pairMap.get("hobby")?.content).toBe("Hobby content");
+		});
+
+		test("should handle empty content", () => {
+			const content = "";
+			const pairMap = TagManager.getAllTagPairs(content);
+			expect(pairMap.size).toBe(0);
+		});
+	});
+
+	describe("validateTagPairs - enhanced", () => {
+		test("should detect duplicate categories", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+First work
+<!-- memolog: end -->
+
+<!-- memolog: start category="work" -->
+Second work
+<!-- memolog: end -->
+`;
+			const result = TagManager.validateTagPairs(content);
+			expect(result.valid).toBe(true); //! ペア自体は正しい。
+			expect(result.warnings.length).toBeGreaterThan(0); //! 重複警告。
+		});
+
+		test("should return both errors and warnings", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+First work
+<!-- memolog: end -->
+
+<!-- memolog: start category="work" -->
+Unclosed duplicate
+`;
+			const result = TagManager.validateTagPairs(content);
+			expect(result.valid).toBe(false);
+			expect(result.errors.length).toBeGreaterThan(0);
+			expect(result.warnings.length).toBeGreaterThan(0);
+		});
+	});
 });

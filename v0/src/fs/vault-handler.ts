@@ -135,9 +135,46 @@ export class MemologVaultHandler {
 	}
 
 	//! ファイル内のタグペアの整合性をチェックする。
-	async validateTagPairs(filePath: string): Promise<{ valid: boolean; errors: string[] }> {
+	async validateTagPairs(
+		filePath: string
+	): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
 		const content = await this.readFile(filePath);
 		return TagManager.validateTagPairs(content);
+	}
+
+	//! 壊れたタグペアを自動修復する。
+	async repairTagPairs(
+		filePath: string,
+		createBackup = true
+	): Promise<{ repaired: boolean; fixes: string[]; backupPath?: string }> {
+		try {
+			await this.fileLock.acquire(filePath);
+
+			const content = await this.readFile(filePath);
+			const result = TagManager.repairTagPairs(content);
+
+			if (!result.repaired) {
+				return { repaired: false, fixes: [] };
+			}
+
+			//! バックアップを作成。
+			let backupPath: string | undefined;
+			if (createBackup) {
+				backupPath = `${filePath}.backup-${Date.now()}`;
+				await this.createFile(backupPath, content);
+			}
+
+			//! 修復した内容を書き込む。
+			await this.writeFile(filePath, result.content);
+
+			return {
+				repaired: true,
+				fixes: result.fixes,
+				backupPath,
+			};
+		} finally {
+			this.fileLock.release(filePath);
+		}
 	}
 
 	//! ファイル内の特定カテゴリのタグペアを取得する。
@@ -226,6 +263,63 @@ export class MemologVaultHandler {
 			await this.writeFile(filePath, updatedContent);
 		} finally {
 			this.fileLock.release(filePath);
+		}
+	}
+
+	//! 全てのカテゴリ領域を取得する（複数カテゴリ対応）。
+	async getAllCategories(filePath: string): Promise<Map<string, string>> {
+		const content = await this.readFile(filePath);
+		const pairMap = TagManager.getAllTagPairs(content);
+		const contentMap = new Map<string, string>();
+
+		for (const [category, pair] of pairMap.entries()) {
+			contentMap.set(category, pair.content);
+		}
+
+		return contentMap;
+	}
+
+	//! 複数カテゴリのメモを一括取得する。
+	async getMultipleCategoryContents(
+		filePath: string,
+		categories: string[]
+	): Promise<Map<string, string>> {
+		const allCategories = await this.getAllCategories(filePath);
+		const result = new Map<string, string>();
+
+		for (const category of categories) {
+			const content = allCategories.get(category);
+			if (content) {
+				result.set(category, content);
+			}
+		}
+
+		return result;
+	}
+
+	//! エラーハンドリング付きのファイル読み込み。
+	async safeReadFile(filePath: string): Promise<{ content: string; error?: string }> {
+		try {
+			const content = await this.readFile(filePath);
+			return { content };
+		} catch (error) {
+			return {
+				content: "",
+				error: error instanceof Error ? error.message : "Unknown error",
+			};
+		}
+	}
+
+	//! エラーハンドリング付きのファイル書き込み。
+	async safeWriteFile(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
+		try {
+			await this.writeFile(filePath, content);
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : "Unknown error",
+			};
 		}
 	}
 }

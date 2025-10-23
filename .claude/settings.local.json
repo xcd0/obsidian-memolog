@@ -15,7 +15,8 @@
       "Bash(npm install:*)",
       "Bash(npm test:*)",
       "Bash(cat:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:coverage:*)"
     ],
     "deny": [],
     "ask": []

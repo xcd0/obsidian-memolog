@@ -59,9 +59,24 @@
   - getMultipleCategoryContents() - 複数カテゴリ一括取得
   - safeReadFile()/safeWriteFile() - エラーハンドリング強化
 
-### v0.4 残タスク (アーキテクチャ改善)
-- [ ] パフォーマンス最適化 (debounce/throttle)
-- [ ] 統一エラーハンドリング機構
+### v0.4 パフォーマンス最適化 ✅ **完了**
+- src/utils/performance.ts
+  - debounce/throttle/rafDebounce実装
+  - memoize関数
+  - batch処理関数
+- InputFormへのdebounce適用
+
+### v0.4 エラーハンドリング強化 ✅ **完了**
+- src/core/error-handler.ts
+  - ErrorHandler統一機構
+  - MemologError/FileIOError/ValidationError/ParseError/ConfigurationError
+  - wrap/wrapSyncメソッド
+  - エラーログ管理
+- src/utils/notification-manager.ts
+  - NotificationManager (シングルトン)
+  - 重複通知防止
+  - 通知履歴管理
+- MemoManager/InputFormへのエラーハンドリング統合
 
 ---
 
@@ -349,23 +364,24 @@
 - [x] MemoManagerへの統合
 - [x] テスト作成 (test/cache-manager.test.ts)
 
-### 4.4 パフォーマンス最適化
-- [ ] ファイルI/O非同期処理最適化
-- [ ] 大量メモ読み込み処理の最適化
-- [ ] 不要な再レンダリング防止
-- [ ] debounce/throttle適用 (入力処理等)
+### 4.4 パフォーマンス最適化 ✅ **完了**
+- [x] ファイルI/O非同期処理最適化 (CacheManager)
+- [x] 大量メモ読み込み処理の最適化 (LRUキャッシュ)
+- [ ] 不要な再レンダリング防止 (UIコンポーネント最適化 - 保留)
+- [x] debounce/throttle適用 (InputForm)
 
-### 4.5 エラーハンドリング強化
-- [ ] 統一エラーハンドリング機構
-- [ ] ファイルI/Oエラー処理
-- [ ] 設定ファイル読み込みエラー処理
-- [ ] ユーザーへのエラー通知改善
+### 4.5 エラーハンドリング強化 ✅ **完了**
+- [x] 統一エラーハンドリング機構 (ErrorHandler)
+- [x] ファイルI/Oエラー処理 (FileIOError, VaultHandler)
+- [x] 設定ファイル読み込みエラー処理 (ConfigurationError)
+- [x] ユーザーへのエラー通知改善 (NotificationManager)
 
-### 4.6 テスト (test/v0.4/)
-- [ ] 複数カテゴリ管理テスト
-- [ ] CacheManager テスト
-- [ ] パフォーマンステスト (大量メモ生成スクリプト作成)
-- [ ] エラーハンドリングテスト
+### 4.6 テスト (test/v0.4/) ✅ **完了**
+- [x] 複数カテゴリ管理テスト (tag-manager.test.ts)
+- [x] CacheManager テスト (cache-manager.test.ts - 8テスト)
+- [x] パフォーマンステスト (performance.test.ts - 9テスト)
+- [x] エラーハンドリングテスト (error-handler.test.ts - 28テスト)
+- [x] NotificationManagerテスト (notification-manager.test.ts - 13テスト)
 
 ---
 

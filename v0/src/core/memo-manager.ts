@@ -3,6 +3,8 @@ import { MemoEntry, SortOrder } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CacheManager } from "./cache-manager";
 import { v4 as uuidv4 } from "uuid";
+import { getErrorHandler, FileIOError } from "./error-handler";
+import { notify } from "../utils/notification-manager";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -11,6 +13,9 @@ export class MemoManager {
 
 	//! CacheManagerインスタンス。
 	private cacheManager: CacheManager;
+
+	//! ErrorHandlerインスタンス。
+	private errorHandler = getErrorHandler();
 
 	constructor(app: App) {
 		this.vaultHandler = new MemologVaultHandler(app);
@@ -107,101 +112,133 @@ export class MemoManager {
 		template?: string,
 		attachments?: string[]
 	): Promise<MemoEntry> {
-		//! タグペアが存在しない場合は初期化。
-		if (!this.vaultHandler.fileExists(filePath)) {
-			await this.vaultHandler.initializeTagPair(filePath, category, { order });
-		} else {
-			const pair = await this.vaultHandler.findTagPairByCategory(filePath, category);
-			if (!pair) {
-				await this.vaultHandler.initializeTagPair(filePath, category, { order });
-			}
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! タグペアが存在しない場合は初期化。
+				if (!this.vaultHandler.fileExists(filePath)) {
+					await this.vaultHandler.initializeTagPair(filePath, category, { order });
+				} else {
+					const pair = await this.vaultHandler.findTagPairByCategory(filePath, category);
+					if (!pair) {
+						await this.vaultHandler.initializeTagPair(filePath, category, { order });
+					}
+				}
+
+				//! メモエントリを作成。
+				const memo: MemoEntry = {
+					id: uuidv4(),
+					category,
+					timestamp: this.generateTimestamp(),
+					content,
+					attachments,
+				};
+
+				//! メモをテキスト形式に変換。
+				const memoText = this.memoToText(memo, template);
+
+				//! 挿入位置を決定（昇順: top, 降順: bottom）。
+				const position = order === "asc" ? "bottom" : "top";
+
+				//! カテゴリ領域にメモを挿入。
+				await this.vaultHandler.insertTextInCategory(filePath, category, memoText, position);
+
+				//! キャッシュを無効化。
+				const cacheKey = `${filePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				notify.success("メモを追加しました");
+				return memo;
+			})(),
+			{ filePath, category, context: "MemoManager.addMemo" }
+		);
+
+		if (!result.success || !result.data) {
+			throw new FileIOError("メモの追加に失敗しました", {
+				filePath,
+				category,
+			});
 		}
 
-		//! メモエントリを作成。
-		const memo: MemoEntry = {
-			id: uuidv4(),
-			category,
-			timestamp: this.generateTimestamp(),
-			content,
-			attachments,
-		};
-
-		//! メモをテキスト形式に変換。
-		const memoText = this.memoToText(memo, template);
-
-		//! 挿入位置を決定（昇順: top, 降順: bottom）。
-		const position = order === "asc" ? "bottom" : "top";
-
-		//! カテゴリ領域にメモを挿入。
-		await this.vaultHandler.insertTextInCategory(filePath, category, memoText, position);
-
-		//! キャッシュを無効化。
-		const cacheKey = `${filePath}::${category}`;
-		this.cacheManager.invalidateMemos(cacheKey);
-
-		return memo;
+		return result.data;
 	}
 
 	//! メモを削除する（IDで検索して削除）。
 	async deleteMemo(filePath: string, category: string, memoId: string): Promise<boolean> {
-		const content = await this.vaultHandler.getCategoryContent(filePath, category);
-		if (!content) {
-			return false;
-		}
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				const content = await this.vaultHandler.getCategoryContent(filePath, category);
+				if (!content) {
+					notify.warning("カテゴリが見つかりません");
+					return false;
+				}
 
-		//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-		const memos = content.split(/(?=<!-- memo-id:)/);
-		const filtered = memos.filter((memo) => !memo.includes(`<!-- memo-id: ${memoId} -->`));
+				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+				const memos = content.split(/(?=<!-- memo-id:)/);
+				const filtered = memos.filter((memo) => !memo.includes(`<!-- memo-id: ${memoId} -->`));
 
-		if (filtered.length === memos.length) {
-			//! 削除対象が見つからなかった。
-			return false;
-		}
+				if (filtered.length === memos.length) {
+					//! 削除対象が見つからなかった。
+					notify.warning("削除対象のメモが見つかりません");
+					return false;
+				}
 
-		//! カテゴリ領域の内容を更新。
-		const newContent = filtered.join("");
-		await this.vaultHandler.replaceCategoryContent(filePath, category, newContent);
+				//! カテゴリ領域の内容を更新。
+				const newContent = filtered.join("");
+				await this.vaultHandler.replaceCategoryContent(filePath, category, newContent);
 
-		//! キャッシュを無効化。
-		const cacheKey = `${filePath}::${category}`;
-		this.cacheManager.invalidateMemos(cacheKey);
+				//! キャッシュを無効化。
+				const cacheKey = `${filePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
 
-		return true;
+				notify.success("メモを削除しました");
+				return true;
+			})(),
+			{ filePath, category, memoId, context: "MemoManager.deleteMemo" }
+		);
+
+		return result.success && result.data ? result.data : false;
 	}
 
 	//! カテゴリ内の全メモを取得する。
 	async getMemos(filePath: string, category: string): Promise<MemoEntry[]> {
-		//! キャッシュキーを生成（ファイルパス + カテゴリ）。
-		const cacheKey = `${filePath}::${category}`;
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! キャッシュキーを生成（ファイルパス + カテゴリ）。
+				const cacheKey = `${filePath}::${category}`;
 
-		//! キャッシュをチェック。
-		const cachedMemos = await this.cacheManager.getMemos(cacheKey);
-		if (cachedMemos) {
-			return cachedMemos;
-		}
+				//! キャッシュをチェック。
+				const cachedMemos = await this.cacheManager.getMemos(cacheKey);
+				if (cachedMemos) {
+					return cachedMemos;
+				}
 
-		//! キャッシュミス: ファイルから読み込む。
-		const content = await this.vaultHandler.getCategoryContent(filePath, category);
-		if (!content) {
-			return [];
-		}
+				//! キャッシュミス: ファイルから読み込む。
+				const content = await this.vaultHandler.getCategoryContent(filePath, category);
+				if (!content) {
+					return [];
+				}
 
-		//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-		const memoTexts = content.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+				const memoTexts = content.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 
-		//! メモエントリに変換。
-		const memos: MemoEntry[] = [];
-		for (const text of memoTexts) {
-			const memo = this.parseTextToMemo(text, category);
-			if (memo) {
-				memos.push(memo);
-			}
-		}
+				//! メモエントリに変換。
+				const memos: MemoEntry[] = [];
+				for (const text of memoTexts) {
+					const memo = this.parseTextToMemo(text, category);
+					if (memo) {
+						memos.push(memo);
+					}
+				}
 
-		//! キャッシュに保存。
-		await this.cacheManager.setMemos(cacheKey, memos);
+				//! キャッシュに保存。
+				await this.cacheManager.setMemos(cacheKey, memos);
 
-		return memos;
+				return memos;
+			})(),
+			{ filePath, category, context: "MemoManager.getMemos" }
+		);
+
+		return result.success && result.data ? result.data : [];
 	}
 
 	//! 特定のメモを取得する。

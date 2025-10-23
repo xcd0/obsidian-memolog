@@ -1,9 +1,15 @@
 import { setIcon } from "obsidian";
+import { debounce } from "../../utils/performance";
+import { getErrorHandler, FileIOError } from "../../core/error-handler";
+import { notify } from "../../utils/notification-manager";
 
 //! 入力フォームのイベントハンドラー。
 export interface InputFormHandlers {
 	//! 送信時のハンドラー。
 	onSubmit?: (content: string, attachments: string[]) => void;
+
+	//! 入力変更時のハンドラー（debounce適用済み）。
+	onChange?: (content: string) => void;
 }
 
 //! 入力フォームコンポーネント。
@@ -13,10 +19,17 @@ export class InputForm {
 	private textarea: HTMLTextAreaElement | null = null;
 	private attachmentsList: HTMLElement | null = null;
 	private selectedFiles: File[] = [];
+	private errorHandler = getErrorHandler();
+	private debouncedOnChange: ((content: string) => void) | null = null;
 
 	constructor(container: HTMLElement, handlers: InputFormHandlers = {}) {
 		this.container = container;
 		this.handlers = handlers;
+
+		//! onChange ハンドラーにdebounceを適用。
+		if (handlers.onChange) {
+			this.debouncedOnChange = debounce(handlers.onChange, 300);
+		}
 	}
 
 	//! フォームを描画する。
@@ -88,17 +101,41 @@ export class InputForm {
 				e.preventDefault();
 			}
 		});
+
+		//! 入力変更時のイベント（debounce適用済み）。
+		if (this.debouncedOnChange) {
+			this.textarea.addEventListener("input", () => {
+				if (this.textarea && this.debouncedOnChange) {
+					this.debouncedOnChange(this.textarea.value);
+				}
+			});
+		}
 	}
 
 	//! ファイル選択処理。
 	private handleFileSelect(files: FileList): void {
-		for (let i = 0; i < files.length; i++) {
-			const file = files[i];
-			if (file) {
-				this.selectedFiles.push(file);
+		try {
+			//! ファイルサイズチェック（10MB制限）。
+			const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+			for (let i = 0; i < files.length; i++) {
+				const file = files[i];
+				if (file) {
+					if (file.size > MAX_FILE_SIZE) {
+						throw new FileIOError(
+							`ファイルサイズが大きすぎます: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+							{ filename: file.name, size: file.size, maxSize: MAX_FILE_SIZE }
+						);
+					}
+					this.selectedFiles.push(file);
+				}
 			}
+			this.renderAttachments();
+		} catch (error) {
+			this.errorHandler.handle(error as Error, {
+				context: "InputForm.handleFileSelect",
+			});
 		}
-		this.renderAttachments();
 	}
 
 	//! 添付ファイル一覧を描画する。
@@ -141,18 +178,25 @@ export class InputForm {
 
 	//! 送信処理。
 	private handleSubmit(): void {
-		if (!this.textarea) return;
+		try {
+			if (!this.textarea) return;
 
-		const content = this.textarea.value.trim();
-		if (!content && this.selectedFiles.length === 0) {
-			return;
-		}
+			const content = this.textarea.value.trim();
+			if (!content && this.selectedFiles.length === 0) {
+				notify.info("メモ内容を入力してください");
+				return;
+			}
 
-		if (this.handlers.onSubmit) {
-			//! ファイル名のみを渡す（実際のファイルコピーはsidebarで処理）。
-			const attachmentNames = this.selectedFiles.map((f) => f.name);
-			this.handlers.onSubmit(content, attachmentNames);
-			this.clear();
+			if (this.handlers.onSubmit) {
+				//! ファイル名のみを渡す（実際のファイルコピーはsidebarで処理）。
+				const attachmentNames = this.selectedFiles.map((f) => f.name);
+				this.handlers.onSubmit(content, attachmentNames);
+				this.clear();
+			}
+		} catch (error) {
+			this.errorHandler.handle(error as Error, {
+				context: "InputForm.handleSubmit",
+			});
 		}
 	}
 

@@ -1,6 +1,7 @@
 import { App } from "obsidian";
 import { MemoEntry, SortOrder } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
+import { CacheManager } from "./cache-manager";
 import { v4 as uuidv4 } from "uuid";
 
 //! メモを管理するクラス。
@@ -8,8 +9,12 @@ export class MemoManager {
 	//! VaultHandlerインスタンス（publicアクセス可能）。
 	public vaultHandler: MemologVaultHandler;
 
+	//! CacheManagerインスタンス。
+	private cacheManager: CacheManager;
+
 	constructor(app: App) {
 		this.vaultHandler = new MemologVaultHandler(app);
+		this.cacheManager = new CacheManager(app);
 	}
 
 	//! 現在のタイムスタンプを生成する。
@@ -130,6 +135,10 @@ export class MemoManager {
 		//! カテゴリ領域にメモを挿入。
 		await this.vaultHandler.insertTextInCategory(filePath, category, memoText, position);
 
+		//! キャッシュを無効化。
+		const cacheKey = `${filePath}::${category}`;
+		this.cacheManager.invalidateMemos(cacheKey);
+
 		return memo;
 	}
 
@@ -153,11 +162,25 @@ export class MemoManager {
 		const newContent = filtered.join("");
 		await this.vaultHandler.replaceCategoryContent(filePath, category, newContent);
 
+		//! キャッシュを無効化。
+		const cacheKey = `${filePath}::${category}`;
+		this.cacheManager.invalidateMemos(cacheKey);
+
 		return true;
 	}
 
 	//! カテゴリ内の全メモを取得する。
 	async getMemos(filePath: string, category: string): Promise<MemoEntry[]> {
+		//! キャッシュキーを生成（ファイルパス + カテゴリ）。
+		const cacheKey = `${filePath}::${category}`;
+
+		//! キャッシュをチェック。
+		const cachedMemos = await this.cacheManager.getMemos(cacheKey);
+		if (cachedMemos) {
+			return cachedMemos;
+		}
+
+		//! キャッシュミス: ファイルから読み込む。
 		const content = await this.vaultHandler.getCategoryContent(filePath, category);
 		if (!content) {
 			return [];
@@ -174,6 +197,9 @@ export class MemoManager {
 				memos.push(memo);
 			}
 		}
+
+		//! キャッシュに保存。
+		await this.cacheManager.setMemos(cacheKey, memos);
 
 		return memos;
 	}

@@ -123,7 +123,13 @@ class MockVaultHandler {
 }
 
 //! Appのモック（最小限）。
-const mockApp = {} as any;
+const mockApp = {
+	vault: {
+		adapter: {
+			stat: jest.fn().mockResolvedValue({ mtime: Date.now() }),
+		},
+	},
+} as any;
 
 describe("MemoManager", () => {
 	let memoManager: MemoManager;
@@ -134,6 +140,9 @@ describe("MemoManager", () => {
 		mockVaultHandler = new MockVaultHandler();
 		//! VaultHandlerをモックに置き換え。
 		(memoManager as any).vaultHandler = mockVaultHandler;
+		//! statモックをリセット。
+		(mockApp.vault.adapter.stat as jest.Mock).mockClear();
+		(mockApp.vault.adapter.stat as jest.Mock).mockResolvedValue({ mtime: Date.now() });
 	});
 
 	afterEach(() => {

@@ -1,0 +1,10 @@
+{
+	"id": "memolog",
+	"name": "memolog",
+	"version": "0.1.0",
+	"minAppVersion": "1.6.0",
+	"description": "Obsidian上でメモを素早く記録・整理・回顧するプラグイン",
+	"author": "xcd0",
+	"authorUrl": "https://github.com/xcd0",
+	"isDesktopOnly": false
+}

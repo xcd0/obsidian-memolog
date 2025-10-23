@@ -443,6 +443,24 @@
 	background-color: var(--background-modifier-border-hover);
 }
 
+.memolog-btn-daily-note {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.memolog-btn-daily-note:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.memolog-btn-delete {
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+}
+
+.memolog-btn-delete:hover {
+	opacity: 0.8;
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
 	.memolog-container {

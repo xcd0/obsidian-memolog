@@ -6,11 +6,18 @@ export class MemoList {
 	private container: HTMLElement;
 	private memos: MemoEntry[];
 	private handlers: MemoCardHandlers;
+	private enableDailyNotes: boolean;
 
-	constructor(container: HTMLElement, memos: MemoEntry[] = [], handlers: MemoCardHandlers = {}) {
+	constructor(
+		container: HTMLElement,
+		memos: MemoEntry[] = [],
+		handlers: MemoCardHandlers = {},
+		enableDailyNotes = false
+	) {
 		this.container = container;
 		this.memos = memos;
 		this.handlers = handlers;
+		this.enableDailyNotes = enableDailyNotes;
 	}
 
 	//! メモリストを描画する。
@@ -26,7 +33,7 @@ export class MemoList {
 
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
-			const card = new MemoCard(this.container, memo, this.handlers);
+			const card = new MemoCard(this.container, memo, this.handlers, this.enableDailyNotes);
 			card.render();
 		}
 	}

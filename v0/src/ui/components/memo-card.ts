@@ -7,6 +7,9 @@ export interface MemoCardHandlers {
 
 	//! 編集ボタンクリック時のハンドラー。
 	onEdit?: (memoId: string) => void;
+
+	//! Daily Noteに追加ボタンクリック時のハンドラー。
+	onAddToDailyNote?: (memo: MemoEntry) => void;
 }
 
 //! メモカードコンポーネント。
@@ -14,11 +17,18 @@ export class MemoCard {
 	private container: HTMLElement;
 	private memo: MemoEntry;
 	private handlers: MemoCardHandlers;
+	private enableDailyNotes: boolean;
 
-	constructor(container: HTMLElement, memo: MemoEntry, handlers: MemoCardHandlers = {}) {
+	constructor(
+		container: HTMLElement,
+		memo: MemoEntry,
+		handlers: MemoCardHandlers = {},
+		enableDailyNotes = false
+	) {
 		this.container = container;
 		this.memo = memo;
 		this.handlers = handlers;
+		this.enableDailyNotes = enableDailyNotes;
 	}
 
 	//! カードを描画する。
@@ -52,6 +62,19 @@ export class MemoCard {
 
 		//! アクションボタン。
 		const actions = header.createDiv({ cls: "memolog-card-actions" });
+
+		//! Daily Noteに追加ボタン。
+		if (this.enableDailyNotes && this.handlers.onAddToDailyNote) {
+			const dailyNoteBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-daily-note",
+				text: "Daily Noteに追加",
+			});
+			dailyNoteBtn.addEventListener("click", () => {
+				if (this.handlers.onAddToDailyNote) {
+					this.handlers.onAddToDailyNote(this.memo);
+				}
+			});
+		}
 
 		//! 編集ボタン（将来実装）。
 		// const editBtn = actions.createEl("button", {

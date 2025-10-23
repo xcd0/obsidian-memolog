@@ -5,6 +5,7 @@ import { MemoManager } from "../core/memo-manager";
 import { MemoList } from "./components/memo-list";
 import { InputForm } from "./components/input-form";
 import { ButtonBar } from "./components/button-bar";
+import { CategoryTabs } from "./components/category-tabs";
 import { PathGenerator } from "../utils/path-generator";
 
 //! サイドバーのビュータイプ。
@@ -19,11 +20,13 @@ export class MemologSidebar extends ItemView {
 	private _memoManager: MemoManager;
 
 	//! UIコンポーネント。
+	private categoryTabs: CategoryTabs | null = null;
 	private memoList: MemoList | null = null;
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
 
-	//! 現在のソート順。
+	//! 現在の状態。
+	private currentCategory: string = "";
 	private currentOrder: SortOrder = "asc";
 
 	//! メモデータ。
@@ -70,6 +73,9 @@ export class MemologSidebar extends ItemView {
 		//! メインコンテナを作成。
 		container.addClass("memolog-container");
 
+		//! カテゴリタブ領域を作成。
+		const categoryTabsArea = this.createCategoryTabsArea(container);
+
 		//! ヘッダー部分を作成。
 		const header = this.createHeader(container);
 
@@ -80,16 +86,23 @@ export class MemologSidebar extends ItemView {
 		const inputArea = this.createInputArea(container);
 
 		//! コンポーネントを初期化。
-		this.initializeComponents(header, listArea, inputArea);
+		this.initializeComponents(categoryTabsArea, header, listArea, inputArea);
 
 		//! 初期データを読み込む。
 		await this.loadMemos();
 	}
 
 	//! ビューを閉じたときの処理。
+	// eslint-disable-next-line @typescript-eslint/require-await
 	override async onClose(): Promise<void> {
 		//! クリーンアップ処理。
 		this.containerEl.empty();
+	}
+
+	//! カテゴリタブ領域を作成する。
+	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
+		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
+		return categoryTabsArea;
 	}
 
 	//! ヘッダー部分を作成する。
@@ -120,10 +133,26 @@ export class MemologSidebar extends ItemView {
 
 	//! コンポーネントを初期化する。
 	private initializeComponents(
+		categoryTabsAreaEl: HTMLElement,
 		buttonBarEl: HTMLElement,
 		listAreaEl: HTMLElement,
 		inputAreaEl: HTMLElement
 	): void {
+		//! 設定を取得。
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! カテゴリタブを初期化。
+		if (settings.categories.length > 0) {
+			this.categoryTabs = new CategoryTabs(categoryTabsAreaEl, settings.categories, {
+				onCategoryChange: (category) => void this.handleCategoryChange(category),
+			});
+			this.currentCategory = settings.defaultCategory || settings.categories[0].name;
+			this.categoryTabs.render(this.currentCategory);
+		} else {
+			//! カテゴリが設定されていない場合はデフォルトカテゴリを使用。
+			this.currentCategory = settings.defaultCategory;
+		}
+
 		//! ボタンバーを初期化。
 		this.buttonBar = new ButtonBar(buttonBarEl, {
 			onSortOrderChange: (order) => this.handleSortOrderChange(order),
@@ -149,7 +178,7 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = settings.defaultCategory;
+			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
 			const filePath = PathGenerator.generateFilePath(
@@ -192,12 +221,18 @@ export class MemologSidebar extends ItemView {
 		});
 	}
 
+	//! カテゴリ変更処理。
+	private async handleCategoryChange(category: string): Promise<void> {
+		this.currentCategory = category;
+		await this.loadMemos();
+	}
+
 	//! メモ送信処理。
 	private async handleSubmit(content: string): Promise<void> {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = settings.defaultCategory;
+			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
 			const filePath = PathGenerator.generateFilePath(
@@ -230,7 +265,7 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = settings.defaultCategory;
+			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
 			const filePath = PathGenerator.generateFilePath(

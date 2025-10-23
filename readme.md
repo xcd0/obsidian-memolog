@@ -1,5 +1,7 @@
 # memolog 仕様書 v0.8
 
+[![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
+
 最終更新: 2025-10-23
 対象: Obsidian 1.6+（Desktop/Mobile）
 言語: TypeScript

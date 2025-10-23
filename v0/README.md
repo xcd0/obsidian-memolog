@@ -1,5 +1,7 @@
 # memolog v0.x
 
+[![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
+
 Obsidian上でメモを素早く記録・整理・回顧するプラグイン
 
 ## 概要

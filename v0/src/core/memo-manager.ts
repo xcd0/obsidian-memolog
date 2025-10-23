@@ -5,11 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 
 //! メモを管理するクラス。
 export class MemoManager {
-	private app: App;
 	private vaultHandler: MemologVaultHandler;
 
 	constructor(app: App) {
-		this.app = app;
 		this.vaultHandler = new MemologVaultHandler(app);
 	}
 

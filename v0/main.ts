@@ -1,14 +1,41 @@
 import { Plugin } from "obsidian";
+import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./src/ui/sidebar";
+import { SettingsManager } from "./src/core/settings";
 
 //! memologプラグインのメインクラス。
 export default class MemologPlugin extends Plugin {
+	//! 設定マネージャー。
+	public settingsManager!: SettingsManager;
+
 	//! プラグイン読み込み時の処理。
 	override async onload() {
 		console.log("memolog plugin loading...");
 
-		//! TODO: 設定の読み込み。
-		//! TODO: サイドバーUIの登録。
-		//! TODO: コマンドの登録。
+		//! 設定マネージャーを初期化。
+		this.settingsManager = new SettingsManager(this.app);
+		await this.settingsManager.loadGlobalSettings();
+
+		//! サイドバービューを登録。
+		this.registerView(VIEW_TYPE_MEMOLOG, (leaf) => new MemologSidebar(leaf, this));
+
+		//! サイドバーを開くコマンドを登録。
+		this.addCommand({
+			id: "open-memolog-sidebar",
+			name: "memologサイドバーを開く",
+			callback: () => {
+				this.activateView();
+			},
+		});
+
+		//! リボンアイコンを追加。
+		this.addRibbonIcon("file-text", "memolog", () => {
+			this.activateView();
+		});
+
+		//! 初回起動時にサイドバーを開く。
+		this.app.workspace.onLayoutReady(() => {
+			this.activateView();
+		});
 
 		console.log("memolog plugin loaded.");
 	}
@@ -16,7 +43,34 @@ export default class MemologPlugin extends Plugin {
 	//! プラグインアンロード時の処理。
 	override onunload() {
 		console.log("memolog plugin unloading...");
-		//! TODO: クリーンアップ処理。
+
+		//! ビューをデタッチ。
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_MEMOLOG);
+
 		console.log("memolog plugin unloaded.");
+	}
+
+	//! サイドバーをアクティブにする。
+	async activateView() {
+		const { workspace } = this.app;
+
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG)[0];
+
+		if (!leaf) {
+			//! 右サイドバーに新しいリーフを作成。
+			const newLeaf = workspace.getRightLeaf(false);
+			if (newLeaf) {
+				await newLeaf.setViewState({
+					type: VIEW_TYPE_MEMOLOG,
+					active: true,
+				});
+				leaf = newLeaf;
+			}
+		}
+
+		//! ビューをアクティブにする。
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
 	}
 }

@@ -5,6 +5,7 @@ import { MemoManager } from "../core/memo-manager";
 import { MemoList } from "./components/memo-list";
 import { InputForm } from "./components/input-form";
 import { ButtonBar } from "./components/button-bar";
+import { PathGenerator } from "../utils/path-generator";
 
 //! サイドバーのビュータイプ。
 export const VIEW_TYPE_MEMOLOG = "memolog-sidebar";
@@ -145,32 +146,77 @@ export class MemologSidebar extends ItemView {
 
 	//! メモを読み込む。
 	private async loadMemos(): Promise<void> {
-		//! TODO: 実際のファイルからメモを読み込む。
-		//! 現在はダミーデータ。
-		this.memos = [];
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const category = settings.defaultCategory;
 
-		if (this.memoList) {
-			this.memoList.updateMemos(this.memos);
+			//! ファイルパスを生成。
+			const filePath = PathGenerator.generateFilePath(
+				settings.rootDirectory,
+				category,
+				settings.saveUnit,
+				settings.useDirectoryCategory
+			);
+
+			//! ファイルが存在するか確認。
+			const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+
+			if (fileExists) {
+				//! メモを読み込む。
+				this.memos = await this.memoManager.getMemos(filePath, category);
+
+				//! ソート順に応じて並べ替え。
+				this.sortMemos();
+			} else {
+				//! ファイルが存在しない場合は空配列。
+				this.memos = [];
+			}
+
+			if (this.memoList) {
+				this.memoList.updateMemos(this.memos);
+			}
+		} catch (error) {
+			console.error("メモ読み込みエラー:", error);
+			new Notice("メモの読み込みに失敗しました");
+			this.memos = [];
 		}
+	}
+
+	//! メモをソートする。
+	private sortMemos(): void {
+		this.memos.sort((a, b) => {
+			const timeA = new Date(a.timestamp).getTime();
+			const timeB = new Date(b.timestamp).getTime();
+			return this.currentOrder === "asc" ? timeA - timeB : timeB - timeA;
+		});
 	}
 
 	//! メモ送信処理。
 	private async handleSubmit(content: string): Promise<void> {
 		try {
-			//! TODO: 実際のファイルに保存する処理を実装。
-			//! 現在はダミー実装。
-			const newMemo: MemoEntry = {
-				id: Date.now().toString(),
-				category: "default",
-				timestamp: new Date().toISOString(),
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const category = settings.defaultCategory;
+
+			//! ファイルパスを生成。
+			const filePath = PathGenerator.generateFilePath(
+				settings.rootDirectory,
+				category,
+				settings.saveUnit,
+				settings.useDirectoryCategory
+			);
+
+			//! メモを追加。
+			await this.memoManager.addMemo(
+				filePath,
+				category,
 				content,
-			};
+				this.currentOrder
+			);
 
-			this.memos.push(newMemo);
-
-			if (this.memoList) {
-				this.memoList.updateMemos(this.memos);
-			}
+			//! メモリストを再読み込み。
+			await this.loadMemos();
 
 			new Notice("メモを追加しました");
 		} catch (error) {
@@ -182,14 +228,28 @@ export class MemologSidebar extends ItemView {
 	//! メモ削除処理。
 	private async handleDelete(memoId: string): Promise<void> {
 		try {
-			//! TODO: 実際のファイルから削除する処理を実装。
-			this.memos = this.memos.filter((m) => m.id !== memoId);
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const category = settings.defaultCategory;
 
-			if (this.memoList) {
-				this.memoList.updateMemos(this.memos);
+			//! ファイルパスを生成。
+			const filePath = PathGenerator.generateFilePath(
+				settings.rootDirectory,
+				category,
+				settings.saveUnit,
+				settings.useDirectoryCategory
+			);
+
+			//! メモを削除。
+			const deleted = await this.memoManager.deleteMemo(filePath, category, memoId);
+
+			if (deleted) {
+				//! メモリストを再読み込み。
+				await this.loadMemos();
+				new Notice("メモを削除しました");
+			} else {
+				new Notice("メモが見つかりませんでした");
 			}
-
-			new Notice("メモを削除しました");
 		} catch (error) {
 			console.error("メモ削除エラー:", error);
 			new Notice("メモの削除に失敗しました");
@@ -201,11 +261,7 @@ export class MemologSidebar extends ItemView {
 		this.currentOrder = order;
 
 		//! メモをソート。
-		this.memos.sort((a, b) => {
-			const timeA = new Date(a.timestamp).getTime();
-			const timeB = new Date(b.timestamp).getTime();
-			return order === "asc" ? timeA - timeB : timeB - timeA;
-		});
+		this.sortMemos();
 
 		if (this.memoList) {
 			this.memoList.updateMemos(this.memos);

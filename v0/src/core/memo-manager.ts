@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 
 //! メモを管理するクラス。
 export class MemoManager {
-	private vaultHandler: MemologVaultHandler;
+	//! VaultHandlerインスタンス（publicアクセス可能）。
+	public vaultHandler: MemologVaultHandler;
 
 	constructor(app: App) {
 		this.vaultHandler = new MemologVaultHandler(app);

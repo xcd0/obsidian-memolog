@@ -8,6 +8,9 @@ export interface MemoCardHandlers {
 	//! 編集ボタンクリック時のハンドラー。
 	onEdit?: (memoId: string) => void;
 
+	//! 編集保存時のハンドラー。
+	onSaveEdit?: (memoId: string, newContent: string) => void;
+
 	//! Daily Noteに追加ボタンクリック時のハンドラー。
 	onAddToDailyNote?: (memo: MemoEntry) => void;
 }
@@ -18,6 +21,8 @@ export class MemoCard {
 	private memo: MemoEntry;
 	private handlers: MemoCardHandlers;
 	private enableDailyNotes: boolean;
+	private isEditMode = false;
+	private cardElement: HTMLElement | null = null;
 
 	constructor(
 		container: HTMLElement,
@@ -34,6 +39,7 @@ export class MemoCard {
 	//! カードを描画する。
 	render(): HTMLElement {
 		const card = this.container.createDiv({ cls: "memolog-card" });
+		this.cardElement = card;
 
 		//! ヘッダー（タイムスタンプとアクション）。
 		this.renderHeader(card);
@@ -76,16 +82,14 @@ export class MemoCard {
 			});
 		}
 
-		//! 編集ボタン（将来実装）。
-		// const editBtn = actions.createEl("button", {
-		// 	cls: "memolog-btn",
-		// 	text: "編集",
-		// });
-		// editBtn.addEventListener("click", () => {
-		// 	if (this.handlers.onEdit) {
-		// 		this.handlers.onEdit(this.memo.id);
-		// 	}
-		// });
+		//! 編集ボタン。
+		const editBtn = actions.createEl("button", {
+			cls: "memolog-btn memolog-btn-edit",
+			text: "編集",
+		});
+		editBtn.addEventListener("click", () => {
+			this.toggleEditMode();
+		});
 
 		//! 削除ボタン。
 		const deleteBtn = actions.createEl("button", {
@@ -101,10 +105,44 @@ export class MemoCard {
 
 	//! 本文を描画する。
 	private renderContent(card: HTMLElement): void {
-		card.createDiv({
-			cls: "memolog-card-content",
-			text: this.memo.content,
-		});
+		const contentDiv = card.createDiv({ cls: "memolog-card-content" });
+
+		if (this.isEditMode) {
+			//! 編集モード: テキストエリアを表示。
+			const textarea = contentDiv.createEl("textarea", {
+				cls: "memolog-card-edit-textarea",
+				value: this.memo.content,
+			});
+
+			//! 保存・キャンセルボタン。
+			const editActions = contentDiv.createDiv({ cls: "memolog-card-edit-actions" });
+
+			const saveBtn = editActions.createEl("button", {
+				cls: "memolog-btn memolog-btn-save",
+				text: "保存",
+			});
+
+			saveBtn.addEventListener("click", () => {
+				const newContent = textarea.value.trim();
+				if (newContent && this.handlers.onSaveEdit) {
+					this.handlers.onSaveEdit(this.memo.id, newContent);
+					this.memo.content = newContent;
+					this.toggleEditMode();
+				}
+			});
+
+			const cancelBtn = editActions.createEl("button", {
+				cls: "memolog-btn memolog-btn-cancel",
+				text: "キャンセル",
+			});
+
+			cancelBtn.addEventListener("click", () => {
+				this.toggleEditMode();
+			});
+		} else {
+			//! 通常モード: テキストを表示。
+			contentDiv.setText(this.memo.content);
+		}
 	}
 
 	//! 添付ファイルを描画する。
@@ -194,5 +232,26 @@ export class MemoCard {
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 
 		return `${year}-${month}-${day} ${hours}:${minutes}`;
+	}
+
+	//! 編集モードを切り替える。
+	toggleEditMode(): void {
+		this.isEditMode = !this.isEditMode;
+
+		//! カードを再描画。
+		if (this.cardElement) {
+			this.cardElement.empty();
+
+			//! ヘッダーを再描画。
+			this.renderHeader(this.cardElement);
+
+			//! 本文を再描画（編集モードに応じて変わる）。
+			this.renderContent(this.cardElement);
+
+			//! 添付ファイルを再描画。
+			if (this.memo.attachments && this.memo.attachments.length > 0) {
+				this.renderAttachments(this.cardElement);
+			}
+		}
 	}
 }

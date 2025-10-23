@@ -247,6 +247,64 @@ export class MemoManager {
 		return memos.find((m) => m.id === memoId) || null;
 	}
 
+	//! メモを更新する（IDで検索して内容を置き換え）。
+	async updateMemo(
+		filePath: string,
+		category: string,
+		memoId: string,
+		newContent: string,
+		template?: string
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				const content = await this.vaultHandler.getCategoryContent(filePath, category);
+				if (!content) {
+					notify.warning("カテゴリが見つかりません");
+					return false;
+				}
+
+				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+				const memoTexts = content.split(/(?=<!-- memo-id:)/);
+				let updated = false;
+
+				const newMemoTexts = memoTexts.map((memoText) => {
+					if (memoText.includes(`<!-- memo-id: ${memoId} -->`)) {
+						//! 対象メモを解析。
+						const memo = this.parseTextToMemo(memoText, category);
+						if (memo) {
+							//! 内容を更新。
+							memo.content = newContent;
+
+							//! 新しいテキストに変換。
+							updated = true;
+							return this.memoToText(memo, template);
+						}
+					}
+					return memoText;
+				});
+
+				if (!updated) {
+					notify.warning("更新対象のメモが見つかりません");
+					return false;
+				}
+
+				//! カテゴリ領域の内容を更新。
+				const newCategoryContent = newMemoTexts.join("");
+				await this.vaultHandler.replaceCategoryContent(filePath, category, newCategoryContent);
+
+				//! キャッシュを無効化。
+				const cacheKey = `${filePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				notify.success("メモを更新しました");
+				return true;
+			})(),
+			{ filePath, category, memoId, context: "MemoManager.updateMemo" }
+		);
+
+		return result.success && result.data ? result.data : false;
+	}
+
 	//! カテゴリ領域を初期化する。
 	async initializeCategory(
 		filePath: string,

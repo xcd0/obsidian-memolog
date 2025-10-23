@@ -197,9 +197,9 @@ interface MemoTemplate {
 
 ## 10. ライセンス
 
-本プロジェクトはCC0 1.0 Universal (Public Domain)ライセンスの下で公開されています。
+### 本プロジェクトのライセンス
 
-### CC0 1.0 Universal
+本プロジェクトはCC0 1.0 Universal (Public Domain)ライセンスの下で公開されています。
 
 このプロジェクトの作成者は、法律上可能な範囲で、全ての著作権および関連する権利を放棄しています。
 
@@ -209,5 +209,47 @@ interface MemoTemplate {
 - 無保証
 
 詳細は[LICENSE](LICENSE)ファイルまたは https://creativecommons.org/publicdomain/zero/1.0/ をご参照ください。
+
+### 使用ライブラリのライセンス
+
+**重要**: 本プロジェクトで使用している各ライブラリのライセンスは、言うまでもなく各ライブラリのライセンスに従います。
+
+#### ランタイム依存関係
+
+- **uuid** (v13.0.0) - MIT License
+  - UUID生成ライブラリ
+  - https://github.com/uuidjs/uuid
+
+#### 開発依存関係
+
+- **Obsidian API** (v1.6.0) - Proprietary
+  - Obsidianプラグイン開発用API
+  - https://github.com/obsidianmd/obsidian-api
+
+- **TypeScript** (v5.3.3) - Apache-2.0 License
+  - TypeScriptコンパイラ
+  - https://github.com/microsoft/TypeScript
+
+- **esbuild** (v0.20.1) - MIT License
+  - JavaScriptバンドラー
+  - https://github.com/evanw/esbuild
+
+- **Jest** (v29.7.0) - MIT License
+  - JavaScriptテストフレームワーク
+  - https://github.com/jestjs/jest
+
+- **ESLint** (v8.56.0) - MIT License
+  - JavaScriptリンター
+  - https://github.com/eslint/eslint
+
+- **Prettier** (v3.2.5) - MIT License
+  - コードフォーマッター
+  - https://github.com/prettier/prettier
+
+その他の開発依存関係については、`v0/package.json`をご参照ください。
+
+### ライセンス遵守について
+
+本プロジェクトを使用・改変・再配布する際は、上記の各ライブラリのライセンス条項を遵守してください。特に、MITライセンスやApache-2.0ライセンスのライブラリについては、著作権表示とライセンス文の保持が必要です。
 
 ---

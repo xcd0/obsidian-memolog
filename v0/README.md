@@ -58,6 +58,8 @@ v0/
 
 ## ライセンス
 
+### 本プロジェクトのライセンス
+
 CC0 1.0 Universal (Public Domain)
 
 このプロジェクトの作成者は、法律上可能な範囲で、全ての著作権および関連する権利を放棄しています。
@@ -68,6 +70,21 @@ CC0 1.0 Universal (Public Domain)
 - 無保証
 
 詳細は[LICENSE](../LICENSE)ファイルまたは https://creativecommons.org/publicdomain/zero/1.0/ をご参照ください。
+
+### 使用ライブラリのライセンス
+
+**重要**: 本プロジェクトで使用している各ライブラリのライセンスは、言うまでもなく各ライブラリのライセンスに従います。
+
+主な依存関係:
+- **uuid** (MIT License) - UUID生成
+- **Obsidian API** (Proprietary) - プラグイン開発用API
+- **TypeScript** (Apache-2.0) - TypeScriptコンパイラ
+- **esbuild** (MIT License) - バンドラー
+- **Jest** (MIT License) - テストフレームワーク
+- **ESLint** (MIT License) - リンター
+- **Prettier** (MIT License) - フォーマッター
+
+詳細なライセンス情報は[プロジェクトルートのreadme.md](../readme.md#10-ライセンス)をご参照ください。
 
 ## 作者
 

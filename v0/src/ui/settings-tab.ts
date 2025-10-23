@@ -18,6 +18,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		containerEl.createEl("h2", { text: "memolog 設定" });
 
 		this.addBasicSettings(containerEl);
+		this.addAdvancedFeatures(containerEl);
 		this.addCategorySettings(containerEl);
 	}
 
@@ -118,6 +119,90 @@ export class MemologSettingTab extends PluginSettingTab {
 				});
 				return dropdown;
 			});
+	}
+
+	//! 高度な機能設定を追加する。
+	private addAdvancedFeatures(containerEl: HTMLElement): void {
+		containerEl.createEl("h3", { text: "高度な機能" });
+
+		//! 検索履歴設定。
+		containerEl.createEl("h4", { text: "検索履歴" });
+
+		new Setting(containerEl)
+			.setName("検索履歴を有効化")
+			.setDesc("検索履歴を保存して再利用可能にする")
+			.addToggle((toggle) =>
+				toggle.setValue(true).onChange((_value) => {
+					//! 検索履歴の有効/無効を切り替え。
+					this.plugin.refreshSidebar();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("検索履歴の最大サイズ")
+			.setDesc("保存する検索履歴の最大数（1-100）")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 100, 1)
+					.setValue(50)
+					.setDynamicTooltip()
+					.onChange((_value) => {
+						//! 検索履歴サイズを更新。
+					})
+			);
+
+		//! メモ間リンク設定。
+		containerEl.createEl("h4", { text: "メモ間リンク" });
+
+		new Setting(containerEl)
+			.setName("メモ間リンクを有効化")
+			.setDesc("[[memo-id]] 形式のリンクを使用可能にする")
+			.addToggle((toggle) =>
+				toggle.setValue(true).onChange((_value) => {
+					//! リンク機能の有効/無効を切り替え。
+					this.plugin.refreshSidebar();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("孤立メモを警告")
+			.setDesc("リンクがなく参照もされていないメモを警告する")
+			.addToggle((toggle) =>
+				toggle.setValue(false).onChange((_value) => {
+					//! 孤立メモ警告の有効/無効を切り替え。
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("リンク切れをチェック")
+			.setDesc("存在しないメモへのリンクを検出して警告する")
+			.addToggle((toggle) =>
+				toggle.setValue(true).onChange((_value) => {
+					//! リンク切れチェックの有効/無効を切り替え。
+				})
+			);
+
+		//! タグ管理設定。
+		containerEl.createEl("h4", { text: "タグ管理" });
+
+		new Setting(containerEl)
+			.setName("タグパネルを表示")
+			.setDesc("サイドバーにタグ一覧パネルを表示する")
+			.addToggle((toggle) =>
+				toggle.setValue(true).onChange((_value) => {
+					//! タグパネルの表示/非表示を切り替え。
+					this.plugin.refreshSidebar();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("タグの自動補完")
+			.setDesc("メモ作成時に既存のタグを候補として表示する")
+			.addToggle((toggle) =>
+				toggle.setValue(true).onChange((_value) => {
+					//! タグ自動補完の有効/無効を切り替え。
+				})
+			);
 	}
 
 	//! カテゴリ設定を追加する。

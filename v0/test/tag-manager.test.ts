@@ -1,0 +1,176 @@
+import { TagManager } from "../src/core/tag-manager";
+
+describe("TagManager", () => {
+	describe("createStartTag", () => {
+		test("should create a valid start tag", () => {
+			const tag = TagManager.createStartTag("work");
+			expect(tag).toBe('<!-- memolog: start category="work" -->');
+		});
+	});
+
+	describe("createEndTag", () => {
+		test("should create a valid end tag", () => {
+			const tag = TagManager.createEndTag();
+			expect(tag).toBe("<!-- memolog: end -->");
+		});
+	});
+
+	describe("createMetadataTag", () => {
+		test("should create a valid metadata tag", () => {
+			const metadata = { format: "template", order: "asc" as const };
+			const tag = TagManager.createMetadataTag(metadata);
+			expect(tag).toContain("memolog:");
+			expect(tag).toContain("format");
+			expect(tag).toContain("order");
+		});
+	});
+
+	describe("parseTagPairs", () => {
+		test("should parse single tag pair", () => {
+			const content = `
+Some text
+<!-- memolog: start category="work" -->
+Memo content
+<!-- memolog: end -->
+Other text
+`;
+			const pairs = TagManager.parseTagPairs(content);
+			expect(pairs).toHaveLength(1);
+			expect(pairs[0].category).toBe("work");
+			expect(pairs[0].content).toBe("Memo content");
+		});
+
+		test("should parse multiple tag pairs", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Work content
+<!-- memolog: end -->
+
+<!-- memolog: start category="hobby" -->
+Hobby content
+<!-- memolog: end -->
+`;
+			const pairs = TagManager.parseTagPairs(content);
+			expect(pairs).toHaveLength(2);
+			expect(pairs[0].category).toBe("work");
+			expect(pairs[1].category).toBe("hobby");
+		});
+
+		test("should handle empty content between tags", () => {
+			const content = `
+<!-- memolog: start category="empty" -->
+<!-- memolog: end -->
+`;
+			const pairs = TagManager.parseTagPairs(content);
+			expect(pairs).toHaveLength(1);
+			expect(pairs[0].content).toBe("");
+		});
+	});
+
+	describe("validateTagPairs", () => {
+		test("should validate correct tag pairs", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Content
+<!-- memolog: end -->
+`;
+			const result = TagManager.validateTagPairs(content);
+			expect(result.valid).toBe(true);
+			expect(result.errors).toHaveLength(0);
+		});
+
+		test("should detect unclosed start tag", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Content without end tag
+`;
+			const result = TagManager.validateTagPairs(content);
+			expect(result.valid).toBe(false);
+			expect(result.errors.length).toBeGreaterThan(0);
+		});
+
+		test("should detect end tag without start tag", () => {
+			const content = `
+Content
+<!-- memolog: end -->
+`;
+			const result = TagManager.validateTagPairs(content);
+			expect(result.valid).toBe(false);
+			expect(result.errors.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("findTagPairByCategory", () => {
+		test("should find tag pair by category", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Work content
+<!-- memolog: end -->
+
+<!-- memolog: start category="hobby" -->
+Hobby content
+<!-- memolog: end -->
+`;
+			const pair = TagManager.findTagPairByCategory(content, "hobby");
+			expect(pair).not.toBeNull();
+			expect(pair?.category).toBe("hobby");
+			expect(pair?.content).toBe("Hobby content");
+		});
+
+		test("should return null for non-existent category", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Work content
+<!-- memolog: end -->
+`;
+			const pair = TagManager.findTagPairByCategory(content, "nonexistent");
+			expect(pair).toBeNull();
+		});
+	});
+
+	describe("hasTagPairs", () => {
+		test("should detect presence of tag pairs", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Content
+<!-- memolog: end -->
+`;
+			expect(TagManager.hasTagPairs(content)).toBe(true);
+		});
+
+		test("should return false when no tag pairs", () => {
+			const content = "Just plain text";
+			expect(TagManager.hasTagPairs(content)).toBe(false);
+		});
+	});
+
+	describe("initializeTagPair", () => {
+		test("should initialize tag pair in empty content", () => {
+			const content = "";
+			const result = TagManager.initializeTagPair(content, "work");
+			expect(result).toContain('<!-- memolog: start category="work" -->');
+			expect(result).toContain("<!-- memolog: end -->");
+		});
+
+		test("should not duplicate existing tag pair", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Existing content
+<!-- memolog: end -->
+`;
+			const result = TagManager.initializeTagPair(content, "work");
+			expect(result).toBe(content);
+		});
+
+		test("should add new category tag pair", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Work content
+<!-- memolog: end -->
+`;
+			const result = TagManager.initializeTagPair(content, "hobby");
+			expect(result).toContain('category="work"');
+			expect(result).toContain('category="hobby"');
+		});
+	});
+});

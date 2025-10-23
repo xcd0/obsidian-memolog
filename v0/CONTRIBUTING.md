@@ -111,4 +111,7 @@ npm run test -- --coverage
 
 ## ライセンス
 
-MIT License
+CC0 1.0 Universal (Public Domain)
+
+本プロジェクトに貢献されたコードは、CC0 1.0 Universalライセンスの下で公開されます。
+貢献することにより、あなたの貢献に対する著作権を放棄することに同意したものとみなされます。

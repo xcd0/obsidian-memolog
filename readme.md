@@ -3,7 +3,8 @@
 最終更新: 2025-10-23
 対象: Obsidian 1.6+（Desktop/Mobile）
 言語: TypeScript
-配布: Obsidian Community Plugins（MIT予定）
+ライセンス: CC0 1.0 Universal (Public Domain)
+配布: Obsidian Community Plugins
 
 ---
 
@@ -194,4 +195,19 @@ interface MemoTemplate {
 
 ---
 
-以上。
+## 10. ライセンス
+
+本プロジェクトはCC0 1.0 Universal (Public Domain)ライセンスの下で公開されています。
+
+### CC0 1.0 Universal
+
+このプロジェクトの作成者は、法律上可能な範囲で、全ての著作権および関連する権利を放棄しています。
+
+- 商用・非商用問わず自由に使用可能
+- 改変・再配布自由
+- クレジット表記不要
+- 無保証
+
+詳細は[LICENSE](LICENSE)ファイルまたは https://creativecommons.org/publicdomain/zero/1.0/ をご参照ください。
+
+---

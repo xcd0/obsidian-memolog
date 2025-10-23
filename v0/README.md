@@ -58,7 +58,16 @@ v0/
 
 ## ライセンス
 
-MIT License
+CC0 1.0 Universal (Public Domain)
+
+このプロジェクトの作成者は、法律上可能な範囲で、全ての著作権および関連する権利を放棄しています。
+
+- 商用・非商用問わず自由に使用可能
+- 改変・再配布自由
+- クレジット表記不要
+- 無保証
+
+詳細は[LICENSE](../LICENSE)ファイルまたは https://creativecommons.org/publicdomain/zero/1.0/ をご参照ください。
 
 ## 作者
 

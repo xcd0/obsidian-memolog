@@ -1,6 +1,7 @@
 import { Plugin } from "obsidian";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./src/ui/sidebar";
 import { SettingsManager } from "./src/core/settings";
+import { MemologSettingTab } from "./src/ui/settings-tab";
 
 //! memologプラグインのメインクラス。
 export default class MemologPlugin extends Plugin {
@@ -17,6 +18,9 @@ export default class MemologPlugin extends Plugin {
 
 		//! サイドバービューを登録。
 		this.registerView(VIEW_TYPE_MEMOLOG, (leaf) => new MemologSidebar(leaf, this));
+
+		//! 設定タブを登録。
+		this.addSettingTab(new MemologSettingTab(this.app, this));
 
 		//! サイドバーを開くコマンドを登録。
 		this.addCommand({
@@ -71,6 +75,17 @@ export default class MemologPlugin extends Plugin {
 		//! ビューをアクティブにする。
 		if (leaf) {
 			void workspace.revealLeaf(leaf);
+		}
+	}
+
+	//! サイドバーを再描画する。
+	refreshSidebar(): void {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG);
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof MemologSidebar) {
+				view.refresh();
+			}
 		}
 	}
 }

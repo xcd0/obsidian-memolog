@@ -461,6 +461,26 @@
 	opacity: 0.8;
 }
 
+/* 設定画面 */
+.memolog-category-setting {
+	padding: 1rem;
+	margin-bottom: 1rem;
+	background-color: var(--background-secondary);
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-category-setting .setting-item {
+	border: none;
+	padding: 0.5rem 0;
+}
+
+.memolog-category-setting hr {
+	margin: 0.5rem 0 0;
+	border: none;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
 	.memolog-container {

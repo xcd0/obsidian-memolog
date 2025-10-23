@@ -15,7 +15,7 @@ class FileLock {
 			await this.locks.get(filePath);
 		}
 
-		let release: () => void;
+		let release!: () => void;
 		const promise = new Promise<void>((resolve) => {
 			release = resolve;
 		});
@@ -25,7 +25,7 @@ class FileLock {
 		return new Promise((resolve) => {
 			resolve();
 			//! ロック解放用の関数を返す。
-			return release!;
+			return release;
 		});
 	}
 
@@ -175,7 +175,7 @@ export class MemologVaultHandler {
 		try {
 			await this.fileLock.acquire(filePath);
 
-			let content = await this.readFile(filePath);
+			const content = await this.readFile(filePath);
 			const lines = content.split("\n");
 			const pair = TagManager.findTagPairByCategory(content, category);
 
@@ -211,7 +211,7 @@ export class MemologVaultHandler {
 		try {
 			await this.fileLock.acquire(filePath);
 
-			let content = await this.readFile(filePath);
+			const content = await this.readFile(filePath);
 			const lines = content.split("\n");
 			const pair = TagManager.findTagPairByCategory(content, category);
 

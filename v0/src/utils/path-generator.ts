@@ -23,10 +23,11 @@ export class PathGenerator {
 			case "day":
 				filename = `${year}-${month}-${day}.md`;
 				break;
-			case "week":
+			case "week": {
 				const weekNumber = PathGenerator.getWeekNumber(date);
 				filename = `${year}-W${weekNumber.toString().padStart(2, "0")}.md`;
 				break;
+			}
 			case "month":
 				filename = `${year}-${month}.md`;
 				break;

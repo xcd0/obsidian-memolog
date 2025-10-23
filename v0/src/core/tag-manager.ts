@@ -73,8 +73,8 @@ export class TagManager {
 			//! endタグを検出。
 			const endMatch = line.match(TagManager.END_TAG_PATTERN);
 			if (endMatch) {
-				if (stack.length > 0) {
-					const start = stack.pop()!;
+				const start = stack.pop();
+				if (start) {
 					const pairContent = lines.slice(start.line + 1, i).join("\n");
 					pairs.push({
 						category: start.category,

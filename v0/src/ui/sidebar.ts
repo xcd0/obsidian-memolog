@@ -127,19 +127,19 @@ export class MemologSidebar extends ItemView {
 		//! ボタンバーを初期化。
 		this.buttonBar = new ButtonBar(buttonBarEl, {
 			onSortOrderChange: (order) => this.handleSortOrderChange(order),
-			onRefreshClick: () => this.handleRefresh(),
+			onRefreshClick: () => void this.handleRefresh(),
 		});
 		this.buttonBar.render(this.currentOrder);
 
 		//! メモリストを初期化。
 		this.memoList = new MemoList(listAreaEl, this.memos, {
-			onDelete: (memoId) => this.handleDelete(memoId),
+			onDelete: (memoId) => void this.handleDelete(memoId),
 		});
 		this.memoList.render();
 
 		//! 入力フォームを初期化。
 		this.inputForm = new InputForm(inputAreaEl, {
-			onSubmit: (content) => this.handleSubmit(content),
+			onSubmit: (content) => void this.handleSubmit(content),
 		});
 		this.inputForm.render();
 	}
@@ -276,6 +276,6 @@ export class MemologSidebar extends ItemView {
 
 	//! サイドバーを更新する。
 	public refresh(): void {
-		this.onOpen();
+		void this.onOpen();
 	}
 }

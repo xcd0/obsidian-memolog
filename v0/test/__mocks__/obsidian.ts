@@ -1,4 +1,5 @@
 //! Obsidian APIのモック。
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/require-await */
 
 export class App {
 	vault: Vault = new Vault();

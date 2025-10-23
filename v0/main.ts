@@ -23,18 +23,18 @@ export default class MemologPlugin extends Plugin {
 			id: "open-memolog-sidebar",
 			name: "memologサイドバーを開く",
 			callback: () => {
-				this.activateView();
+				void this.activateView();
 			},
 		});
 
 		//! リボンアイコンを追加。
 		this.addRibbonIcon("file-text", "memolog", () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		//! 初回起動時にサイドバーを開く。
 		this.app.workspace.onLayoutReady(() => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		console.log("memolog plugin loaded.");
@@ -70,7 +70,7 @@ export default class MemologPlugin extends Plugin {
 
 		//! ビューをアクティブにする。
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			void workspace.revealLeaf(leaf);
 		}
 	}
 }

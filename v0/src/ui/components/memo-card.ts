@@ -88,7 +88,7 @@ export class MemoCard {
 	private renderAttachments(card: HTMLElement): void {
 		const attachmentsDiv = card.createDiv({ cls: "memolog-card-attachments" });
 
-		const attachmentText = `添付: ${this.memo.attachments!.join(", ")}`;
+		const attachmentText = `添付: ${this.memo.attachments?.join(", ") ?? ""}`;
 		attachmentsDiv.setText(attachmentText);
 	}
 

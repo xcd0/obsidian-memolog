@@ -103,7 +103,7 @@ export class MemoManager {
 		attachments?: string[]
 	): Promise<MemoEntry> {
 		//! タグペアが存在しない場合は初期化。
-		if (!(await this.vaultHandler.fileExists(filePath))) {
+		if (!this.vaultHandler.fileExists(filePath)) {
 			await this.vaultHandler.initializeTagPair(filePath, category, { order });
 		} else {
 			const pair = await this.vaultHandler.findTagPairByCategory(filePath, category);

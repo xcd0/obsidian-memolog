@@ -265,9 +265,41 @@
 }
 
 .memolog-card-attachments {
-	margin-top: 0.5rem;
-	font-size: 0.85rem;
-	color: var(--text-muted);
+	margin-top: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.memolog-attachment {
+	display: flex;
+	align-items: center;
+}
+
+.memolog-attachment-image {
+	max-width: 100%;
+	max-height: 300px;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: transform 0.2s ease;
+}
+
+.memolog-attachment-image:hover {
+	transform: scale(1.02);
+}
+
+.memolog-attachment-link {
+	color: var(--link-color);
+	text-decoration: none;
+	font-size: 0.9rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-attachment-link:hover {
+	background-color: var(--background-modifier-hover);
+	text-decoration: underline;
 }
 
 /* 入力欄 */
@@ -295,6 +327,84 @@
 .memolog-input:focus {
 	outline: none;
 	border-color: var(--interactive-accent);
+}
+
+.memolog-attachments-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.5rem;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+}
+
+.memolog-attachment-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.25rem 0.5rem;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+}
+
+.memolog-attachment-name {
+	font-size: 0.85rem;
+	color: var(--text-normal);
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.memolog-attachment-remove {
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+	border-radius: 3px;
+	transition: all 0.2s ease;
+}
+
+.memolog-attachment-remove:hover {
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+}
+
+.memolog-input-buttons {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.memolog-attach-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-secondary);
+	color: var(--text-normal);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 0.9rem;
+}
+
+.memolog-attach-btn:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.memolog-attach-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.memolog-file-input {
+	display: none;
 }
 
 .memolog-submit-btn {

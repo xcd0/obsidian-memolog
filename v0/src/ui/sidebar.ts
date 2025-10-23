@@ -187,7 +187,7 @@ export class MemologSidebar extends ItemView {
 
 		//! 入力フォームを初期化。
 		this.inputForm = new InputForm(inputAreaEl, {
-			onSubmit: (content) => void this.handleSubmit(content),
+			onSubmit: (content, attachments) => void this.handleSubmit(content, attachments),
 		});
 		this.inputForm.render();
 	}
@@ -281,7 +281,7 @@ export class MemologSidebar extends ItemView {
 	}
 
 	//! メモ送信処理。
-	private async handleSubmit(content: string): Promise<void> {
+	private async handleSubmit(content: string, attachmentNames: string[]): Promise<void> {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
@@ -295,12 +295,42 @@ export class MemologSidebar extends ItemView {
 				settings.useDirectoryCategory
 			);
 
+			//! 添付ファイルをVaultにコピー。
+			const copiedAttachments: string[] = [];
+			if (attachmentNames.length > 0 && this.inputForm) {
+				const selectedFiles = this.inputForm.getSelectedFiles();
+				const attachmentDir = `${settings.rootDirectory}/attachments`;
+
+				//! 添付ファイルディレクトリを作成。
+				const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir);
+				if (!dirExists) {
+					await this.app.vault.createFolder(attachmentDir).catch(() => {
+						//! ディレクトリが既に存在する場合は無視。
+					});
+				}
+
+				//! 各ファイルをコピー。
+				for (const file of selectedFiles) {
+					const timestamp = Date.now();
+					const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+					const targetPath = `${attachmentDir}/${timestamp}_${sanitizedName}`;
+
+					//! ファイルを読み込んでVaultに書き込み。
+					const arrayBuffer = await file.arrayBuffer();
+					await this.app.vault.createBinary(targetPath, arrayBuffer);
+
+					copiedAttachments.push(targetPath);
+				}
+			}
+
 			//! メモを追加。
 			await this.memoManager.addMemo(
 				filePath,
 				category,
 				content,
-				this.currentOrder
+				this.currentOrder,
+				undefined,
+				copiedAttachments
 			);
 
 			//! メモリストを再読み込み。

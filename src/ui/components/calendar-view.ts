@@ -1,5 +1,3 @@
-import { setIcon } from "obsidian";
-
 //! カレンダービューのハンドラー。
 interface CalendarViewHandlers {
 	onDateSelect: (date: Date | null) => void;
@@ -9,67 +7,56 @@ interface CalendarViewHandlers {
 export class CalendarView {
 	private container: HTMLElement;
 	private handlers: CalendarViewHandlers;
-	private currentMonth: Date;
 	private selectedDate: Date | null = null;
 	private memoDateCounts: Map<string, number> = new Map();
-
-	//! カレンダーグリッド要素。
-	private calendarGrid: HTMLElement | null = null;
 
 	constructor(container: HTMLElement, handlers: CalendarViewHandlers) {
 		this.container = container;
 		this.handlers = handlers;
-		this.currentMonth = new Date();
-		//! 月の最初の日に設定。
-		this.currentMonth.setDate(1);
-		this.currentMonth.setHours(0, 0, 0, 0);
 	}
 
-	//! カレンダーを描画する。
+	//! カレンダーを描画する（複数月表示）。
 	render(): void {
 		this.container.empty();
 
-		//! カレンダーコンテナを作成。
-		const calendarContainer = this.container.createDiv({ cls: "memolog-calendar" });
+		//! 前月・当月・翌月の3ヶ月を生成。
+		const today = new Date();
+		const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-		//! ヘッダー(年月とナビゲーション)を作成。
-		this.createHeader(calendarContainer);
+		//! 前月。
+		const prevMonth = new Date(currentMonth);
+		prevMonth.setMonth(prevMonth.getMonth() - 1);
+		this.renderMonth(prevMonth);
 
-		//! 曜日ヘッダーを作成。
-		this.createWeekdayHeader(calendarContainer);
+		//! 当月。
+		this.renderMonth(currentMonth);
 
-		//! カレンダーグリッド(日付セル)を作成。
-		this.calendarGrid = calendarContainer.createDiv({ cls: "memolog-calendar-grid" });
-		this.renderCalendarCells();
+		//! 翌月。
+		const nextMonth = new Date(currentMonth);
+		nextMonth.setMonth(nextMonth.getMonth() + 1);
+		this.renderMonth(nextMonth);
 
 		//! 「全て表示」ボタンを作成。
-		this.createShowAllButton(calendarContainer);
+		this.createShowAllButton(this.container);
 	}
 
-	//! ヘッダー(年月とナビゲーション)を作成する。
-	private createHeader(container: HTMLElement): void {
-		const header = container.createDiv({ cls: "memolog-calendar-header" });
+	//! 1ヶ月分のカレンダーを描画する。
+	private renderMonth(monthDate: Date): void {
+		//! 月コンテナを作成。
+		const monthContainer = this.container.createDiv({ cls: "memolog-calendar-month" });
 
-		//! 前月ボタン。
-		const prevButton = header.createDiv({ cls: "memolog-calendar-nav-button" });
-		setIcon(prevButton, "chevron-left");
-		prevButton.addEventListener("click", () => this.goToPreviousMonth());
+		//! 年月ヘッダー（ナビゲーションボタンなし）。
+		const header = monthContainer.createDiv({ cls: "memolog-calendar-month-header" });
+		const year = monthDate.getFullYear();
+		const month = monthDate.getMonth() + 1;
+		header.setText(`${year}年 ${month}月`);
 
-		//! 年月表示。
-		const monthYear = header.createDiv({ cls: "memolog-calendar-month-year" });
-		this.updateHeaderText(monthYear);
+		//! 曜日ヘッダーを作成。
+		this.createWeekdayHeader(monthContainer);
 
-		//! 次月ボタン。
-		const nextButton = header.createDiv({ cls: "memolog-calendar-nav-button" });
-		setIcon(nextButton, "chevron-right");
-		nextButton.addEventListener("click", () => this.goToNextMonth());
-	}
-
-	//! ヘッダーのテキストを更新する。
-	private updateHeaderText(element: HTMLElement): void {
-		const year = this.currentMonth.getFullYear();
-		const month = this.currentMonth.getMonth() + 1;
-		element.setText(`${year}年 ${month}月`);
+		//! カレンダーグリッド(日付セル)を作成。
+		const grid = monthContainer.createDiv({ cls: "memolog-calendar-grid" });
+		this.renderMonthCells(grid, monthDate);
 	}
 
 	//! 曜日ヘッダーを作成する。
@@ -85,16 +72,12 @@ export class CalendarView {
 		}
 	}
 
-	//! カレンダーセルを描画する。
-	private renderCalendarCells(): void {
-		if (!this.calendarGrid) {
-			return;
-		}
+	//! 指定月のカレンダーセルを描画する。
+	private renderMonthCells(grid: HTMLElement, monthDate: Date): void {
+		grid.empty();
 
-		this.calendarGrid.empty();
-
-		const year = this.currentMonth.getFullYear();
-		const month = this.currentMonth.getMonth();
+		const year = monthDate.getFullYear();
+		const month = monthDate.getMonth();
 
 		//! 月の最初の日の曜日(0=日曜日)。
 		const firstDay = new Date(year, month, 1).getDay();
@@ -104,14 +87,14 @@ export class CalendarView {
 
 		//! 前月の空白セルを作成。
 		for (let i = 0; i < firstDay; i++) {
-			this.calendarGrid.createDiv({ cls: "memolog-calendar-cell memolog-calendar-cell-empty" });
+			grid.createDiv({ cls: "memolog-calendar-cell memolog-calendar-cell-empty" });
 		}
 
 		//! 日付セルを作成。
 		for (let day = 1; day <= daysInMonth; day++) {
 			const date = new Date(year, month, day);
 			const cell = this.createDateCell(date);
-			this.calendarGrid.appendChild(cell);
+			grid.appendChild(cell);
 		}
 	}
 
@@ -172,18 +155,6 @@ export class CalendarView {
 		});
 	}
 
-	//! 前月に移動する。
-	private goToPreviousMonth(): void {
-		this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
-		this.render();
-	}
-
-	//! 次月に移動する。
-	private goToNextMonth(): void {
-		this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
-		this.render();
-	}
-
 	//! 日付を選択する。
 	private selectDate(date: Date): void {
 		this.selectedDate = new Date(date.getTime());
@@ -211,10 +182,8 @@ export class CalendarView {
 			this.memoDateCounts.set(dateKey, count + 1);
 		}
 
-		//! カレンダーを再描画。
-		if (this.calendarGrid) {
-			this.renderCalendarCells();
-		}
+		//! カレンダーを再描画（複数月対応）。
+		this.render();
 	}
 
 	//! 選択された日付を取得する。

@@ -167,17 +167,19 @@
 	gap: 0.5rem;
 }
 
-.memolog-calendar-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 0.25rem 0;
+/* 月コンテナ（複数月表示） */
+.memolog-calendar-month {
+	margin-bottom: 1.5rem;
 }
 
-.memolog-calendar-month-year {
-	font-size: 0.9rem;
+.memolog-calendar-month-header {
+	font-size: 0.95rem;
 	font-weight: 600;
 	color: var(--text-normal);
+	padding: 0.5rem 0;
+	text-align: center;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 0.5rem;
 }
 
 .memolog-calendar-nav-button {

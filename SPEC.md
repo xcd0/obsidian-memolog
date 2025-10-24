@@ -1,4 +1,4 @@
-# memolog 仕様書 v0.8
+# memolog 仕様書 v0.0.8 (プロトタイプ版)
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 

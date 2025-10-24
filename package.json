@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-memolog",
-	"version": "0.1.0",
+	"version": "0.0.8",
 	"description": "Obsidian上でメモを素早く記録・整理・回顧するプラグイン",
 	"main": "main.js",
 	"scripts": {

@@ -519,6 +519,21 @@
 	box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--text-normal);
 }
 
+/* カラーピッカーのサイズをプリセットボタンと合わせる */
+.memolog-category-setting input[type="color"] {
+	width: 32px;
+	height: 32px;
+	border-radius: 6px;
+	cursor: pointer;
+	border: 2px solid var(--background-modifier-border);
+	padding: 0;
+}
+
+.memolog-category-setting input[type="color"]:hover {
+	transform: scale(1.1);
+	transition: transform 0.2s ease;
+}
+
 /* アイコンプリセットボタン */
 .memolog-current-icon {
 	width: 32px;

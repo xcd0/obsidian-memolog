@@ -1,6 +1,44 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 import MemologPlugin from "../../main";
 import { CategoryConfig } from "../types";
+
+//! プリセットカラー定義。
+const PRESET_COLORS = [
+	{ name: "青", value: "#3b82f6" },
+	{ name: "緑", value: "#22c55e" },
+	{ name: "赤", value: "#ef4444" },
+	{ name: "黄", value: "#eab308" },
+	{ name: "紫", value: "#a855f7" },
+	{ name: "ピンク", value: "#ec4899" },
+	{ name: "橙", value: "#f97316" },
+	{ name: "青緑", value: "#14b8a6" },
+	{ name: "灰", value: "#6b7280" },
+	{ name: "茶", value: "#92400e" },
+];
+
+//! よく使うアイコン定義。
+const COMMON_ICONS = [
+	"folder",
+	"briefcase",
+	"gamepad-2",
+	"star",
+	"heart",
+	"book",
+	"coffee",
+	"home",
+	"user",
+	"users",
+	"calendar",
+	"clock",
+	"bookmark",
+	"tag",
+	"lightbulb",
+	"code",
+	"music",
+	"image",
+	"camera",
+	"palette",
+];
 
 //! memolog設定タブ。
 export class MemologSettingTab extends PluginSettingTab {
@@ -18,8 +56,8 @@ export class MemologSettingTab extends PluginSettingTab {
 		containerEl.createEl("h2", { text: "memolog 設定" });
 
 		this.addBasicSettings(containerEl);
-		this.addAdvancedFeatures(containerEl);
 		this.addCategorySettings(containerEl);
+		this.addAdvancedFeatures(containerEl);
 	}
 
 	//! 基本設定を追加する。
@@ -104,26 +142,42 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 			);
 
-		//! デフォルトカテゴリ設定。
+		//! メモのテンプレート設定。
 		new Setting(containerEl)
-			.setName("デフォルトカテゴリ")
-			.setDesc("新規メモ作成時のデフォルトカテゴリ")
-			.addDropdown((dropdown) => {
-				for (const category of settings.categories) {
-					dropdown.addOption(category.name, category.name);
-				}
-				dropdown.setValue(settings.defaultCategory).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						defaultCategory: value,
-					});
-				});
-				return dropdown;
-			});
+			.setName("メモのテンプレート")
+			.setDesc("メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます")
+			.addTextArea((text) =>
+				text
+					.setPlaceholder("{{content}}")
+					.setValue(settings.memoTemplate)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							memoTemplate: value,
+						});
+					})
+			);
+
+		//! ファイルパス書式設定。
+		new Setting(containerEl)
+			.setName("ファイルパスの書式")
+			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分")
+			.addText((text) =>
+				text
+					.setPlaceholder("%Y/%m/%d")
+					.setValue(settings.pathFormat)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							pathFormat: value,
+						});
+					})
+			);
 	}
 
 	//! 高度な機能設定を追加する。
 	private addAdvancedFeatures(containerEl: HTMLElement): void {
 		containerEl.createEl("h3", { text: "高度な機能" });
+
+		const settings = this.plugin.settingsManager.getGlobalSettings();
 
 		//! 検索履歴設定。
 		containerEl.createEl("h4", { text: "検索履歴" });
@@ -141,13 +195,17 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("検索履歴の最大サイズ")
 			.setDesc("保存する検索履歴の最大数（1-100）")
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 100, 1)
-					.setValue(50)
-					.setDynamicTooltip()
-					.onChange((_value) => {
-						//! 検索履歴サイズを更新。
+			.addText((text) =>
+				text
+					.setPlaceholder("50")
+					.setValue(String(settings.searchHistoryMaxSize))
+					.onChange(async (value) => {
+						const numValue = parseInt(value, 10);
+						if (!isNaN(numValue) && numValue >= 1 && numValue <= 100) {
+							await this.plugin.settingsManager.updateGlobalSettings({
+								searchHistoryMaxSize: numValue,
+							});
+						}
 					})
 			);
 
@@ -235,6 +293,22 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.display();
 				})
 		);
+
+		//! デフォルトカテゴリ設定。
+		new Setting(containerEl)
+			.setName("デフォルトカテゴリ")
+			.setDesc("新規メモ作成時のデフォルトカテゴリ")
+			.addDropdown((dropdown) => {
+				for (const category of settings.categories) {
+					dropdown.addOption(category.name, category.name);
+				}
+				dropdown.setValue(settings.defaultCategory).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						defaultCategory: value,
+					});
+				});
+				return dropdown;
+			});
 	}
 
 	//! カテゴリアイテムを追加する。
@@ -275,38 +349,68 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! カラーコード。
-		new Setting(categoryDiv)
-			.setName("カラー")
-			.addText((text) =>
-				text
-					.setPlaceholder("#3b82f6")
-					.setValue(category.color)
-					.onChange(async (value) => {
-						const updatedCategories = [...settings.categories];
-						updatedCategories[index] = { ...updatedCategories[index], color: value };
-						await this.plugin.settingsManager.updateGlobalSettings({
-							categories: updatedCategories,
-						});
-					})
-			);
+		//! カラー選択。
+		const colorSetting = new Setting(categoryDiv).setName("カラー");
 
-		//! アイコン名。
-		new Setting(categoryDiv)
+		//! プリセットカラーボタンを追加。
+		const colorContainer = colorSetting.controlEl.createDiv({ cls: "memolog-color-preset-container" });
+
+		for (const preset of PRESET_COLORS) {
+			const colorBtn = colorContainer.createDiv({ cls: "memolog-color-preset-btn" });
+			colorBtn.style.backgroundColor = preset.value;
+			colorBtn.setAttribute("aria-label", preset.name);
+			if (category.color === preset.value) {
+				colorBtn.addClass("memolog-color-preset-btn-selected");
+			}
+			colorBtn.addEventListener("click", async () => {
+				const updatedCategories = [...settings.categories];
+				updatedCategories[index] = { ...updatedCategories[index], color: preset.value };
+				await this.plugin.settingsManager.updateGlobalSettings({
+					categories: updatedCategories,
+				});
+				this.display();
+			});
+		}
+
+		//! カラーピッカーを追加。
+		colorSetting.addColorPicker((colorPicker) =>
+			colorPicker.setValue(category.color).onChange(async (value) => {
+				const updatedCategories = [...settings.categories];
+				updatedCategories[index] = { ...updatedCategories[index], color: value };
+				await this.plugin.settingsManager.updateGlobalSettings({
+					categories: updatedCategories,
+				});
+			})
+		);
+
+		//! アイコン選択。
+		const iconSetting = new Setting(categoryDiv)
 			.setName("アイコン")
-			.setDesc("Lucideアイコン名 (例: folder, briefcase, star)")
-			.addText((text) =>
-				text
-					.setPlaceholder("folder")
-					.setValue(category.icon)
-					.onChange(async (value) => {
-						const updatedCategories = [...settings.categories];
-						updatedCategories[index] = { ...updatedCategories[index], icon: value };
-						await this.plugin.settingsManager.updateGlobalSettings({
-							categories: updatedCategories,
-						});
-					})
-			);
+			.setDesc(`選択中: ${category.icon}`);
+
+		//! 現在選択されているアイコンを表示。
+		const currentIconDiv = iconSetting.controlEl.createDiv({ cls: "memolog-current-icon" });
+		setIcon(currentIconDiv, category.icon);
+
+		//! アイコンプリセットボタンを追加。
+		const iconContainer = iconSetting.controlEl.createDiv({ cls: "memolog-icon-preset-container" });
+
+		for (const iconName of COMMON_ICONS) {
+			const iconBtn = iconContainer.createDiv({ cls: "memolog-icon-preset-btn" });
+			if (category.icon === iconName) {
+				iconBtn.addClass("memolog-icon-preset-btn-selected");
+			}
+			setIcon(iconBtn, iconName);
+			iconBtn.setAttribute("aria-label", iconName);
+			iconBtn.addEventListener("click", async () => {
+				const updatedCategories = [...settings.categories];
+				updatedCategories[index] = { ...updatedCategories[index], icon: iconName };
+				await this.plugin.settingsManager.updateGlobalSettings({
+					categories: updatedCategories,
+				});
+				this.display();
+			});
+		}
 
 		//! 削除ボタン。
 		new Setting(categoryDiv)
@@ -322,7 +426,5 @@ export class MemologSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
-		categoryDiv.createEl("hr");
 	}
 }

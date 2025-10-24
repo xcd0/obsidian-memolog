@@ -40,6 +40,15 @@ export interface GlobalSettings {
 
 	//! memologファイルの保存先ルートディレクトリ。
 	rootDirectory: string;
+
+	//! メモのテンプレート書式。
+	memoTemplate: string;
+
+	//! ファイルパスの書式（%Y/%m/%d/%H-%M.mdなど）。
+	pathFormat: string;
+
+	//! 検索履歴の最大サイズ。
+	searchHistoryMaxSize: number;
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -79,4 +88,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	order: "asc",
 	enableDailyNotes: false,
 	rootDirectory: "memolog",
+	memoTemplate: "{{content}}",
+	pathFormat: "%Y/%m/%d",
+	searchHistoryMaxSize: 50,
 };

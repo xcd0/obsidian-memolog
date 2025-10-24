@@ -151,8 +151,8 @@ export class MemoManager {
 				const memoText = this.memoToText(memo, template);
 				console.log("[memolog DEBUG] Memo text:", memoText);
 
-				//! 挿入位置を決定（昇順: top, 降順: bottom）。
-				const position = order === "asc" ? "bottom" : "top";
+				//! 挿入位置は常に末尾（bottom）。
+				const position = "bottom";
 				console.log("[memolog DEBUG] Insert position:", position);
 
 				//! カテゴリ領域にメモを挿入。

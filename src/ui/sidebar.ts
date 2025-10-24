@@ -543,13 +543,20 @@ export class MemologSidebar extends ItemView {
 
 	//! ソート順変更処理。
 	private handleSortOrderChange(order: SortOrder): void {
+		console.log("[memolog DEBUG] handleSortOrderChange called with order:", order);
+		console.log("[memolog DEBUG] Current memos count:", this.memos.length);
 		this.currentOrder = order;
 
 		//! メモをソート。
 		this.sortMemos();
+		console.log("[memolog DEBUG] After sort, first memo:", this.memos[0]?.timestamp);
+		console.log("[memolog DEBUG] After sort, last memo:", this.memos[this.memos.length - 1]?.timestamp);
 
 		if (this.memoList) {
+			console.log("[memolog DEBUG] Calling memoList.updateMemos");
 			this.memoList.updateMemos(this.memos);
+		} else {
+			console.log("[memolog DEBUG] memoList is null/undefined");
 		}
 	}
 

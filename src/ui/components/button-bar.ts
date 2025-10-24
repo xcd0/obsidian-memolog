@@ -62,11 +62,16 @@ export class ButtonBar {
 
 	//! ソート順を切り替える。
 	private toggleSortOrder(iconElement: HTMLElement): void {
+		console.log("[memolog DEBUG] toggleSortOrder called, current:", this.currentOrder);
 		this.currentOrder = this.currentOrder === "asc" ? "desc" : "asc";
+		console.log("[memolog DEBUG] New order:", this.currentOrder);
 		this.updateSortIcon(iconElement, this.currentOrder);
 
 		if (this.handlers.onSortOrderChange) {
+			console.log("[memolog DEBUG] Calling onSortOrderChange with:", this.currentOrder);
 			this.handlers.onSortOrderChange(this.currentOrder);
+		} else {
+			console.log("[memolog DEBUG] onSortOrderChange handler not found");
 		}
 	}
 

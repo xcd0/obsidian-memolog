@@ -48,8 +48,12 @@ export class MemoList {
 
 	//! メモリストを更新する。
 	updateMemos(memos: MemoEntry[]): void {
+		console.log("[memolog DEBUG] MemoList.updateMemos called with", memos.length, "memos");
+		console.log("[memolog DEBUG] First memo:", memos[0]?.timestamp);
+		console.log("[memolog DEBUG] Last memo:", memos[memos.length - 1]?.timestamp);
 		this.memos = memos;
 		this.render();
+		console.log("[memolog DEBUG] MemoList.render completed");
 	}
 
 	//! メモを追加する。

@@ -48,17 +48,66 @@ memologは、Obsidianでメモを効率的に管理するためのプラグイ�
 
 ## インストール
 
-### 開発版
+### 開発環境セットアップ
 
-1. このリポジトリをクローン
-2. `npm install` で依存関係をインストール
-3. `npm run dev` で開発モード起動
-
-### ビルド
+#### 1. リポジトリのクローンとビルド
 
 ```bash
+git clone https://github.com/xcd0/obsidian-memolog.git
+cd obsidian-memolog
+npm install
 npm run build
 ```
+
+#### 2. Obsidianテスト環境へのデプロイ
+
+**方法1: 手動コピー（推奨）**
+
+ビルドした以下のファイルをObsidianのプラグインディレクトリにコピー:
+
+```bash
+# Windowsの場合
+mkdir %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog
+copy main.js %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
+copy manifest.json %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
+copy styles.css %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
+
+# または、PowerShellの場合
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog"
+Copy-Item main.js, manifest.json, styles.css "$env:USERPROFILE\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\"
+
+# Linux/macOSの場合
+mkdir -p ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
+cp main.js manifest.json styles.css ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog/
+```
+
+**注意**: Vaultのパスは環境に合わせて変更してください。
+
+**方法2: シンボリックリンク（開発効率化）**
+
+```bash
+# Windowsの場合（管理者権限が必要）
+mklink /D %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog %CD%
+
+# Linux/macOSの場合
+ln -s $(pwd) ~/path/to/vault/.obsidian/plugins/obsidian-memolog
+```
+
+#### 3. Obsidianでプラグインを有効化
+
+1. Obsidianを起動
+2. 設定 → コミュニティプラグイン
+3. "memolog"を有効化
+
+### 開発モード
+
+変更を監視して自動ビルド:
+
+```bash
+npm run dev
+```
+
+ビルド後、Obsidianでプラグインをリロード（Ctrl+R または Cmd+R）
 
 ## 開発
 

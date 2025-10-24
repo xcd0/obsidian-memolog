@@ -40,3 +40,6 @@ coverage/
 # Environment
 .env
 .env.local
+
+# Sample plugin (reference only)
+obsidian-sample-plugin/

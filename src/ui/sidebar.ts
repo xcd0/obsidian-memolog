@@ -23,6 +23,7 @@ export class MemologSidebar extends ItemView {
 	//! UIコンポーネント。
 	private categoryTabs: CategoryTabs | null = null;
 	private calendarView: CalendarView | null = null;
+	private calendarAreaEl: HTMLElement | null = null;
 	private memoList: MemoList | null = null;
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
@@ -31,6 +32,7 @@ export class MemologSidebar extends ItemView {
 	private currentCategory: string = "";
 	private currentOrder: SortOrder = "asc";
 	private selectedDate: Date | null = null;
+	private calendarVisible: boolean = false;
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
@@ -114,16 +116,15 @@ export class MemologSidebar extends ItemView {
 	//! カレンダー領域を作成する。
 	private createCalendarArea(container: HTMLElement): HTMLElement {
 		const calendarArea = container.createDiv({ cls: "memolog-calendar-area" });
+		//! デフォルトで非表示。
+		calendarArea.style.display = "none";
+		this.calendarAreaEl = calendarArea;
 		return calendarArea;
 	}
 
 	//! ヘッダー部分を作成する。
 	private createHeader(container: HTMLElement): HTMLElement {
 		const header = container.createDiv({ cls: "memolog-header" });
-
-		//! タイトル。
-		const title = header.createDiv({ cls: "memolog-title" });
-		title.setText("memolog");
 
 		//! ボタン群。
 		const buttonBarEl = header.createDiv({ cls: "memolog-button-bar" });
@@ -170,6 +171,7 @@ export class MemologSidebar extends ItemView {
 		this.buttonBar = new ButtonBar(buttonBarEl, {
 			onSortOrderChange: (order) => this.handleSortOrderChange(order),
 			onRefreshClick: () => void this.handleRefresh(),
+			onCalendarClick: () => this.toggleCalendar(),
 		});
 		this.buttonBar.render(this.currentOrder);
 
@@ -477,5 +479,13 @@ export class MemologSidebar extends ItemView {
 	//! サイドバーを更新する。
 	public refresh(): void {
 		void this.onOpen();
+	}
+
+	//! カレンダーの表示/非表示を切り替える。
+	private toggleCalendar(): void {
+		this.calendarVisible = !this.calendarVisible;
+		if (this.calendarAreaEl) {
+			this.calendarAreaEl.style.display = this.calendarVisible ? "block" : "none";
+		}
 	}
 }

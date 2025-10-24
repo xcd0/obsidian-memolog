@@ -11,71 +11,71 @@
 
 /* カテゴリタブ */
 .memolog-category-tabs-area {
-	padding: 0.5rem 1rem 0;
-	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 0 0.5rem;
+	border-bottom: 2px solid var(--background-modifier-border);
 }
 
 .memolog-category-tabs {
 	display: flex;
-	gap: 0.5rem;
+	gap: 0.25rem;
 	overflow-x: auto;
-	padding-bottom: 0.5rem;
 }
 
 .memolog-category-tab {
 	display: flex;
 	align-items: center;
 	gap: 0.25rem;
-	padding: 0.5rem 1rem;
-	border-radius: 6px;
-	background-color: var(--background-secondary);
-	border: 2px solid transparent;
+	padding: 0.35rem 0.75rem;
+	background-color: transparent;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
 	cursor: pointer;
-	transition: all 0.2s ease;
+	transition: all 0.15s ease;
 	white-space: nowrap;
 	user-select: none;
+	position: relative;
 }
 
 .memolog-category-tab:hover {
 	background-color: var(--background-modifier-hover);
-	border-color: var(--category-color, var(--interactive-accent));
 }
 
 .memolog-category-tab-active {
-	background-color: var(--background-primary);
-	border-color: var(--category-color, var(--interactive-accent));
+	border-bottom-color: var(--category-color, var(--interactive-accent));
 	font-weight: 600;
 }
 
 .memolog-category-tab-icon {
-	width: 16px;
-	height: 16px;
+	width: 14px;
+	height: 14px;
 	color: var(--category-color, var(--text-normal));
 }
 
 .memolog-category-tab-name {
 	color: var(--text-normal);
-	font-size: 0.9rem;
+	font-size: 0.85rem;
 }
 
 /* ヘッダー */
 .memolog-header {
-	padding: 1rem;
+	padding: 0.5rem;
 	border-bottom: 1px solid var(--background-modifier-border);
 	display: flex;
-	justify-content: space-between;
+	justify-content: flex-start;
 	align-items: center;
-}
-
-.memolog-title {
-	font-size: 1.2rem;
-	font-weight: 600;
-	color: var(--text-normal);
 }
 
 .memolog-button-bar {
 	display: flex;
 	gap: 0.5rem;
+}
+
+.memolog-btn-icon {
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* カレンダー */

@@ -1,4 +1,5 @@
 import { SortOrder } from "../../types";
+import { setIcon } from "obsidian";
 
 //! ボタンバーのイベントハンドラー。
 export interface ButtonBarHandlers {
@@ -32,11 +33,26 @@ export class ButtonBar {
 		this.container.empty();
 		this.currentOrder = initialOrder;
 
+		//! カレンダートグルボタン（ハンバーガーメニュー）。
+		const calendarBtn = this.container.createEl("button", {
+			cls: "memolog-btn memolog-calendar-toggle-btn",
+			attr: { "aria-label": "カレンダー表示切り替え" },
+		});
+		const calendarIcon = calendarBtn.createDiv({ cls: "memolog-btn-icon" });
+		setIcon(calendarIcon, "menu");
+		calendarBtn.addEventListener("click", () => {
+			if (this.handlers.onCalendarClick) {
+				this.handlers.onCalendarClick();
+			}
+		});
+
 		//! リフレッシュボタン。
 		const refreshBtn = this.container.createEl("button", {
-			cls: "memolog-btn",
-			text: "更新",
+			cls: "memolog-btn memolog-refresh-btn",
+			attr: { "aria-label": "メモリストを更新" },
 		});
+		const refreshIcon = refreshBtn.createDiv({ cls: "memolog-btn-icon" });
+		setIcon(refreshIcon, "refresh-cw");
 		refreshBtn.addEventListener("click", () => {
 			if (this.handlers.onRefreshClick) {
 				this.handlers.onRefreshClick();
@@ -45,49 +61,36 @@ export class ButtonBar {
 
 		//! ソート順ボタン。
 		const sortBtn = this.container.createEl("button", {
-			cls: "memolog-btn",
-			text: this.getSortButtonText(this.currentOrder),
+			cls: "memolog-btn memolog-sort-btn",
+			attr: { "aria-label": this.getSortButtonAriaLabel(this.currentOrder) },
 		});
+		const sortIcon = sortBtn.createDiv({ cls: "memolog-btn-icon" });
+		this.updateSortIcon(sortIcon, this.currentOrder);
 		sortBtn.addEventListener("click", () => {
-			this.toggleSortOrder(sortBtn);
+			this.toggleSortOrder(sortIcon);
 		});
-
-		//! カレンダーボタン（将来実装）。
-		// const calendarBtn = this.container.createEl("button", {
-		// 	cls: "memolog-btn",
-		// 	text: "📅",
-		// });
-		// calendarBtn.addEventListener("click", () => {
-		// 	if (this.handlers.onCalendarClick) {
-		// 		this.handlers.onCalendarClick();
-		// 	}
-		// });
-
-		//! 設定ボタン（将来実装）。
-		// const settingsBtn = this.container.createEl("button", {
-		// 	cls: "memolog-btn",
-		// 	text: "⚙️",
-		// });
-		// settingsBtn.addEventListener("click", () => {
-		// 	if (this.handlers.onSettingsClick) {
-		// 		this.handlers.onSettingsClick();
-		// 	}
-		// });
 	}
 
 	//! ソート順を切り替える。
-	private toggleSortOrder(button: HTMLButtonElement): void {
+	private toggleSortOrder(iconElement: HTMLElement): void {
 		this.currentOrder = this.currentOrder === "asc" ? "desc" : "asc";
-		button.setText(this.getSortButtonText(this.currentOrder));
+		this.updateSortIcon(iconElement, this.currentOrder);
 
 		if (this.handlers.onSortOrderChange) {
 			this.handlers.onSortOrderChange(this.currentOrder);
 		}
 	}
 
-	//! ソートボタンのテキストを取得する。
-	private getSortButtonText(order: SortOrder): string {
-		return order === "asc" ? "昇順" : "降順";
+	//! ソートアイコンを更新する。
+	private updateSortIcon(iconElement: HTMLElement, order: SortOrder): void {
+		iconElement.empty();
+		const iconName = order === "asc" ? "arrow-up-narrow-wide" : "arrow-down-wide-narrow";
+		setIcon(iconElement, iconName);
+	}
+
+	//! ソートボタンのaria-labelを取得する。
+	private getSortButtonAriaLabel(order: SortOrder): string {
+		return order === "asc" ? "昇順でソート" : "降順でソート";
 	}
 
 	//! 現在のソート順を取得する。

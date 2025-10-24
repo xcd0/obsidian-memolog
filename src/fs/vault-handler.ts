@@ -211,8 +211,12 @@ export class MemologVaultHandler {
 				await this.createFile(backupPath, content);
 			}
 
-			//! 修復した内容を書き込む。
-			await this.writeFile(filePath, result.content);
+			//! 修復した内容を書き込む（既にロックを保持しているので直接modifyを呼ぶ）。
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (!(file instanceof TFile)) {
+				throw new Error(`File not found: ${filePath}`);
+			}
+			await this.app.vault.modify(file, result.content);
 
 			return {
 				repaired: true,
@@ -301,7 +305,12 @@ export class MemologVaultHandler {
 			console.log("[memolog DEBUG] New content length:", newContent.length);
 
 			console.log("[memolog DEBUG] Writing file from insertTextInCategory...");
-			await this.writeFile(filePath, newContent);
+			//! 既にロックを保持しているので、直接modifyを呼ぶ。
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (!(file instanceof TFile)) {
+				throw new Error(`File not found: ${filePath}`);
+			}
+			await this.app.vault.modify(file, newContent);
 			console.log("[memolog DEBUG] File written from insertTextInCategory");
 		} finally {
 			console.log("[memolog DEBUG] Releasing lock for insertTextInCategory...");
@@ -337,7 +346,12 @@ export class MemologVaultHandler {
 			lines.splice(pair.startLine + 1, pair.endLine - pair.startLine - 1, newContent);
 
 			const updatedContent = lines.join("\n");
-			await this.writeFile(filePath, updatedContent);
+			//! 既にロックを保持しているので、直接modifyを呼ぶ。
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (!(file instanceof TFile)) {
+				throw new Error(`File not found: ${filePath}`);
+			}
+			await this.app.vault.modify(file, updatedContent);
 		} finally {
 			this.fileLock.release(filePath);
 		}

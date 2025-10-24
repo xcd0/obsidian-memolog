@@ -50,15 +50,19 @@ export class MemoManager {
 
 	//! メモエントリをテキスト形式に変換する。
 	private memoToText(memo: MemoEntry, template?: string): string {
-		const timestamp = this.formatTimestamp(memo.timestamp, template || "## %Y-%m-%d %H:%M");
+		//! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
+		const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M";
+		const timestamp = this.formatTimestamp(memo.timestamp, actualTemplate);
 		const content = memo.content;
 		const attachments =
 			memo.attachments && memo.attachments.length > 0
 				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
 				: "";
 
-		//! IDとタイムスタンプをHTMLコメントとして埋め込む。
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp} -->\n${timestamp}\n${content}${attachments}\n`;
+		//! ID、タイムスタンプ、テンプレートをHTMLコメントとして埋め込む。
+		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
+		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${timestamp}\n${content}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -69,10 +73,30 @@ export class MemoManager {
 			return null;
 		}
 
-		//! IDとタイムスタンプをHTMLコメントから抽出。
-		const commentMatch = text.match(/<!-- memo-id: (.+?)(?:, timestamp: (.+?))? -->/);
-		const id = commentMatch?.[1] || uuidv7();
-		let timestamp = commentMatch?.[2] || null;
+		//! ID、タイムスタンプ、テンプレートをHTMLコメントから抽出。
+		const commentMatch = text.match(/<!-- (.+?) -->/);
+		let id = uuidv7();
+		let timestamp: string | null = null;
+		let template: string | undefined = undefined;
+
+		if (commentMatch) {
+			const comment = commentMatch[1];
+			const idMatch = comment.match(/memo-id: ([^,]+)/);
+			const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
+			const templateMatch = comment.match(/template: (.+)$/);
+
+			id = idMatch?.[1].trim() || uuidv7();
+			timestamp = timestampMatch?.[1].trim() || null;
+
+			if (templateMatch) {
+				try {
+					template = JSON.parse(templateMatch[1].trim());
+				} catch (e) {
+					//! JSON.parseエラーは無視（後方互換性）。
+					console.warn("[memolog] Failed to parse template from comment:", e);
+				}
+			}
+		}
 
 		//! HTMLコメント行をスキップしてタイムスタンプを探す。
 		let timestampLine = lines[0];
@@ -104,6 +128,7 @@ export class MemoManager {
 			timestamp,
 			content,
 			attachments,
+			template,
 		};
 	}
 
@@ -147,6 +172,7 @@ export class MemoManager {
 					timestamp: this.generateTimestamp(),
 					content,
 					attachments,
+					template,
 				};
 				console.log("[memolog DEBUG] Memo entry created:", { id: memo.id, content: memo.content });
 
@@ -196,7 +222,7 @@ export class MemoManager {
 
 				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
 				const memos = content.split(/(?=<!-- memo-id:)/);
-				const filtered = memos.filter((memo) => !memo.includes(`<!-- memo-id: ${memoId} -->`));
+				const filtered = memos.filter((memo) => !memo.includes(`memo-id: ${memoId}`));
 
 				if (filtered.length === memos.length) {
 					//! 削除対象が見つからなかった。
@@ -290,7 +316,7 @@ export class MemoManager {
 				let updated = false;
 
 				const newMemoTexts = memoTexts.map((memoText) => {
-					if (memoText.includes(`<!-- memo-id: ${memoId} -->`)) {
+					if (memoText.includes(`memo-id: ${memoId}`)) {
 						//! 対象メモを解析。
 						const memo = this.parseTextToMemo(memoText, category);
 						if (memo) {

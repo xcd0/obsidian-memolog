@@ -15,6 +15,9 @@ export interface MemoEntry {
 	//! 添付ファイルのパス配列（オプション）。
 	attachments?: string[];
 
+	//! メモ作成時に使用されたテンプレート（オプション）。
+	template?: string;
+
 	//! 作成日時（Date型）。
 	createdAt?: Date;
 

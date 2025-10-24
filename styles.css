@@ -9,16 +9,32 @@
 	gap: 0.5rem;
 }
 
-/* カテゴリタブ */
+/* カテゴリタブエリア */
 .memolog-category-tabs-area {
-	padding: 0 0.5rem;
+	padding: 0.5rem;
 	border-bottom: 2px solid var(--background-modifier-border);
+}
+
+.memolog-category-tabs-container {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.memolog-hamburger-btn,
+.memolog-sort-btn-wrapper {
+	flex-shrink: 0;
+}
+
+.memolog-category-tabs-wrapper {
+	flex: 1;
+	overflow-x: auto;
+	min-width: 0;
 }
 
 .memolog-category-tabs {
 	display: flex;
 	gap: 0.25rem;
-	overflow-x: auto;
 }
 
 .memolog-category-tab {
@@ -56,23 +72,10 @@
 	font-size: 0.85rem;
 }
 
-/* ヘッダー */
-.memolog-header {
-	padding: 0.5rem;
-	border-bottom: 1px solid var(--background-modifier-border);
-	display: flex;
-	justify-content: flex-start;
-	align-items: center;
-}
-
-.memolog-button-bar {
-	display: flex;
-	gap: 0.5rem;
-}
-
+/* ボタン共通 */
 .memolog-btn-icon {
-	width: 16px;
-	height: 16px;
+	width: 20px;
+	height: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -377,30 +380,33 @@
 	display: flex;
 	gap: 0.5rem;
 	align-items: center;
+	justify-content: space-between;
 }
 
 .memolog-attach-btn {
 	display: flex;
 	align-items: center;
-	gap: 0.25rem;
-	padding: 0.5rem 1rem;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
 	background-color: var(--background-secondary);
-	color: var(--text-normal);
+	color: var(--text-muted);
 	cursor: pointer;
 	transition: all 0.2s ease;
-	font-size: 0.9rem;
 }
 
 .memolog-attach-btn:hover {
 	background-color: var(--background-modifier-hover);
 	border-color: var(--interactive-accent);
+	color: var(--text-normal);
 }
 
 .memolog-attach-icon {
-	width: 16px;
-	height: 16px;
+	width: 20px;
+	height: 20px;
 }
 
 .memolog-file-input {
@@ -408,23 +414,33 @@
 }
 
 .memolog-submit-btn {
-	align-self: flex-end;
-	padding: 0.5rem 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
 	background-color: var(--interactive-accent);
 	color: var(--text-on-accent);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
-	font-weight: 500;
-	transition: background-color 0.2s;
+	transition: all 0.2s ease;
+	margin-left: auto;
 }
 
 .memolog-submit-btn:hover {
 	background-color: var(--interactive-accent-hover);
+	transform: scale(1.05);
 }
 
 .memolog-submit-btn:active {
-	transform: translateY(1px);
+	transform: scale(0.95);
+}
+
+.memolog-submit-icon {
+	width: 24px;
+	height: 24px;
 }
 
 /* ボタン */

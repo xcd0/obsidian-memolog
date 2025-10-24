@@ -78,11 +78,8 @@ export class MemologSidebar extends ItemView {
 		//! メインコンテナを作成。
 		container.addClass("memolog-container");
 
-		//! カテゴリタブ領域を作成。
+		//! カテゴリタブ領域を作成（ハンバーガーメニューとソートボタンも含む）。
 		const categoryTabsArea = this.createCategoryTabsArea(container);
-
-		//! ヘッダー部分を作成。
-		const header = this.createHeader(container);
 
 		//! カレンダー領域を作成。
 		const calendarArea = this.createCalendarArea(container);
@@ -94,7 +91,7 @@ export class MemologSidebar extends ItemView {
 		const inputArea = this.createInputArea(container);
 
 		//! コンポーネントを初期化。
-		this.initializeComponents(categoryTabsArea, header, calendarArea, listArea, inputArea);
+		this.initializeComponents(categoryTabsArea, calendarArea, listArea, inputArea);
 
 		//! 初期データを読み込む。
 		await this.loadMemos();
@@ -107,10 +104,23 @@ export class MemologSidebar extends ItemView {
 		this.containerEl.empty();
 	}
 
-	//! カテゴリタブ領域を作成する。
+	//! カテゴリタブ領域を作成する（ハンバーガーメニューとソートボタンも含む）。
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
-		return categoryTabsArea;
+
+		//! 内部コンテナ（flexレイアウト）。
+		const innerContainer = categoryTabsArea.createDiv({ cls: "memolog-category-tabs-container" });
+
+		//! ハンバーガーメニューボタン。
+		innerContainer.createDiv({ cls: "memolog-hamburger-btn" });
+
+		//! カテゴリタブコンテナ。
+		const tabsContainer = innerContainer.createDiv({ cls: "memolog-category-tabs-wrapper" });
+
+		//! ソート順ボタン。
+		innerContainer.createDiv({ cls: "memolog-sort-btn-wrapper" });
+
+		return tabsContainer;
 	}
 
 	//! カレンダー領域を作成する。
@@ -120,16 +130,6 @@ export class MemologSidebar extends ItemView {
 		calendarArea.style.display = "none";
 		this.calendarAreaEl = calendarArea;
 		return calendarArea;
-	}
-
-	//! ヘッダー部分を作成する。
-	private createHeader(container: HTMLElement): HTMLElement {
-		const header = container.createDiv({ cls: "memolog-header" });
-
-		//! ボタン群。
-		const buttonBarEl = header.createDiv({ cls: "memolog-button-bar" });
-
-		return buttonBarEl;
 	}
 
 	//! メモ表示領域を作成する。
@@ -147,13 +147,30 @@ export class MemologSidebar extends ItemView {
 	//! コンポーネントを初期化する。
 	private initializeComponents(
 		categoryTabsAreaEl: HTMLElement,
-		buttonBarEl: HTMLElement,
 		calendarAreaEl: HTMLElement,
 		listAreaEl: HTMLElement,
 		inputAreaEl: HTMLElement
 	): void {
 		//! 設定を取得。
 		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! カテゴリタブエリアの親要素を取得してボタンを配置。
+		const categoryTabsContainer = categoryTabsAreaEl.parentElement;
+		if (categoryTabsContainer) {
+			const hamburgerBtn = categoryTabsContainer.querySelector(
+				".memolog-hamburger-btn"
+			) as HTMLElement;
+			const sortBtnWrapper = categoryTabsContainer.querySelector(
+				".memolog-sort-btn-wrapper"
+			) as HTMLElement;
+
+			//! ボタンバーを初期化（ハンバーガーとソートボタンのみ）。
+			this.buttonBar = new ButtonBar(categoryTabsContainer, {
+				onSortOrderChange: (order) => this.handleSortOrderChange(order),
+				onCalendarClick: () => this.toggleCalendar(),
+			});
+			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, sortBtnWrapper);
+		}
 
 		//! カテゴリタブを初期化。
 		if (settings.categories.length > 0) {
@@ -166,14 +183,6 @@ export class MemologSidebar extends ItemView {
 			//! カテゴリが設定されていない場合はデフォルトカテゴリを使用。
 			this.currentCategory = settings.defaultCategory;
 		}
-
-		//! ボタンバーを初期化。
-		this.buttonBar = new ButtonBar(buttonBarEl, {
-			onSortOrderChange: (order) => this.handleSortOrderChange(order),
-			onRefreshClick: () => void this.handleRefresh(),
-			onCalendarClick: () => this.toggleCalendar(),
-		});
-		this.buttonBar.render(this.currentOrder);
 
 		//! カレンダーを初期化。
 		this.calendarView = new CalendarView(calendarAreaEl, {
@@ -468,12 +477,6 @@ export class MemologSidebar extends ItemView {
 		if (this.memoList) {
 			this.memoList.updateMemos(this.memos);
 		}
-	}
-
-	//! リフレッシュ処理。
-	private async handleRefresh(): Promise<void> {
-		await this.loadMemos();
-		new Notice("メモリストを更新しました");
 	}
 
 	//! サイドバーを更新する。

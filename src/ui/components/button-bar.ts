@@ -18,23 +18,24 @@ export interface ButtonBarHandlers {
 
 //! ボタンバーコンポーネント。
 export class ButtonBar {
-	private container: HTMLElement;
 	private handlers: ButtonBarHandlers;
 	private currentOrder: SortOrder = "asc";
 
-	constructor(container: HTMLElement, handlers: ButtonBarHandlers = {}) {
-		this.container = container;
+	constructor(_container: HTMLElement, handlers: ButtonBarHandlers = {}) {
 		this.handlers = handlers;
 	}
 
-	//! ボタンバーを描画する。
-	render(initialOrder: SortOrder = "asc"): void {
-		//! コンテナをクリア。
-		this.container.empty();
+	//! インラインボタンを描画する（カテゴリタブと同じ行に配置）。
+	renderInline(
+		initialOrder: SortOrder = "asc",
+		hamburgerContainer: HTMLElement,
+		sortContainer: HTMLElement
+	): void {
 		this.currentOrder = initialOrder;
 
-		//! カレンダートグルボタン（ハンバーガーメニュー）。
-		const calendarBtn = this.container.createEl("button", {
+		//! ハンバーガーメニューボタン。
+		hamburgerContainer.empty();
+		const calendarBtn = hamburgerContainer.createEl("button", {
 			cls: "memolog-btn memolog-calendar-toggle-btn",
 			attr: { "aria-label": "カレンダー表示切り替え" },
 		});
@@ -46,21 +47,9 @@ export class ButtonBar {
 			}
 		});
 
-		//! リフレッシュボタン。
-		const refreshBtn = this.container.createEl("button", {
-			cls: "memolog-btn memolog-refresh-btn",
-			attr: { "aria-label": "メモリストを更新" },
-		});
-		const refreshIcon = refreshBtn.createDiv({ cls: "memolog-btn-icon" });
-		setIcon(refreshIcon, "refresh-cw");
-		refreshBtn.addEventListener("click", () => {
-			if (this.handlers.onRefreshClick) {
-				this.handlers.onRefreshClick();
-			}
-		});
-
 		//! ソート順ボタン。
-		const sortBtn = this.container.createEl("button", {
+		sortContainer.empty();
+		const sortBtn = sortContainer.createEl("button", {
 			cls: "memolog-btn memolog-sort-btn",
 			attr: { "aria-label": this.getSortButtonAriaLabel(this.currentOrder) },
 		});

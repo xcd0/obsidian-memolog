@@ -52,13 +52,13 @@ export class InputForm {
 		//! ボタン群。
 		const buttonBar = this.container.createDiv({ cls: "memolog-input-buttons" });
 
-		//! 添付ボタン。
+		//! 添付ボタン（アイコンのみ）。
 		const attachBtn = buttonBar.createEl("button", {
 			cls: "memolog-attach-btn",
+			attr: { "aria-label": "ファイルを添付" },
 		});
 		const attachIcon = attachBtn.createDiv({ cls: "memolog-attach-icon" });
 		setIcon(attachIcon, "paperclip");
-		attachBtn.createSpan({ text: "添付" });
 
 		//! ファイル入力（非表示）。
 		const fileInput = buttonBar.createEl("input", {
@@ -83,11 +83,13 @@ export class InputForm {
 			}
 		});
 
-		//! 送信ボタン。
+		//! 送信ボタン（アイコン）。
 		const submitBtn = buttonBar.createEl("button", {
 			cls: "memolog-submit-btn",
-			text: "追加",
+			attr: { "aria-label": "メモを追加" },
 		});
+		const submitIcon = submitBtn.createDiv({ cls: "memolog-submit-icon" });
+		setIcon(submitIcon, "plus-circle");
 
 		//! 送信ボタンのイベント。
 		submitBtn.addEventListener("click", () => {

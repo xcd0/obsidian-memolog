@@ -2,7 +2,7 @@ import { App } from "obsidian";
 import { MemoEntry, SortOrder } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CacheManager } from "./cache-manager";
-import { v4 as uuidv4 } from "uuid";
+import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
 
@@ -71,7 +71,7 @@ export class MemoManager {
 
 		//! IDをHTMLコメントから抽出。
 		const idMatch = text.match(/<!-- memo-id: (.+?) -->/);
-		const id = idMatch ? idMatch[1] : uuidv4();
+		const id = idMatch ? idMatch[1] : uuidv7();
 
 		//! HTMLコメント行をスキップしてタイムスタンプを探す。
 		let timestampLine = lines[0];
@@ -138,7 +138,7 @@ export class MemoManager {
 				//! メモエントリを作成。
 				console.log("[memolog DEBUG] Creating memo entry...");
 				const memo: MemoEntry = {
-					id: uuidv4(),
+					id: uuidv7(),
 					category,
 					timestamp: this.generateTimestamp(),
 					content,

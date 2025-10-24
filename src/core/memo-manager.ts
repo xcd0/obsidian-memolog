@@ -136,6 +136,7 @@ export class MemoManager {
 				}
 
 				//! メモエントリを作成。
+				console.log("[memolog DEBUG] Creating memo entry...");
 				const memo: MemoEntry = {
 					id: uuidv4(),
 					category,
@@ -143,15 +144,21 @@ export class MemoManager {
 					content,
 					attachments,
 				};
+				console.log("[memolog DEBUG] Memo entry created:", { id: memo.id, content: memo.content });
 
 				//! メモをテキスト形式に変換。
+				console.log("[memolog DEBUG] Converting memo to text...");
 				const memoText = this.memoToText(memo, template);
+				console.log("[memolog DEBUG] Memo text:", memoText);
 
 				//! 挿入位置を決定（昇順: top, 降順: bottom）。
 				const position = order === "asc" ? "bottom" : "top";
+				console.log("[memolog DEBUG] Insert position:", position);
 
 				//! カテゴリ領域にメモを挿入。
+				console.log("[memolog DEBUG] Inserting text in category...");
 				await this.vaultHandler.insertTextInCategory(filePath, category, memoText, position);
+				console.log("[memolog DEBUG] Text inserted successfully");
 
 				//! キャッシュを無効化。
 				const cacheKey = `${filePath}::${category}`;

@@ -252,12 +252,23 @@ export class MemologVaultHandler {
 		text: string,
 		position: "top" | "bottom"
 	): Promise<void> {
+		console.log("[memolog DEBUG] insertTextInCategory called:", { filePath, category, position });
+		console.log("[memolog DEBUG] Text to insert:", text);
 		try {
+			console.log("[memolog DEBUG] Acquiring lock for insertTextInCategory...");
 			await this.fileLock.acquire(filePath);
+			console.log("[memolog DEBUG] Lock acquired for insertTextInCategory");
 
+			console.log("[memolog DEBUG] Reading file for insertTextInCategory...");
 			const content = await this.readFile(filePath);
+			console.log("[memolog DEBUG] File content length:", content.length);
+
 			const lines = content.split("\n");
+			console.log("[memolog DEBUG] Lines count:", lines.length);
+
+			console.log("[memolog DEBUG] Finding tag pair for category:", category);
 			const pair = TagManager.findTagPairByCategory(content, category);
+			console.log("[memolog DEBUG] Tag pair found:", pair);
 
 			if (!pair) {
 				throw new Error(`Category "${category}" not found in file: ${filePath}`);
@@ -265,14 +276,22 @@ export class MemologVaultHandler {
 
 			//! 挿入位置を決定。
 			const insertLine = position === "top" ? pair.startLine + 1 : pair.endLine;
+			console.log("[memolog DEBUG] Insert line:", insertLine);
 
 			//! テキストを挿入。
 			lines.splice(insertLine, 0, text);
+			console.log("[memolog DEBUG] Text spliced into lines");
 
 			const newContent = lines.join("\n");
+			console.log("[memolog DEBUG] New content length:", newContent.length);
+
+			console.log("[memolog DEBUG] Writing file from insertTextInCategory...");
 			await this.writeFile(filePath, newContent);
+			console.log("[memolog DEBUG] File written from insertTextInCategory");
 		} finally {
+			console.log("[memolog DEBUG] Releasing lock for insertTextInCategory...");
 			this.fileLock.release(filePath);
+			console.log("[memolog DEBUG] Lock released for insertTextInCategory");
 		}
 	}
 

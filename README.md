@@ -83,15 +83,27 @@ cp main.js manifest.json styles.css ~/Desktop/dummy/vault/.obsidian/plugins/obsi
 
 **注意**: Vaultのパスは環境に合わせて変更してください。
 
-**方法2: シンボリックリンク（開発効率化）**
+**方法2: シンボリックリンク（開発効率化・推奨）**
+
+セットアップスクリプトを使用すると、プロジェクトディレクトリとVaultが自動的にリンクされます:
 
 ```bash
-# Windowsの場合（管理者権限が必要）
-mklink /D %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog %CD%
+# Windowsの場合（管理者権限で実行）
+setup-dev.bat
 
 # Linux/macOSの場合
-ln -s $(pwd) ~/path/to/vault/.obsidian/plugins/obsidian-memolog
+chmod +x setup-dev.sh
+./setup-dev.sh
 ```
+
+**利点:**
+- ビルド後のファイルコピーが不要
+- `npm run dev`で自動ビルド → Obsidianで即座に反映
+- 開発効率が大幅に向上
+
+**注意（Windows）:**
+- 管理者権限が必要です
+- コマンドプロンプトを右クリック →「管理者として実行」
 
 #### 3. Obsidianでプラグインを有効化
 

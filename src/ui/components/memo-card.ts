@@ -200,38 +200,13 @@ export class MemoCard {
 	private formatTimestamp(timestamp: string): string {
 		const date = new Date(timestamp);
 
-		//! 相対時間表示（例: "5分前", "2時間前", "3日前"）。
-		const now = new Date();
-		const diff = now.getTime() - date.getTime();
-
-		const seconds = Math.floor(diff / 1000);
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
-
-		if (seconds < 60) {
-			return "たった今";
-		} else if (minutes < 60) {
-			return `${minutes}分前`;
-		} else if (hours < 24) {
-			return `${hours}時間前`;
-		} else if (days < 7) {
-			return `${days}日前`;
-		} else {
-			//! 7日以上前は絶対時間表示。
-			return this.formatAbsoluteTimestamp(date);
-		}
-	}
-
-	//! 絶対時間をフォーマットする。
-	private formatAbsoluteTimestamp(date: Date): string {
-		const year = date.getFullYear();
 		const month = (date.getMonth() + 1).toString().padStart(2, "0");
 		const day = date.getDate().toString().padStart(2, "0");
 		const hours = date.getHours().toString().padStart(2, "0");
 		const minutes = date.getMinutes().toString().padStart(2, "0");
 
-		return `${year}-${month}-${day} ${hours}:${minutes}`;
+		//! 常に日付+時刻を表示。
+		return `${month}-${day} ${hours}:${minutes}`;
 	}
 
 	//! 編集モードを切り替える。

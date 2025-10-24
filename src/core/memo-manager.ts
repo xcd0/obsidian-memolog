@@ -57,8 +57,8 @@ export class MemoManager {
 				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
 				: "";
 
-		//! IDをHTMLコメントとして埋め込む。
-		return `<!-- memo-id: ${memo.id} -->\n${timestamp}\n${content}${attachments}\n`;
+		//! IDとタイムスタンプをHTMLコメントとして埋め込む。
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp} -->\n${timestamp}\n${content}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -69,9 +69,10 @@ export class MemoManager {
 			return null;
 		}
 
-		//! IDをHTMLコメントから抽出。
-		const idMatch = text.match(/<!-- memo-id: (.+?) -->/);
-		const id = idMatch ? idMatch[1] : uuidv7();
+		//! IDとタイムスタンプをHTMLコメントから抽出。
+		const commentMatch = text.match(/<!-- memo-id: (.+?)(?:, timestamp: (.+?))? -->/);
+		const id = commentMatch?.[1] || uuidv7();
+		let timestamp = commentMatch?.[2] || null;
 
 		//! HTMLコメント行をスキップしてタイムスタンプを探す。
 		let timestampLine = lines[0];
@@ -82,8 +83,11 @@ export class MemoManager {
 			contentStartIndex = 2;
 		}
 
-		const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
-		const timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
+		//! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
+		if (!timestamp) {
+			const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
+			timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
+		}
 
 		//! 残りの行を本文として扱う。
 		const content = lines.slice(contentStartIndex).join("\n").trim();

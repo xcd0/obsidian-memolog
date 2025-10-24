@@ -479,7 +479,7 @@ export class MemologSidebar extends ItemView {
 				category,
 				content,
 				this.currentOrder,
-				undefined,
+				settings.memoTemplate,
 				copiedAttachments
 			);
 			console.log("[memolog DEBUG] addMemo result:", result);

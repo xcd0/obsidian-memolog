@@ -59,13 +59,20 @@ export class MemoManager {
 				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
 				: "";
 
-		//! テンプレート内の{{content}}を実際のメモ内容に置換。
-		const bodyWithContent = formattedTemplate.replace(/\{\{content\}\}/g, content);
+		//! ボディを構築。
+		let body: string;
+		if (actualTemplate.includes("{{content}}")) {
+			//! テンプレート内の{{content}}を実際のメモ内容に置換。
+			body = formattedTemplate.replace(/\{\{content\}\}/g, content);
+		} else {
+			//! テンプレートに{{content}}がない場合は、タイムスタンプの後に改行してcontentを追加。
+			body = `${formattedTemplate}\n${content}`;
+		}
 
 		//! ID、タイムスタンプ、テンプレートをHTMLコメントとして埋め込む。
 		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
 		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${bodyWithContent}${attachments}\n`;
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${body}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -101,17 +108,12 @@ export class MemoManager {
 			}
 		}
 
-		//! HTMLコメント行をスキップしてタイムスタンプを探す。
-		let timestampLine = lines[0];
-		let contentStartIndex = 1;
-
-		if (lines[0].startsWith("<!--")) {
-			timestampLine = lines[1] || "";
-			contentStartIndex = 2;
-		}
+		//! HTMLコメント行をスキップ。
+		let contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
 
 		//! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
-		if (!timestamp) {
+		if (!timestamp && contentStartIndex < lines.length) {
+			const timestampLine = lines[contentStartIndex];
 			const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
 			timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
 		}
@@ -119,32 +121,11 @@ export class MemoManager {
 		//! 本文を抽出。
 		let content: string;
 
-		//! テンプレートに{{content}}が含まれている場合は、タイムスタンプ行以降の全体から抽出。
+		//! テンプレートに{{content}}が含まれている場合、HTMLコメントの次の行から全体がコンテンツ。
 		if (template && template.includes("{{content}}")) {
-			//! テンプレートをフォーマットして、{{content}}の位置を特定。
-			const formattedTemplate = this.formatTimestamp(timestamp, template);
-			const parts = formattedTemplate.split("{{content}}");
-
-			//! タイムスタンプ行以降の全テキスト。
-			const bodyText = lines.slice(contentStartIndex).join("\n");
-
-			//! 前半部分と後半部分を削除してcontentを抽出。
-			let extracted = bodyText;
-			if (parts[0]) {
-				const startIndex = extracted.indexOf(parts[0]);
-				if (startIndex !== -1) {
-					extracted = extracted.substring(startIndex + parts[0].length);
-				}
-			}
-			if (parts[1]) {
-				const endIndex = extracted.lastIndexOf(parts[1]);
-				if (endIndex !== -1) {
-					extracted = extracted.substring(0, endIndex);
-				}
-			}
-			content = extracted.trim();
+			content = lines.slice(contentStartIndex).join("\n").trim();
 		} else {
-			//! デフォルト: タイムスタンプ行をスキップして、その次の行から本文として扱う。
+			//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
 			const actualContentStartIndex = contentStartIndex + 1;
 			content = lines.slice(actualContentStartIndex).join("\n").trim();
 		}
@@ -155,10 +136,13 @@ export class MemoManager {
 			? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
 			: undefined;
 
+		//! timestampがnullの場合はデフォルト値を設定。
+		const finalTimestamp = timestamp || this.generateTimestamp();
+
 		return {
 			id,
 			category,
-			timestamp,
+			timestamp: finalTimestamp,
 			content,
 			attachments,
 			template,

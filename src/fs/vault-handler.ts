@@ -4,34 +4,45 @@ import { TagManager, TagPair } from "../core/tag-manager";
 //! ファイルロックの管理。
 class FileLock {
 	private locks: Map<string, Promise<void>>;
+	private resolvers: Map<string, () => void>;
 
 	constructor() {
 		this.locks = new Map();
+		this.resolvers = new Map();
 	}
 
 	//! ファイルに対してロックを取得する。
 	async acquire(filePath: string): Promise<void> {
+		console.log("[memolog DEBUG] FileLock.acquire called:", filePath);
+		//! 既存のロックが解放されるまで待機。
 		while (this.locks.has(filePath)) {
+			console.log("[memolog DEBUG] Waiting for existing lock:", filePath);
 			await this.locks.get(filePath);
 		}
 
-		let release!: () => void;
-		const promise = new Promise<void>((resolve) => {
-			release = resolve;
+		console.log("[memolog DEBUG] Acquiring lock:", filePath);
+		//! 新しいロックを作成。
+		let resolve!: () => void;
+		const promise = new Promise<void>((r) => {
+			resolve = r;
 		});
 
 		this.locks.set(filePath, promise);
-
-		return new Promise((resolve) => {
-			resolve();
-			//! ロック解放用の関数を返す。
-			return release;
-		});
+		this.resolvers.set(filePath, resolve);
+		console.log("[memolog DEBUG] Lock acquired:", filePath);
 	}
 
 	//! ファイルのロックを解放する。
 	release(filePath: string): void {
+		console.log("[memolog DEBUG] FileLock.release called:", filePath);
+		const resolve = this.resolvers.get(filePath);
+		if (resolve) {
+			console.log("[memolog DEBUG] Resolving lock promise:", filePath);
+			resolve();
+		}
 		this.locks.delete(filePath);
+		this.resolvers.delete(filePath);
+		console.log("[memolog DEBUG] Lock released:", filePath);
 	}
 }
 

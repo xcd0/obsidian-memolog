@@ -125,10 +125,21 @@ export class MemologSidebar extends ItemView {
 
 	//! カレンダー領域を作成する。
 	private createCalendarArea(container: HTMLElement): HTMLElement {
-		const calendarArea = container.createDiv({ cls: "memolog-calendar-area" });
-		//! デフォルトで非表示。
-		calendarArea.style.display = "none";
-		this.calendarAreaEl = calendarArea;
+		//! オーバーレイラッパー（背景）。
+		const calendarOverlay = container.createDiv({ cls: "memolog-calendar-overlay" });
+		calendarOverlay.style.display = "none";
+
+		//! カレンダーコンテンツ（縮小版）。
+		const calendarArea = calendarOverlay.createDiv({ cls: "memolog-calendar-area" });
+
+		//! オーバーレイ背景クリックで閉じる。
+		calendarOverlay.addEventListener("click", (e) => {
+			if (e.target === calendarOverlay) {
+				this.toggleCalendar();
+			}
+		});
+
+		this.calendarAreaEl = calendarOverlay;
 		return calendarArea;
 	}
 
@@ -442,8 +453,17 @@ export class MemologSidebar extends ItemView {
 				}
 			}
 
+			//! デバッグ: メモ追加前のディレクトリ確認。
+			const dirPath = filePath.split("/").slice(0, -1).join("/");
+			console.log("[memolog DEBUG] Parent directory path:", dirPath);
+			console.log(
+				"[memolog DEBUG] Directory exists:",
+				this.memoManager.vaultHandler.folderExists(dirPath)
+			);
+
 			//! メモを追加。
-			await this.memoManager.addMemo(
+			console.log("[memolog DEBUG] Calling addMemo...");
+			const result = await this.memoManager.addMemo(
 				filePath,
 				category,
 				content,
@@ -451,13 +471,24 @@ export class MemologSidebar extends ItemView {
 				undefined,
 				copiedAttachments
 			);
+			console.log("[memolog DEBUG] addMemo result:", result);
+
+			//! デバッグ: ファイルが作成されたか確認。
+			console.log(
+				"[memolog DEBUG] File exists after addMemo:",
+				this.memoManager.vaultHandler.fileExists(filePath)
+			);
 
 			//! メモリストを再読み込み。
 			await this.loadMemos();
 
 			new Notice("メモを追加しました");
 		} catch (error) {
-			console.error("メモ追加エラー:", error);
+			console.error("[memolog DEBUG] メモ追加エラー:", error);
+			if (error instanceof Error) {
+				console.error("[memolog DEBUG] Error message:", error.message);
+				console.error("[memolog DEBUG] Error stack:", error.stack);
+			}
 			new Notice("メモの追加に失敗しました");
 		}
 	}

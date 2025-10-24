@@ -59,17 +59,25 @@ export class MemologVaultHandler {
 
 	//! ファイルを作成する。
 	async createFile(filePath: string, content: string): Promise<TFile> {
+		console.log("[memolog DEBUG] createFile called with:", filePath);
 		try {
 			await this.fileLock.acquire(filePath);
 
 			//! 親ディレクトリが存在しない場合は作成。
 			const dirPath = filePath.split("/").slice(0, -1).join("/");
+			console.log("[memolog DEBUG] Parent directory:", dirPath);
 			if (dirPath && !this.folderExists(dirPath)) {
+				console.log("[memolog DEBUG] Parent directory does not exist, creating...");
 				await this.createFolder(dirPath);
 			}
 
+			console.log("[memolog DEBUG] Creating file:", filePath);
 			const file = await this.app.vault.create(filePath, content);
+			console.log("[memolog DEBUG] File created successfully:", filePath);
 			return file;
+		} catch (error) {
+			console.error("[memolog DEBUG] createFile error:", error);
+			throw error;
 		} finally {
 			this.fileLock.release(filePath);
 		}
@@ -77,15 +85,21 @@ export class MemologVaultHandler {
 
 	//! フォルダを作成する。
 	async createFolder(folderPath: string): Promise<void> {
+		console.log("[memolog DEBUG] createFolder called with:", folderPath);
 		if (this.folderExists(folderPath)) {
+			console.log("[memolog DEBUG] Folder already exists:", folderPath);
 			return;
 		}
 
 		try {
+			console.log("[memolog DEBUG] Creating folder:", folderPath);
 			await this.app.vault.createFolder(folderPath);
+			console.log("[memolog DEBUG] Folder created successfully:", folderPath);
 		} catch (error) {
+			console.log("[memolog DEBUG] createFolder error:", error);
 			//! 既に存在する場合はエラーを無視。
 			if (!this.folderExists(folderPath)) {
+				console.error("[memolog DEBUG] Folder creation failed and folder does not exist:", folderPath);
 				throw error;
 			}
 		}

@@ -387,6 +387,15 @@ export class MemologSidebar extends ItemView {
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 			const category = this.currentCategory || settings.defaultCategory;
 
+			//! デバッグ: 設定を確認。
+			console.log("[memolog DEBUG] Settings:", {
+				rootDirectory: settings.rootDirectory,
+				category,
+				pathFormat: settings.pathFormat,
+				saveUnit: settings.saveUnit,
+				useDirectoryCategory: settings.useDirectoryCategory,
+			});
+
 			//! ファイルパスを生成。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
@@ -401,6 +410,9 @@ export class MemologSidebar extends ItemView {
 						settings.saveUnit,
 						settings.useDirectoryCategory
 					);
+
+			//! デバッグ: 生成されたファイルパスを確認。
+			console.log("[memolog DEBUG] Generated filePath:", filePath);
 
 			//! 添付ファイルをVaultにコピー。
 			const copiedAttachments: string[] = [];

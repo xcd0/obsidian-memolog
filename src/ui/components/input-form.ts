@@ -83,13 +83,13 @@ export class InputForm {
 			}
 		});
 
-		//! 送信ボタン（アイコン）。
+		//! 送信ボタン（POSTアイコン）。
 		const submitBtn = buttonBar.createEl("button", {
 			cls: "memolog-submit-btn",
 			attr: { "aria-label": "メモを追加" },
 		});
 		const submitIcon = submitBtn.createDiv({ cls: "memolog-submit-icon" });
-		setIcon(submitIcon, "plus-circle");
+		setIcon(submitIcon, "send");
 
 		//! 送信ボタンのイベント。
 		submitBtn.addEventListener("click", () => {

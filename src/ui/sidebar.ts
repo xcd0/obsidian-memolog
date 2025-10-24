@@ -217,12 +217,19 @@ export class MemologSidebar extends ItemView {
 			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
-			const filePath = PathGenerator.generateFilePath(
-				settings.rootDirectory,
-				category,
-				settings.saveUnit,
-				settings.useDirectoryCategory
-			);
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						category,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						category,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
 
 			//! ファイルが存在するか確認。
 			const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
@@ -381,12 +388,19 @@ export class MemologSidebar extends ItemView {
 			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
-			const filePath = PathGenerator.generateFilePath(
-				settings.rootDirectory,
-				category,
-				settings.saveUnit,
-				settings.useDirectoryCategory
-			);
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						category,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						category,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
 
 			//! 添付ファイルをVaultにコピー。
 			const copiedAttachments: string[] = [];
@@ -444,12 +458,19 @@ export class MemologSidebar extends ItemView {
 			const category = this.currentCategory || settings.defaultCategory;
 
 			//! ファイルパスを生成。
-			const filePath = PathGenerator.generateFilePath(
-				settings.rootDirectory,
-				category,
-				settings.saveUnit,
-				settings.useDirectoryCategory
-			);
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						category,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						category,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
 
 			//! メモを削除。
 			const deleted = await this.memoManager.deleteMemo(filePath, category, memoId);

@@ -112,15 +112,26 @@ export class MemoManager {
 		template?: string,
 		attachments?: string[]
 	): Promise<MemoEntry> {
+		console.log("[memolog DEBUG] addMemo called with:", { filePath, category, order });
 		const result = await this.errorHandler.wrap(
 			(async () => {
 				//! タグペアが存在しない場合は初期化。
-				if (!this.vaultHandler.fileExists(filePath)) {
+				console.log("[memolog DEBUG] Checking if file exists:", filePath);
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				console.log("[memolog DEBUG] File exists:", fileExists);
+
+				if (!fileExists) {
+					console.log("[memolog DEBUG] File does not exist, initializing tag pair...");
 					await this.vaultHandler.initializeTagPair(filePath, category, { order });
+					console.log("[memolog DEBUG] Tag pair initialized");
 				} else {
+					console.log("[memolog DEBUG] File exists, checking for tag pair...");
 					const pair = await this.vaultHandler.findTagPairByCategory(filePath, category);
+					console.log("[memolog DEBUG] Tag pair found:", !!pair);
 					if (!pair) {
+						console.log("[memolog DEBUG] Tag pair not found, initializing...");
 						await this.vaultHandler.initializeTagPair(filePath, category, { order });
+						console.log("[memolog DEBUG] Tag pair initialized");
 					}
 				}
 

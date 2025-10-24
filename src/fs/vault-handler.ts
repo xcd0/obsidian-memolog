@@ -118,15 +118,21 @@ export class MemologVaultHandler {
 
 	//! ファイルに書き込む。
 	async writeFile(filePath: string, content: string): Promise<void> {
+		console.log("[memolog DEBUG] writeFile called:", filePath);
 		try {
 			await this.fileLock.acquire(filePath);
 
 			const file = this.app.vault.getAbstractFileByPath(filePath);
+			console.log("[memolog DEBUG] File from vault:", file ? "exists" : "null", file?.constructor.name);
 
 			if (file instanceof TFile) {
+				console.log("[memolog DEBUG] File is TFile, modifying...");
 				await this.app.vault.modify(file, content);
+				console.log("[memolog DEBUG] File modified successfully");
 			} else {
+				console.log("[memolog DEBUG] File does not exist, creating...");
 				await this.createFile(filePath, content);
+				console.log("[memolog DEBUG] File created via createFile");
 			}
 		} finally {
 			this.fileLock.release(filePath);
@@ -203,16 +209,27 @@ export class MemologVaultHandler {
 		category: string,
 		metadata?: { format?: string; order?: "asc" | "desc"; timestamp?: string }
 	): Promise<void> {
+		console.log("[memolog DEBUG] initializeTagPair called:", { filePath, category, metadata });
 		let content = "";
 
-		if (this.fileExists(filePath)) {
+		const fileExists = this.fileExists(filePath);
+		console.log("[memolog DEBUG] File exists in initializeTagPair:", fileExists);
+
+		if (fileExists) {
+			console.log("[memolog DEBUG] Reading existing file...");
 			content = await this.readFile(filePath);
+			console.log("[memolog DEBUG] File content length:", content.length);
 		}
 
+		console.log("[memolog DEBUG] Calling TagManager.initializeTagPair...");
 		const newContent = TagManager.initializeTagPair(content, category, metadata);
+		console.log("[memolog DEBUG] New content length:", newContent.length);
+		console.log("[memolog DEBUG] Content changed:", newContent !== content);
 
 		if (newContent !== content) {
+			console.log("[memolog DEBUG] Writing file...");
 			await this.writeFile(filePath, newContent);
+			console.log("[memolog DEBUG] File written successfully");
 		}
 	}
 

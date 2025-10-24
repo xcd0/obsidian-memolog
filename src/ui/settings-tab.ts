@@ -352,8 +352,8 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! カラー選択。
-		const colorSetting = new Setting(categoryDiv).setName("カラー");
+		//! プリセットカラー選択。
+		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー");
 
 		//! プリセットカラーボタンを追加。
 		const colorContainer = colorSetting.controlEl.createDiv({ cls: "memolog-color-preset-container" });
@@ -375,16 +375,35 @@ export class MemologSettingTab extends PluginSettingTab {
 			});
 		}
 
-		//! カラーピッカーを追加。
-		colorSetting.addColorPicker((colorPicker) =>
-			colorPicker.setValue(category.color).onChange(async (value) => {
-				const updatedCategories = [...settings.categories];
-				updatedCategories[index] = { ...updatedCategories[index], color: value };
-				await this.plugin.settingsManager.updateGlobalSettings({
-					categories: updatedCategories,
-				});
-			})
-		);
+		//! カラーコード入力（カラーピッカー + テキスト入力欄）。
+		new Setting(categoryDiv)
+			.setName("カラーコード")
+			.addColorPicker((colorPicker) =>
+				colorPicker.setValue(category.color).onChange(async (value) => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], color: value };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.display();
+				})
+			)
+			.addText((text) =>
+				text
+					.setValue(category.color)
+					.setPlaceholder("#3b82f6")
+					.onChange(async (value) => {
+						//! #で始まる6桁の16進数かチェック。
+						if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+							const updatedCategories = [...settings.categories];
+							updatedCategories[index] = { ...updatedCategories[index], color: value };
+							await this.plugin.settingsManager.updateGlobalSettings({
+								categories: updatedCategories,
+							});
+							this.display();
+						}
+					})
+			);
 
 		//! アイコン選択。
 		const iconSetting = new Setting(categoryDiv)

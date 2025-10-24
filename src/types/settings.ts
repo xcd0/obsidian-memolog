@@ -68,7 +68,7 @@ export interface LocalSettings {
 
 //! デフォルトのグローバル設定。
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
-	useDirectoryCategory: true,
+	useDirectoryCategory: false,
 	categories: [
 		{
 			name: "仕事",

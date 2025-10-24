@@ -52,17 +52,20 @@ export class MemoManager {
 	private memoToText(memo: MemoEntry, template?: string): string {
 		//! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
 		const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M";
-		const timestamp = this.formatTimestamp(memo.timestamp, actualTemplate);
+		const formattedTemplate = this.formatTimestamp(memo.timestamp, actualTemplate);
 		const content = memo.content;
 		const attachments =
 			memo.attachments && memo.attachments.length > 0
 				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
 				: "";
 
+		//! テンプレート内の{{content}}を実際のメモ内容に置換。
+		const bodyWithContent = formattedTemplate.replace(/\{\{content\}\}/g, content);
+
 		//! ID、タイムスタンプ、テンプレートをHTMLコメントとして埋め込む。
 		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
 		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${timestamp}\n${content}${attachments}\n`;
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${bodyWithContent}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -113,8 +116,38 @@ export class MemoManager {
 			timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
 		}
 
-		//! 残りの行を本文として扱う。
-		const content = lines.slice(contentStartIndex).join("\n").trim();
+		//! 本文を抽出。
+		let content: string;
+
+		//! テンプレートに{{content}}が含まれている場合は、タイムスタンプ行以降の全体から抽出。
+		if (template && template.includes("{{content}}")) {
+			//! テンプレートをフォーマットして、{{content}}の位置を特定。
+			const formattedTemplate = this.formatTimestamp(timestamp, template);
+			const parts = formattedTemplate.split("{{content}}");
+
+			//! タイムスタンプ行以降の全テキスト。
+			const bodyText = lines.slice(contentStartIndex).join("\n");
+
+			//! 前半部分と後半部分を削除してcontentを抽出。
+			let extracted = bodyText;
+			if (parts[0]) {
+				const startIndex = extracted.indexOf(parts[0]);
+				if (startIndex !== -1) {
+					extracted = extracted.substring(startIndex + parts[0].length);
+				}
+			}
+			if (parts[1]) {
+				const endIndex = extracted.lastIndexOf(parts[1]);
+				if (endIndex !== -1) {
+					extracted = extracted.substring(0, endIndex);
+				}
+			}
+			content = extracted.trim();
+		} else {
+			//! デフォルト: タイムスタンプ行をスキップして、その次の行から本文として扱う。
+			const actualContentStartIndex = contentStartIndex + 1;
+			content = lines.slice(actualContentStartIndex).join("\n").trim();
+		}
 
 		//! 添付ファイルを抽出（[[filename]]形式）。
 		const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g);

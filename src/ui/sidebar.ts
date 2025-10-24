@@ -217,6 +217,7 @@ export class MemologSidebar extends ItemView {
 			this.memos,
 			{
 				onDelete: (memoId) => void this.handleDelete(memoId),
+				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 			},
 			settings.enableDailyNotes
@@ -538,6 +539,48 @@ export class MemologSidebar extends ItemView {
 		} catch (error) {
 			console.error("メモ削除エラー:", error);
 			new Notice("メモの削除に失敗しました");
+		}
+	}
+
+	//! メモ編集保存処理。
+	private async handleSaveEdit(memoId: string, newContent: string): Promise<void> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const category = this.currentCategory || settings.defaultCategory;
+
+			//! ファイルパスを生成。
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						category,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						category,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
+
+			//! メモを更新。
+			const updated = await this.memoManager.updateMemo(
+				filePath,
+				category,
+				memoId,
+				newContent
+			);
+
+			if (updated) {
+				//! メモリストを再読み込み。
+				await this.loadMemos();
+			} else {
+				new Notice("メモの更新に失敗しました");
+			}
+		} catch (error) {
+			console.error("メモ更新エラー:", error);
+			new Notice("メモの更新に失敗しました");
 		}
 	}
 

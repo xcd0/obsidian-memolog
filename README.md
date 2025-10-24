@@ -8,6 +8,8 @@ Obsidian上でメモを素早く記録・整理・回顧するプラグイン (v
 
 memologは、Obsidianでメモを効率的に管理するためのプラグインです。
 
+詳細な仕様については [SPEC.md](./SPEC.md) をご参照ください。
+
 ### 主な機能
 
 #### v0.0.8 (最新 - プロトタイプ版)
@@ -85,15 +87,12 @@ cp main.js manifest.json styles.css ~/Desktop/dummy/vault/.obsidian/plugins/obsi
 
 **方法2: シンボリックリンク（開発効率化・推奨）**
 
-セットアップスクリプトを使用すると、プロジェクトディレクトリとVaultが自動的にリンクされます:
-
 ```bash
 # Windowsの場合（管理者権限で実行）
-setup-dev.bat
+mklink /D "%USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog" "%CD%"
 
 # Linux/macOSの場合
-chmod +x setup-dev.sh
-./setup-dev.sh
+ln -s "$(pwd)" ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
 ```
 
 **利点:**

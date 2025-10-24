@@ -1,45 +1,109 @@
-# 開発者向けガイド
+# Claude Code コミットガイドライン
 
-memolog v0.x の開発に参加いただきありがとうございます。
+このドキュメントは、Claude がコミットする際に気をつけるべきガイドラインです。
 
-## 開発環境のセットアップ
+## コミットメッセージ形式
 
-### 必要な環境
+### Angular Conventional Commit形式（日本語）
 
-- Node.js 18+
-- npm 9+
-- Git
+コミットメッセージの1行目は以下の形式に従う:
 
-### セットアップ手順
+```
+<type>: <件名>
 
-```bash
-# リポジトリをクローン
-git clone https://github.com/xcd0/obsidian-memolog.git
-cd obsidian-memolog/v0
+<本文（オプション）>
 
-# 依存関係をインストール
-npm install
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-# 開発モードで起動
-npm run dev
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Type（プレフィックス）
+
+- `feat`: 新機能追加
+- `fix`: バグ修正
+- `docs`: ドキュメント変更のみ
+- `style`: コードの意味に影響を与えない変更（空白、フォーマット等）
+- `refactor`: バグ修正でも機能追加でもないコードの変更
+- `perf`: パフォーマンス向上のための変更
+- `test`: テストの追加や修正
+- `chore`: ビルドプロセスやツールの変更
+
+### 件名（Subject）
+
+- 簡潔に変更内容を記述（50文字以内推奨）
+- 日本語で記述
+- 命令形で書く（「追加」「修正」「変更」など）
+- 末尾にピリオドを付けない
+
+### 本文（Body）
+
+- 必要に応じて変更の詳細を記述
+- 箇条書きで複数の変更をリストアップ
+- 「何を」「なぜ」変更したかを明確に
+
+## コミット例
+
+### 良い例
+
+```
+feat: カレンダー表示機能を追加
+
+主な変更:
+- CalendarViewコンポーネントを実装
+- 日付選択時にメモをフィルタリング
+- 月次ナビゲーション機能を追加
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+```
+fix: メモ削除時にエラーが発生する問題を修正
+
+- 削除対象のメモIDが見つからない場合の処理を追加
+- エラーハンドリングを改善
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### 悪い例
+
+```
+update code  # 英語、抽象的すぎる
+```
+
+```
+カテゴリタブを修正しました。  # typeなし、詳細不明
 ```
 
 ## コーディング規約
 
 ### TypeScript
 
-- strict mode必須
-- インデントはtab使用
-- コメントは日本語で記述
-- doxygen形式のコメント (`//!`) を使用
+- **strict mode**: 必須
+- **インデント**: tab使用
+- **コメント**: 日本語で記述、doxygen形式 (`//!`) を使用
+- **命名規則**:
+  - クラス: PascalCase
+  - 関数/変数: camelCase
+  - 定数: UPPER_SNAKE_CASE
+  - プライベートメンバー: `_` プレフィックス
 
-### 例
+### コメント例
 
 ```typescript
 //! ユーザー設定を管理するクラス。
-class SettingsManager {
+export class SettingsManager {
 	//! 設定ファイルを読み込む。
 	async loadSettings(): Promise<Settings> {
+		//! ファイルが存在しない場合はデフォルト設定を返す。
+		if (!this.fileExists()) {
+			return DEFAULT_SETTINGS;
+		}
 		// 実装
 	}
 }
@@ -47,71 +111,38 @@ class SettingsManager {
 
 ## Git運用
 
-### ブランチ戦略
+### 現在のフェーズ: v0.0.x (プロトタイプ版)
 
-- `main`: 安定版
+- **ブランチ**: `master`で直接作業
+- **目的**: v0.1.0の仕様策定のための試験的実装
+
+### v0.1.0以降の運用（将来）
+
+- `master`: 安定版
 - `develop`: 開発版
 - `feature/xxx`: 機能開発
 - `hotfix/xxx`: 緊急修正
 
-### コミットメッセージ
-
-Angular Conventional Commit形式（日本語）を使用:
-
-- `feat: 新機能を追加`
-- `fix: バグを修正`
-- `docs: ドキュメント更新`
-- `refactor: リファクタリング`
-- `test: テスト追加・修正`
-- `chore: ビルド・ツール関連`
-
-### 例
-
-```
-feat: カレンダー表示機能を追加
-
-- カレンダーコンポーネントを実装
-- 日付選択機能を実装
-- メモフィルタリング機能を実装
-```
-
 ## テスト
 
-### テストの実行
+### テスト実行
 
 ```bash
 # 全テスト実行
 npm run test
 
-# ウォッチモード
-npm run test:watch
-
-# カバレッジ
-npm run test -- --coverage
+# カバレッジ測定
+npm run test:coverage
 ```
 
-### テスト作成
+### テスト作成ルール
 
 - 各クラス・関数ごとに単体テストを作成
 - `test/` ディレクトリに配置
-- ファイル名は `*.test.ts` または `*.spec.ts`
-
-## プルリクエスト
-
-1. featureブランチを作成
-2. 変更を実装
-3. テストを追加・更新
-4. Lintとテストをパス
-5. プルリクエストを作成
-
-## 質問・問題報告
-
-- GitHub Issuesで報告してください
-- 再現手順を明記してください
+- ファイル名は `*.test.ts`
 
 ## ライセンス
 
 CC0 1.0 Universal (Public Domain)
 
 本プロジェクトに貢献されたコードは、CC0 1.0 Universalライセンスの下で公開されます。
-貢献することにより、あなたの貢献に対する著作権を放棄することに同意したものとみなされます。

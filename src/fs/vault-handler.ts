@@ -130,23 +130,24 @@ export class MemologVaultHandler {
 	//! ファイルに書き込む。
 	async writeFile(filePath: string, content: string): Promise<void> {
 		console.log("[memolog DEBUG] writeFile called:", filePath);
-		try {
-			await this.fileLock.acquire(filePath);
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		console.log("[memolog DEBUG] File from vault:", file ? "exists" : "null", file?.constructor.name);
 
-			const file = this.app.vault.getAbstractFileByPath(filePath);
-			console.log("[memolog DEBUG] File from vault:", file ? "exists" : "null", file?.constructor.name);
-
-			if (file instanceof TFile) {
-				console.log("[memolog DEBUG] File is TFile, modifying...");
+		if (file instanceof TFile) {
+			//! ファイルが存在する場合は修正。
+			console.log("[memolog DEBUG] File is TFile, modifying...");
+			try {
+				await this.fileLock.acquire(filePath);
 				await this.app.vault.modify(file, content);
 				console.log("[memolog DEBUG] File modified successfully");
-			} else {
-				console.log("[memolog DEBUG] File does not exist, creating...");
-				await this.createFile(filePath, content);
-				console.log("[memolog DEBUG] File created via createFile");
+			} finally {
+				this.fileLock.release(filePath);
 			}
-		} finally {
-			this.fileLock.release(filePath);
+		} else {
+			//! ファイルが存在しない場合は作成（createFileが内部でロックを取得）。
+			console.log("[memolog DEBUG] File does not exist, creating...");
+			await this.createFile(filePath, content);
+			console.log("[memolog DEBUG] File created via createFile");
 		}
 	}
 

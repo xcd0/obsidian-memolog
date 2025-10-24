@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, TFile, setIcon } from "obsidian";
 import MemologPlugin from "../../main";
 import { MemoEntry, SortOrder } from "../types";
 import { MemoManager } from "../core/memo-manager";
@@ -123,23 +123,33 @@ export class MemologSidebar extends ItemView {
 		return tabsContainer;
 	}
 
-	//! カレンダー領域を作成する。
+	//! カレンダー領域を作成する（ドロワーメニュー）。
 	private createCalendarArea(container: HTMLElement): HTMLElement {
-		//! オーバーレイラッパー（背景）。
-		const calendarOverlay = container.createDiv({ cls: "memolog-calendar-overlay" });
-		calendarOverlay.style.display = "none";
+		//! ドロワーオーバーレイ（背景）。
+		const drawerOverlay = container.createDiv({ cls: "memolog-drawer-overlay" });
+		drawerOverlay.style.display = "none";
 
-		//! カレンダーコンテンツ（縮小版）。
-		const calendarArea = calendarOverlay.createDiv({ cls: "memolog-calendar-area" });
+		//! ドロワーコンテンツ（左からスライドイン）。
+		const drawerContent = drawerOverlay.createDiv({ cls: "memolog-drawer-content" });
+
+		//! ドロワーヘッダー。
+		const drawerHeader = drawerContent.createDiv({ cls: "memolog-drawer-header" });
+		drawerHeader.createDiv({ cls: "memolog-drawer-title", text: "カレンダー" });
+		const closeBtn = drawerHeader.createDiv({ cls: "memolog-drawer-close-btn" });
+		setIcon(closeBtn, "x");
+		closeBtn.addEventListener("click", () => this.toggleCalendar());
+
+		//! カレンダーコンテンツエリア（スクロール可能）。
+		const calendarArea = drawerContent.createDiv({ cls: "memolog-drawer-calendar-area" });
 
 		//! オーバーレイ背景クリックで閉じる。
-		calendarOverlay.addEventListener("click", (e) => {
-			if (e.target === calendarOverlay) {
+		drawerOverlay.addEventListener("click", (e) => {
+			if (e.target === drawerOverlay) {
 				this.toggleCalendar();
 			}
 		});
 
-		this.calendarAreaEl = calendarOverlay;
+		this.calendarAreaEl = drawerOverlay;
 		return calendarArea;
 	}
 

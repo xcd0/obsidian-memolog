@@ -144,10 +144,25 @@ export class MemologVaultHandler {
 				this.fileLock.release(filePath);
 			}
 		} else {
-			//! ファイルが存在しない場合は作成（createFileが内部でロックを取得）。
+			//! ファイルが存在しない場合は作成（ロック内で実行）。
 			console.log("[memolog DEBUG] File does not exist, creating...");
-			await this.createFile(filePath, content);
-			console.log("[memolog DEBUG] File created via createFile");
+			try {
+				await this.fileLock.acquire(filePath);
+
+				//! 親ディレクトリが存在しない場合は作成。
+				const dirPath = filePath.split("/").slice(0, -1).join("/");
+				console.log("[memolog DEBUG] Parent directory:", dirPath);
+				if (dirPath && !this.folderExists(dirPath)) {
+					console.log("[memolog DEBUG] Parent directory does not exist, creating...");
+					await this.createFolder(dirPath);
+				}
+
+				console.log("[memolog DEBUG] Creating file:", filePath);
+				await this.app.vault.create(filePath, content);
+				console.log("[memolog DEBUG] File created successfully:", filePath);
+			} finally {
+				this.fileLock.release(filePath);
+			}
 		}
 	}
 

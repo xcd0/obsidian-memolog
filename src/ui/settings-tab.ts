@@ -146,7 +146,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("メモのテンプレート")
 			.setDesc("メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます")
-			.addTextArea((text) =>
+			.addTextArea((text) => {
 				text
 					.setPlaceholder("{{content}}")
 					.setValue(settings.memoTemplate)
@@ -154,8 +154,11 @@ export class MemologSettingTab extends PluginSettingTab {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							memoTemplate: value,
 						});
-					})
-			);
+					});
+				//! textareaのサイズを大きくする。
+				text.inputEl.rows = 5;
+				text.inputEl.cols = 50;
+			});
 
 		//! ファイルパス書式設定。
 		new Setting(containerEl)

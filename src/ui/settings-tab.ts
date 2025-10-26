@@ -143,13 +143,8 @@ export class MemologSettingTab extends PluginSettingTab {
 			);
 
 		//! メモのテンプレート設定。
-		new Setting(containerEl)
+		const templateSetting = new Setting(containerEl)
 			.setName("メモのテンプレート")
-			.setDesc(
-				"メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。\n" +
-				"利用可能な書式: %Y(年), %y(年2桁), %m(月), %b(月名略), %B(月名), %d(日), " +
-				"%a(曜日略), %A(曜日), %u(曜日1-7), %H(時24h), %I(時12h), %M(分), %S(秒), %s(UNIX時刻)"
-			)
 			.addTextArea((text) => {
 				text
 					.setPlaceholder("{{content}}")
@@ -163,6 +158,49 @@ export class MemologSettingTab extends PluginSettingTab {
 				text.inputEl.rows = 5;
 				text.inputEl.cols = 50;
 			});
+
+		//! 説明文と表を追加。
+		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" });
+		templateSetting.descEl.createEl("br");
+		templateSetting.descEl.createDiv({ text: "利用可能な書式:", cls: "setting-item-description" });
+
+		//! 書式コード一覧表を作成。
+		const table = templateSetting.descEl.createEl("table", {
+			attr: { style: "width: 100%; margin-top: 8px; border-collapse: collapse;" },
+		});
+
+		//! ヘッダー行。
+		const thead = table.createEl("thead");
+		const headerRow = thead.createEl("tr");
+		headerRow.createEl("th", { text: "書式", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
+		headerRow.createEl("th", { text: "説明", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
+		headerRow.createEl("th", { text: "例", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
+
+		//! データ行。
+		const tbody = table.createEl("tbody");
+		const formatData = [
+			{ code: "%Y", desc: "年(4桁)", example: "2025" },
+			{ code: "%y", desc: "年(2桁)", example: "25" },
+			{ code: "%m", desc: "月(01-12)", example: "01" },
+			{ code: "%B", desc: "月名", example: "1月" },
+			{ code: "%b", desc: "月名略", example: "1月" },
+			{ code: "%d", desc: "日(01-31)", example: "27" },
+			{ code: "%A", desc: "曜日", example: "月曜日" },
+			{ code: "%a", desc: "曜日略", example: "月" },
+			{ code: "%u", desc: "曜日(1-7)", example: "1" },
+			{ code: "%H", desc: "時(24h)", example: "14" },
+			{ code: "%I", desc: "時(12h)", example: "02" },
+			{ code: "%M", desc: "分", example: "30" },
+			{ code: "%S", desc: "秒", example: "45" },
+			{ code: "%s", desc: "UNIX時刻", example: "1738017045" },
+		];
+
+		for (const format of formatData) {
+			const row = tbody.createEl("tr");
+			row.createEl("td", { text: format.code, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" } });
+			row.createEl("td", { text: format.desc, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px;" } });
+			row.createEl("td", { text: format.example, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" } });
+		}
 
 		//! ファイルパス書式設定。
 		new Setting(containerEl)

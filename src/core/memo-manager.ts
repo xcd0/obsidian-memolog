@@ -27,20 +27,47 @@ export class MemoManager {
 		return new Date().toISOString();
 	}
 
-	//! タイムスタンプをフォーマットする。
+	//! タイムスタンプをフォーマットする（Linuxのdateコマンド書式に対応）。
 	private formatTimestamp(timestamp: string, format: string): string {
 		const date = new Date(timestamp);
 
+		//! 月名（日本語）。
+		const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月",
+			"7月", "8月", "9月", "10月", "11月", "12月"];
+		const monthNamesShort = ["1月", "2月", "3月", "4月", "5月", "6月",
+			"7月", "8月", "9月", "10月", "11月", "12月"];
+
+		//! 曜日名（日本語）。
+		const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+		const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"];
+
+		//! 12時間形式の時。
+		const hours12 = date.getHours() % 12 || 12;
+
+		//! 曜日（1-7、月曜日=1）。
+		const dayOfWeek = date.getDay();
+		const isoWeekday = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+		//! 置換マップ（順序が重要: 長いパターンを先に置換）。
 		const replacements: Record<string, string> = {
 			"%Y": date.getFullYear().toString(),
+			"%y": date.getFullYear().toString().slice(-2),
+			"%B": monthNames[date.getMonth()],
+			"%b": monthNamesShort[date.getMonth()],
 			"%m": (date.getMonth() + 1).toString().padStart(2, "0"),
 			"%d": date.getDate().toString().padStart(2, "0"),
+			"%A": dayNames[dayOfWeek],
+			"%a": dayNamesShort[dayOfWeek],
+			"%u": isoWeekday.toString(),
 			"%H": date.getHours().toString().padStart(2, "0"),
+			"%I": hours12.toString().padStart(2, "0"),
 			"%M": date.getMinutes().toString().padStart(2, "0"),
 			"%S": date.getSeconds().toString().padStart(2, "0"),
+			"%s": Math.floor(date.getTime() / 1000).toString(),
 		};
 
 		let formatted = format;
+		//! %B, %A を先に置換（%b, %a と衝突しないように）。
 		for (const [key, value] of Object.entries(replacements)) {
 			formatted = formatted.replace(new RegExp(key, "g"), value);
 		}

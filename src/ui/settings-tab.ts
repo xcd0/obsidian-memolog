@@ -145,7 +145,11 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! メモのテンプレート設定。
 		new Setting(containerEl)
 			.setName("メモのテンプレート")
-			.setDesc("メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます")
+			.setDesc(
+				"メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。\n" +
+				"利用可能な書式: %Y(年), %y(年2桁), %m(月), %b(月名略), %B(月名), %d(日), " +
+				"%a(曜日略), %A(曜日), %u(曜日1-7), %H(時24h), %I(時12h), %M(分), %S(秒), %s(UNIX時刻)"
+			)
 			.addTextArea((text) => {
 				text
 					.setPlaceholder("{{content}}")

@@ -111,6 +111,12 @@ export class TemplateManager {
 
 		//! 日付変数を自動生成。
 		const now = new Date();
+
+		//! 月名と曜日の配列。
+		const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+		const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+		const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"];
+
 		const autoVariables: TemplateVariables = {
 			year: now.getFullYear().toString(),
 			month: (now.getMonth() + 1).toString().padStart(2, "0"),
@@ -126,11 +132,19 @@ export class TemplateManager {
 		//! % 形式の変数を置換 (%Y, %m, %d, 等)。
 		result = result
 			.replace(/%Y/g, autoVariables.year || "")
+			.replace(/%y/g, autoVariables.year?.slice(-2) || "")
 			.replace(/%m/g, autoVariables.month || "")
+			.replace(/%B/g, monthNames[now.getMonth()])
+			.replace(/%b/g, monthNames[now.getMonth()])
 			.replace(/%d/g, autoVariables.day || "")
+			.replace(/%A/g, dayNames[now.getDay()])
+			.replace(/%a/g, dayNamesShort[now.getDay()])
+			.replace(/%u/g, (now.getDay() === 0 ? 7 : now.getDay()).toString())
 			.replace(/%H/g, autoVariables.hour || "")
+			.replace(/%I/g, (now.getHours() % 12 || 12).toString().padStart(2, "0"))
 			.replace(/%M/g, autoVariables.minute || "")
-			.replace(/%S/g, autoVariables.second || "");
+			.replace(/%S/g, autoVariables.second || "")
+			.replace(/%s/g, Math.floor(now.getTime() / 1000).toString());
 
 		//! {{ }} 形式の変数を置換。
 		result = result.replace(/\{\{(\w+)\}\}/g, (_, varName: string) => {
@@ -165,7 +179,7 @@ export class TemplateManager {
 		}
 
 		//! % 変数を抽出。
-		const percentVars = template.match(/%[YmdHMS]/g);
+		const percentVars = template.match(/%[YymdHMSBbAaus]/g);
 		if (percentVars) {
 			for (const match of percentVars) {
 				if (!usedVariables.includes(match)) {
@@ -175,7 +189,7 @@ export class TemplateManager {
 		}
 
 		//! 不明な % 変数をチェック。
-		const unknownPercent = template.match(/%[^YmdHMS\s]/g);
+		const unknownPercent = template.match(/%[^YymdHMSBbAausI\s]/g);
 		if (unknownPercent) {
 			warnings.push(
 				`Unknown percent variables: ${unknownPercent.join(", ")}`

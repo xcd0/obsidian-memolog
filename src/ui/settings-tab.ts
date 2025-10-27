@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 import MemologPlugin from "../../main";
 import { CategoryConfig } from "../types";
+import { TemplateManager } from "../core/template-manager";
 
 //! プリセットカラー定義。
 const PRESET_COLORS = [
@@ -153,6 +154,8 @@ export class MemologSettingTab extends PluginSettingTab {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							memoTemplate: value,
 						});
+						//! プレビューを更新。
+						updatePreview(value);
 					});
 				//! textareaのサイズを大きくする。
 				text.inputEl.rows = 5;
@@ -161,6 +164,41 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! 説明文と表を追加。
 		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" });
+		templateSetting.descEl.createEl("br");
+
+		//! プレビュー表示領域を追加。
+		const previewContainer = templateSetting.descEl.createDiv({
+			cls: "memolog-template-preview-container",
+			attr: {
+				style: "margin-top: 12px; padding: 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
+			}
+		});
+		previewContainer.createDiv({
+			text: "投稿例:",
+			attr: {
+				style: "font-weight: 600; margin-bottom: 8px; color: var(--text-muted);"
+			}
+		});
+		const previewContent = previewContainer.createDiv({
+			cls: "memolog-template-preview-content",
+			attr: {
+				style: "white-space: pre-wrap; font-family: var(--font-text); line-height: 1.5; color: var(--text-normal);"
+			}
+		});
+
+		//! プレビュー更新関数。
+		const updatePreview = (template: string) => {
+			try {
+				const preview = TemplateManager.preview(template);
+				previewContent.setText(preview);
+			} catch (error) {
+				previewContent.setText(`エラー: ${(error as Error).message}`);
+			}
+		};
+
+		//! 初期プレビューを表示。
+		updatePreview(settings.memoTemplate);
+
 		templateSetting.descEl.createEl("br");
 		templateSetting.descEl.createDiv({ text: "利用可能な書式:", cls: "setting-item-description" });
 

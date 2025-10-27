@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 import MemologPlugin from "../../main";
 import { CategoryConfig } from "../types";
 import { TemplateManager } from "../core/template-manager";
+import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
 
 //! プリセットカラー定義。
 const PRESET_COLORS = [
@@ -393,6 +394,7 @@ export class MemologSettingTab extends PluginSettingTab {
 						categories: updatedCategories,
 					});
 					this.display();
+					this.refreshSidebar();
 				})
 		);
 
@@ -432,6 +434,7 @@ export class MemologSettingTab extends PluginSettingTab {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
 						});
+						this.refreshSidebar();
 					})
 			);
 
@@ -472,6 +475,7 @@ export class MemologSettingTab extends PluginSettingTab {
 						categories: updatedCategories,
 					});
 					this.display();
+					this.refreshSidebar();
 				})();
 			});
 		}
@@ -487,6 +491,7 @@ export class MemologSettingTab extends PluginSettingTab {
 						categories: updatedCategories,
 					});
 					this.display();
+					this.refreshSidebar();
 				})
 			)
 			.addText((text) =>
@@ -502,6 +507,7 @@ export class MemologSettingTab extends PluginSettingTab {
 								categories: updatedCategories,
 							});
 							this.display();
+							this.refreshSidebar();
 						}
 					})
 			);
@@ -533,6 +539,7 @@ export class MemologSettingTab extends PluginSettingTab {
 						categories: updatedCategories,
 					});
 					this.display();
+					this.refreshSidebar();
 				})();
 			});
 		}
@@ -549,7 +556,19 @@ export class MemologSettingTab extends PluginSettingTab {
 							categories: updatedCategories,
 						});
 						this.display();
+						this.refreshSidebar();
 					})
 			);
+	}
+
+	//! サイドバーをリフレッシュする。
+	private refreshSidebar(): void {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG);
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof MemologSidebar) {
+				view.refresh();
+			}
+		}
 	}
 }

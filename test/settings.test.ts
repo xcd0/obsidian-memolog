@@ -13,14 +13,14 @@ const mockCreateFolder = jest.fn();
 const createMockTFile = (path: string): TFile => {
 	return Object.create(TFile.prototype, {
 		path: { value: path },
-	});
+	}) as TFile;
 };
 
 //! TFolderのモック作成ヘルパー。
 const createMockTFolder = (path: string): TFolder => {
 	return Object.create(TFolder.prototype, {
 		path: { value: path },
-	});
+	}) as TFolder;
 };
 
 //! Appのモック。

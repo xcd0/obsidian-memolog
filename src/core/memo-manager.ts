@@ -96,10 +96,11 @@ export class MemoManager {
 			body = `${formattedTemplate}\n${content}`;
 		}
 
-		//! ID、タイムスタンプ、テンプレートをHTMLコメントとして埋め込む。
+		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントとして埋め込む。
 		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
+		const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
 		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${templateEncoded} -->\n${body}${attachments}\n`;
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -110,20 +111,31 @@ export class MemoManager {
 			return null;
 		}
 
-		//! ID、タイムスタンプ、テンプレートをHTMLコメントから抽出。
+		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
 		const commentMatch = text.match(/<!-- (.+?) -->/);
 		let id = uuidv7();
 		let timestamp: string | null = null;
+		let parsedCategory: string | null = null;
 		let template: string | undefined = undefined;
 
 		if (commentMatch) {
 			const comment = commentMatch[1];
 			const idMatch = comment.match(/memo-id: ([^,]+)/);
 			const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
+			const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
 			const templateMatch = comment.match(/template: (.+)$/);
 
 			id = idMatch?.[1].trim() || uuidv7();
 			timestamp = timestampMatch?.[1].trim() || null;
+
+			if (categoryMatch) {
+				try {
+					parsedCategory = JSON.parse(categoryMatch[1].trim()) as string;
+				} catch (e) {
+					//! JSON.parseエラーの場合は直接使用。
+					parsedCategory = categoryMatch[1].trim();
+				}
+			}
 
 			if (templateMatch) {
 				try {
@@ -134,6 +146,9 @@ export class MemoManager {
 				}
 			}
 		}
+
+		//! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
+		const finalCategory = parsedCategory || category;
 
 		//! HTMLコメント行をスキップ。
 		const contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
@@ -183,7 +198,7 @@ export class MemoManager {
 
 		return {
 			id,
-			category,
+			category: finalCategory,
 			timestamp: finalTimestamp,
 			content,
 			attachments,
@@ -203,26 +218,6 @@ export class MemoManager {
 		console.log("[memolog DEBUG] addMemo called with:", { filePath, category, order });
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! タグペアが存在しない場合は初期化。
-				console.log("[memolog DEBUG] Checking if file exists:", filePath);
-				const fileExists = this.vaultHandler.fileExists(filePath);
-				console.log("[memolog DEBUG] File exists:", fileExists);
-
-				if (!fileExists) {
-					console.log("[memolog DEBUG] File does not exist, initializing tag pair...");
-					await this.vaultHandler.initializeTagPair(filePath, category, { order });
-					console.log("[memolog DEBUG] Tag pair initialized");
-				} else {
-					console.log("[memolog DEBUG] File exists, checking for tag pair...");
-					const pair = await this.vaultHandler.findTagPairByCategory(filePath, category);
-					console.log("[memolog DEBUG] Tag pair found:", !!pair);
-					if (!pair) {
-						console.log("[memolog DEBUG] Tag pair not found, initializing...");
-						await this.vaultHandler.initializeTagPair(filePath, category, { order });
-						console.log("[memolog DEBUG] Tag pair initialized");
-					}
-				}
-
 				//! メモエントリを作成。
 				console.log("[memolog DEBUG] Creating memo entry...");
 				const memo: MemoEntry = {
@@ -240,16 +235,32 @@ export class MemoManager {
 				const memoText = this.memoToText(memo, template);
 				console.log("[memolog DEBUG] Memo text:", memoText);
 
+				//! ファイルが存在しない場合は空として扱う。
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				let fileContent = "";
+				if (fileExists) {
+					fileContent = await this.vaultHandler.readFile(filePath);
+				}
+
+				//! 既存のメモを分割（HTMLコメント <!-- memo-id: で分割）。
+				const existingMemos = fileContent ? fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim()) : [];
+
 				//! 挿入位置を決定（昇順: bottom、降順: top）。
-				const position = order === "desc" ? "top" : "bottom";
-				console.log("[memolog DEBUG] Insert position:", position);
+				let newContent: string;
+				if (order === "desc") {
+					//! 降順の場合は先頭に追加。
+					newContent = [memoText, ...existingMemos].join("");
+				} else {
+					//! 昇順の場合は末尾に追加。
+					newContent = [...existingMemos, memoText].join("");
+				}
 
-				//! カテゴリ領域にメモを挿入。
-				console.log("[memolog DEBUG] Inserting text in category...");
-				await this.vaultHandler.insertTextInCategory(filePath, category, memoText, position);
-				console.log("[memolog DEBUG] Text inserted successfully");
+				//! ファイル全体を書き込む。
+				console.log("[memolog DEBUG] Writing file...");
+				await this.vaultHandler.writeFile(filePath, newContent);
+				console.log("[memolog DEBUG] File written successfully");
 
-				//! キャッシュを無効化。
+				//! キャッシュを無効化（ファイル全体のキャッシュ）。
 				const cacheKey = `${filePath}::${category}`;
 				this.cacheManager.invalidateMemos(cacheKey);
 
@@ -273,14 +284,18 @@ export class MemoManager {
 	async deleteMemo(filePath: string, category: string, memoId: string): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				const content = await this.vaultHandler.getCategoryContent(filePath, category);
-				if (!content) {
-					notify.warning("カテゴリが見つかりません");
+				//! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				if (!fileExists) {
+					notify.warning("ファイルが見つかりません");
 					return false;
 				}
 
+				//! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+
 				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memos = content.split(/(?=<!-- memo-id:)/);
+				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 				const filtered = memos.filter((memo) => !memo.includes(`memo-id: ${memoId}`));
 
 				if (filtered.length === memos.length) {
@@ -289,9 +304,9 @@ export class MemoManager {
 					return false;
 				}
 
-				//! カテゴリ領域の内容を更新。
+				//! ファイル全体を書き込む。
 				const newContent = filtered.join("");
-				await this.vaultHandler.replaceCategoryContent(filePath, category, newContent);
+				await this.vaultHandler.writeFile(filePath, newContent);
 
 				//! キャッシュを無効化。
 				const cacheKey = `${filePath}::${category}`;
@@ -319,20 +334,26 @@ export class MemoManager {
 					return cachedMemos;
 				}
 
-				//! キャッシュミス: ファイルから読み込む。
-				const content = await this.vaultHandler.getCategoryContent(filePath, category);
-				if (!content) {
+				//! ファイルが存在しない場合は空配列を返す。
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				if (!fileExists) {
+					return [];
+				}
+
+				//! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+				if (!fileContent) {
 					return [];
 				}
 
 				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memoTexts = content.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 
-				//! メモエントリに変換。
+				//! メモエントリに変換（categoryでフィルタリング）。
 				const memos: MemoEntry[] = [];
 				for (const text of memoTexts) {
 					const memo = this.parseTextToMemo(text, category);
-					if (memo) {
+					if (memo && memo.category === category) {
 						memos.push(memo);
 					}
 				}
@@ -364,14 +385,18 @@ export class MemoManager {
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				const content = await this.vaultHandler.getCategoryContent(filePath, category);
-				if (!content) {
-					notify.warning("カテゴリが見つかりません");
+				//! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				if (!fileExists) {
+					notify.warning("ファイルが見つかりません");
 					return false;
 				}
 
+				//! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+
 				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memoTexts = content.split(/(?=<!-- memo-id:)/);
+				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 				let updated = false;
 
 				const newMemoTexts = memoTexts.map((memoText) => {
@@ -395,9 +420,9 @@ export class MemoManager {
 					return false;
 				}
 
-				//! カテゴリ領域の内容を更新。
-				const newCategoryContent = newMemoTexts.join("");
-				await this.vaultHandler.replaceCategoryContent(filePath, category, newCategoryContent);
+				//! ファイル全体を書き込む。
+				const newFileContent = newMemoTexts.join("");
+				await this.vaultHandler.writeFile(filePath, newFileContent);
 
 				//! キャッシュを無効化。
 				const cacheKey = `${filePath}::${category}`;

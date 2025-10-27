@@ -164,7 +164,7 @@ describe("MemoManager", () => {
 			expect(memo.timestamp).toBeDefined();
 
 			//! ファイル内容を確認。
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toContain("テストメモ");
 		});
 
@@ -175,7 +175,7 @@ describe("MemoManager", () => {
 			//! 2番目のメモを追加。
 			await memoManager.addMemo(filePath, category, "メモ2", "asc");
 
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toBeDefined();
 
 			//! メモ1が先、メモ2が後（昇順なのでbottomに追加）。
@@ -191,7 +191,7 @@ describe("MemoManager", () => {
 			//! 2番目のメモを追加（降順）。
 			await memoManager.addMemo(filePath, category, "メモB", "desc");
 
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toBeDefined();
 
 			//! メモBが先、メモAが後（降順なのでtopに追加）。
@@ -212,7 +212,7 @@ describe("MemoManager", () => {
 
 			expect(memo.attachments).toEqual(["image1.png", "image2.jpg"]);
 
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toContain("[[image1.png]]");
 			expect(content).toContain("[[image2.jpg]]");
 		});
@@ -223,8 +223,8 @@ describe("MemoManager", () => {
 		const category = "work";
 
 		it("空のファイルから空配列を取得", async () => {
-			//! ファイルを初期化。
-			await mockVaultHandler.initializeTagPair(filePath, category);
+			//! 空のファイルを作成。
+			await mockVaultHandler.writeFile(filePath, "");
 
 			const memos = await memoManager.getMemos(filePath, category);
 			expect(memos).toEqual([]);
@@ -344,14 +344,14 @@ describe("MemoManager", () => {
 				customTemplate
 			);
 
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toMatch(/### \d{4}年\d{2}月\d{2}日 \d{2}時\d{2}分/);
 		});
 
 		it("デフォルトテンプレートでメモを追加", async () => {
 			await memoManager.addMemo(filePath, category, "デフォルト形式", "asc");
 
-			const content = await mockVaultHandler.getCategoryContent(filePath, category);
+			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toMatch(/## \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
 		});
 	});

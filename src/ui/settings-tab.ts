@@ -497,6 +497,9 @@ export class MemologSettingTab extends PluginSettingTab {
 				await this.plugin.settingsManager.updateGlobalSettings({
 					defaultCategory: category.name,
 				});
+
+				//! サイドバーを再描画。
+				this.refreshSidebar();
 			});
 		}
 	}

@@ -578,16 +578,16 @@ export class MemologSidebar extends ItemView {
 					: this.currentCategory || settings.defaultCategory;
 
 			//! カテゴリ名からカテゴリ設定を取得。
+			//! 見つからない場合はカテゴリ名をそのままdirectoryとして使用。
 			const categoryConfig = settings.categories.find((c) => c.name === category);
-			if (!categoryConfig) {
-				throw new Error(`カテゴリ "${category}" が見つかりません`);
-			}
+			const categoryDirectory = categoryConfig?.directory || category;
 
 			//! デバッグ: 設定を確認。
 			console.log("[memolog DEBUG] Settings:", {
 				rootDirectory: settings.rootDirectory,
 				category,
-				categoryDirectory: categoryConfig.directory,
+				categoryDirectory,
+				categoryConfigFound: !!categoryConfig,
 				pathFormat: settings.pathFormat,
 				saveUnit: settings.saveUnit,
 				useDirectoryCategory: settings.useDirectoryCategory,
@@ -597,13 +597,13 @@ export class MemologSidebar extends ItemView {
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
 						settings.rootDirectory,
-						categoryConfig.directory,
+						categoryDirectory,
 						settings.pathFormat,
 						settings.useDirectoryCategory
 					)
 				: PathGenerator.generateFilePath(
 						settings.rootDirectory,
-						categoryConfig.directory,
+						categoryDirectory,
 						settings.saveUnit,
 						settings.useDirectoryCategory
 					);

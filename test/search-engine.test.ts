@@ -204,8 +204,10 @@ describe("SearchEngine", () => {
 
 			const start = new Date(range.startDate);
 			const end = new Date(range.endDate);
-			const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+			const diffMs = end.getTime() - start.getTime();
+			const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+			//! 日付文字列のみが返されるため、時刻は00:00:00となり、7日間の差になる。
 			expect(diffDays).toBe(7);
 		});
 

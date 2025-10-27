@@ -127,7 +127,7 @@ export class MemoManager {
 
 			if (templateMatch) {
 				try {
-					template = JSON.parse(templateMatch[1].trim());
+					template = JSON.parse(templateMatch[1].trim()) as string;
 				} catch (e) {
 					//! JSON.parseエラーは無視（後方互換性）。
 					console.warn("[memolog] Failed to parse template from comment:", e);
@@ -136,7 +136,7 @@ export class MemoManager {
 		}
 
 		//! HTMLコメント行をスキップ。
-		let contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
+		const contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
 
 		//! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
 		if (!timestamp && contentStartIndex < lines.length) {
@@ -240,8 +240,8 @@ export class MemoManager {
 				const memoText = this.memoToText(memo, template);
 				console.log("[memolog DEBUG] Memo text:", memoText);
 
-				//! 挿入位置は常に末尾（bottom）。
-				const position = "bottom";
+				//! 挿入位置を決定（昇順: bottom、降順: top）。
+				const position = order === "desc" ? "top" : "bottom";
 				console.log("[memolog DEBUG] Insert position:", position);
 
 				//! カテゴリ領域にメモを挿入。

@@ -69,8 +69,9 @@ export class Exporter {
 
 		//! カテゴリフィルタ。
 		if (options.categories && options.categories.length > 0) {
+			const categories = options.categories;
 			filteredMemos = filteredMemos.filter((memo) =>
-				options.categories!.includes(memo.category)
+				categories.includes(memo.category)
 			);
 		}
 
@@ -126,7 +127,10 @@ export class Exporter {
 			if (!byCategory.has(memo.category)) {
 				byCategory.set(memo.category, []);
 			}
-			byCategory.get(memo.category)!.push(memo);
+			const categoryMemos = byCategory.get(memo.category);
+			if (categoryMemos) {
+				categoryMemos.push(memo);
+			}
 		}
 
 		//! カテゴリ別に出力。

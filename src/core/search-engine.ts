@@ -71,7 +71,8 @@ export class SearchEngine {
 
 		//! カテゴリフィルタ。
 		if (query.categories && query.categories.length > 0) {
-			results = results.filter((memo) => query.categories!.includes(memo.category));
+			const categories = query.categories;
+			results = results.filter((memo) => categories.includes(memo.category));
 		}
 
 		const endTime = performance.now();

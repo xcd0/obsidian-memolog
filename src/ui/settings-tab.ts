@@ -407,13 +407,15 @@ export class MemologSettingTab extends PluginSettingTab {
 			if (category.color === preset.value) {
 				colorBtn.addClass("memolog-color-preset-btn-selected");
 			}
-			colorBtn.addEventListener("click", async () => {
-				const updatedCategories = [...settings.categories];
-				updatedCategories[index] = { ...updatedCategories[index], color: preset.value };
-				await this.plugin.settingsManager.updateGlobalSettings({
-					categories: updatedCategories,
-				});
-				this.display();
+			colorBtn.addEventListener("click", () => {
+				void (async () => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], color: preset.value };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.display();
+				})();
 			});
 		}
 
@@ -466,13 +468,15 @@ export class MemologSettingTab extends PluginSettingTab {
 			}
 			setIcon(iconBtn, iconName);
 			iconBtn.setAttribute("aria-label", iconName);
-			iconBtn.addEventListener("click", async () => {
-				const updatedCategories = [...settings.categories];
-				updatedCategories[index] = { ...updatedCategories[index], icon: iconName };
-				await this.plugin.settingsManager.updateGlobalSettings({
-					categories: updatedCategories,
-				});
-				this.display();
+			iconBtn.addEventListener("click", () => {
+				void (async () => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], icon: iconName };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.display();
+				})();
 			});
 		}
 

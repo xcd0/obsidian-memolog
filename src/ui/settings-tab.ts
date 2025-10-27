@@ -398,6 +398,19 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 		);
 
+		//! 全カテゴリタブ表示設定。
+		new Setting(containerEl)
+			.setName("Allタブを表示")
+			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showAllTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showAllTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
+
 		//! デフォルトカテゴリ設定。
 		new Setting(containerEl)
 			.setName("デフォルトカテゴリ")

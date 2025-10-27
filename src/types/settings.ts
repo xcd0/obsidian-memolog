@@ -55,6 +55,9 @@ export interface GlobalSettings {
 
 	//! 検索履歴の最大サイズ。
 	searchHistoryMaxSize: number;
+
+	//! 全カテゴリ表示タブ（all）を表示するか。
+	showAllTab: boolean;
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -98,4 +101,5 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	pathFormat: "%Y/%m/%d",
 	attachmentPath: "./attachments",
 	searchHistoryMaxSize: 50,
+	showAllTab: true,
 };

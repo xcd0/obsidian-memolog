@@ -218,7 +218,8 @@ export class MemologSidebar extends ItemView {
 				settings.categories,
 				{
 					onCategoryChange: (category) => void this.handleCategoryChange(category),
-				}
+				},
+				settings.showAllTab
 			);
 			this.currentCategory = settings.defaultCategory || settings.categories[0].name;
 			this.categoryTabs.render(this.currentCategory);
@@ -261,35 +262,66 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = this.currentCategory || settings.defaultCategory;
 
-			//! ファイルパスを生成。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						category,
-						settings.pathFormat,
-						settings.useDirectoryCategory
-					)
-				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						category,
-						settings.saveUnit,
-						settings.useDirectoryCategory
-					);
+			//! "all"が選択されている場合は全カテゴリのメモを読み込む。
+			if (this.currentCategory === "all") {
+				this.memos = [];
+				for (const cat of settings.categories) {
+					const filePath = settings.pathFormat
+						? PathGenerator.generateCustomPath(
+								settings.rootDirectory,
+								cat.directory,
+								settings.pathFormat,
+								settings.useDirectoryCategory
+							)
+						: PathGenerator.generateFilePath(
+								settings.rootDirectory,
+								cat.directory,
+								settings.saveUnit,
+								settings.useDirectoryCategory
+							);
 
-			//! ファイルが存在するか確認。
-			const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
-
-			if (fileExists) {
-				//! メモを読み込む。
-				this.memos = await this.memoManager.getMemos(filePath, category);
+					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+					if (fileExists) {
+						const categoryMemos = await this.memoManager.getMemos(filePath, cat.name);
+						this.memos.push(...categoryMemos);
+					}
+				}
 
 				//! ソート順に応じて並べ替え。
 				this.sortMemos();
 			} else {
-				//! ファイルが存在しない場合は空配列。
-				this.memos = [];
+				//! 特定のカテゴリのメモを読み込む。
+				const category = this.currentCategory || settings.defaultCategory;
+
+				//! ファイルパスを生成。
+				const filePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							category,
+							settings.pathFormat,
+							settings.useDirectoryCategory
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							category,
+							settings.saveUnit,
+							settings.useDirectoryCategory
+						);
+
+				//! ファイルが存在するか確認。
+				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+
+				if (fileExists) {
+					//! メモを読み込む。
+					this.memos = await this.memoManager.getMemos(filePath, category);
+
+					//! ソート順に応じて並べ替え。
+					this.sortMemos();
+				} else {
+					//! ファイルが存在しない場合は空配列。
+					this.memos = [];
+				}
 			}
 
 			//! 日付でフィルタリング。
@@ -539,7 +571,11 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = this.currentCategory || settings.defaultCategory;
+			//! "all"が選択されている場合はデフォルトカテゴリを使用。
+			const category =
+				this.currentCategory === "all"
+					? settings.defaultCategory
+					: this.currentCategory || settings.defaultCategory;
 
 			//! デバッグ: 設定を確認。
 			console.log("[memolog DEBUG] Settings:", {

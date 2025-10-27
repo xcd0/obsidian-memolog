@@ -13,15 +13,18 @@ export class CategoryTabs {
 	private handlers: CategoryTabsHandlers;
 	private activeCategory: string;
 	private tabElements: Map<string, HTMLElement> = new Map();
+	private showAllTab: boolean;
 
 	constructor(
 		container: HTMLElement,
 		categories: CategoryConfig[],
-		handlers: CategoryTabsHandlers
+		handlers: CategoryTabsHandlers,
+		showAllTab = true
 	) {
 		this.container = container;
 		this.categories = categories;
 		this.handlers = handlers;
+		this.showAllTab = showAllTab;
 		this.activeCategory = categories[0]?.name || "";
 	}
 
@@ -39,6 +42,17 @@ export class CategoryTabs {
 		//! タブコンテナを作成。
 		const tabsContainer = this.container.createDiv({ cls: "memolog-category-tabs" });
 
+		//! Allタブを最初に追加（showAllTabがtrueの場合）。
+		if (this.showAllTab) {
+			const allTab = this.createAllTab(tabsContainer);
+			this.tabElements.set("all", allTab);
+
+			//! アクティブなタブをハイライト。
+			if (this.activeCategory === "all") {
+				allTab.addClass("memolog-category-tab-active");
+			}
+		}
+
 		//! 各カテゴリのタブを作成。
 		for (const category of this.categories) {
 			const tab = this.createTab(tabsContainer, category);
@@ -49,6 +63,28 @@ export class CategoryTabs {
 				tab.addClass("memolog-category-tab-active");
 			}
 		}
+	}
+
+	//! Allタブを作成する。
+	private createAllTab(container: HTMLElement): HTMLElement {
+		const tab = container.createDiv({ cls: "memolog-category-tab" });
+
+		//! デフォルトのアクセントカラーを設定。
+		tab.style.setProperty("--category-color", "var(--interactive-accent)");
+
+		//! カテゴリ名を追加。
+		tab.createDiv({
+			cls: "memolog-category-tab-name",
+			text: "All",
+		});
+
+		//! クリックイベントを設定。
+		tab.addEventListener("click", () => {
+			this.setActiveCategory("all");
+			this.handlers.onCategoryChange("all");
+		});
+
+		return tab;
 	}
 
 	//! 個別のタブを作成する。

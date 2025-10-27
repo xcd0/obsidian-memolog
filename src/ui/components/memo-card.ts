@@ -160,13 +160,21 @@ export class MemoCard {
 			});
 		} else {
 			//! 通常モード: Markdownとしてレンダリング。
+			//! Markdown画像リンクをHTMLのimgタグに変換。
+			const contentWithImages = this.convertMarkdownImagesToHtml(this.memo.content);
 			await MarkdownRenderer.renderMarkdown(
-				this.memo.content,
+				contentWithImages,
 				contentDiv,
 				this.sourcePath,
 				this.component
 			);
 		}
+	}
+
+	//! Markdown画像リンクをHTMLのimgタグに変換する。
+	private convertMarkdownImagesToHtml(content: string): string {
+		//! ![alt](path) 形式を <img alt="alt" src="path"> に変換。
+		return content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
 	}
 
 	//! ペースト処理（画像の場合はファイルとして保存）。

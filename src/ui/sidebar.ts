@@ -508,8 +508,8 @@ export class MemologSidebar extends ItemView {
 			const arrayBuffer = await file.arrayBuffer();
 			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer);
 
-			//! HTMLのimg形式で画像リンクを生成（MarkdownRendererで正しく表示されるため）。
-			const markdownLink = `<img alt="${fileName}" src="${filePath}">`;
+			//! 標準Markdown形式で画像リンクを生成。
+			const markdownLink = `![${fileName}](${filePath})`;
 
 			return markdownLink;
 		} catch (error) {

@@ -288,6 +288,8 @@ export class MemologSidebar extends ItemView {
 			//! メモリストを更新。
 			if (this.memoList) {
 				this.memoList.updateMemos(displayMemos);
+				//! 最新メモが表示されるようにスクロール。
+				this.memoList.scrollToLatest(this.currentOrder);
 			}
 
 			//! カレンダーのメモカウントを更新。
@@ -610,11 +612,6 @@ export class MemologSidebar extends ItemView {
 			//! メモリストを再読み込み。
 			await this.loadMemos();
 
-			//! 最新メモが表示されるようにスクロール。
-			if (this.memoList) {
-				this.memoList.scrollToLatest(this.currentOrder);
-			}
-
 			new Notice("メモを追加しました");
 		} catch (error) {
 			console.error("[memolog DEBUG] メモ追加エラー:", error);
@@ -720,6 +717,8 @@ export class MemologSidebar extends ItemView {
 		if (this.memoList) {
 			console.log("[memolog DEBUG] Calling memoList.updateMemos");
 			this.memoList.updateMemos(this.memos);
+			//! 最新メモが表示されるようにスクロール。
+			this.memoList.scrollToLatest(this.currentOrder);
 		} else {
 			console.log("[memolog DEBUG] memoList is null/undefined");
 		}

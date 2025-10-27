@@ -422,6 +422,23 @@ export class MemologSettingTab extends PluginSettingTab {
 			return;
 		}
 
+		//! デフォルトカテゴリが存在しない場合、一番上のカテゴリを選択。
+		const categoryExists = settings.categories.some((c) => c.name === settings.defaultCategory);
+		if (!categoryExists || !settings.defaultCategory) {
+			const firstCategory = settings.categories[0];
+			//! 非同期で設定を更新（awaitしない）。
+			this.plugin.settingsManager
+				.updateGlobalSettings({
+					defaultCategory: firstCategory.name,
+				})
+				.then(() => {
+					//! 更新後にサイドバーを再描画。
+					this.refreshSidebar();
+				});
+			//! 表示用に現在の設定を更新。
+			settings.defaultCategory = firstCategory.name;
+		}
+
 		//! 表を作成。
 		const tableContainer = defaultCategorySetting.controlEl.createDiv({
 			cls: "memolog-default-category-table-container",

@@ -120,6 +120,9 @@ export class InputForm {
 		this.textarea.addEventListener("paste", (e) => {
 			void this.handlePaste(e);
 		});
+
+		//! 添付ファイルリストの初期状態を設定（非表示）。
+		this.renderAttachments();
 	}
 
 	//! ペースト処理（画像の場合はファイルとして保存）。

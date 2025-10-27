@@ -461,7 +461,7 @@
 	border-bottom: none;
 	display: flex;
 	flex-direction: column;
-	gap: 0.125rem;
+	gap: 0.5rem;
 }
 
 /* 降順時は下部に線を表示 */

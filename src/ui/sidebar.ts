@@ -28,6 +28,10 @@ export class MemologSidebar extends ItemView {
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
 
+	//! UI要素への参照。
+	private listAreaEl: HTMLElement | null = null;
+	private inputAreaEl: HTMLElement | null = null;
+
 	//! 現在の状態。
 	private currentCategory: string = "";
 	private currentOrder: SortOrder = "asc";
@@ -89,12 +93,17 @@ export class MemologSidebar extends ItemView {
 
 		//! メモ表示領域を作成。
 		const listArea = this.createMemoListArea(container);
+		this.listAreaEl = listArea;
 
 		//! 入力欄を作成。
 		const inputArea = this.createInputArea(container);
+		this.inputAreaEl = inputArea;
 
 		//! コンポーネントを初期化。
 		this.initializeComponents(categoryTabsArea, calendarArea, listArea, inputArea);
+
+		//! 初期レイアウトを設定。
+		this.updateInputAreaPosition();
 
 		//! 初期データを読み込む。
 		await this.loadMemos();
@@ -722,11 +731,36 @@ export class MemologSidebar extends ItemView {
 		} else {
 			console.log("[memolog DEBUG] memoList is null/undefined");
 		}
+
+		//! 入力エリアの位置を更新。
+		this.updateInputAreaPosition();
 	}
 
 	//! サイドバーを更新する。
 	public refresh(): void {
 		void this.onOpen();
+	}
+
+	//! ソート順に応じて入力エリアの位置を更新する。
+	private updateInputAreaPosition(): void {
+		if (!this.listAreaEl || !this.inputAreaEl) {
+			return;
+		}
+
+		const parent = this.listAreaEl.parentElement;
+		if (!parent) {
+			return;
+		}
+
+		if (this.currentOrder === "desc") {
+			//! 降順: 入力エリアをメモリストの前に配置。
+			parent.insertBefore(this.inputAreaEl, this.listAreaEl);
+		} else {
+			//! 昇順: 入力エリアをメモリストの後に配置。
+			if (this.listAreaEl.nextSibling !== this.inputAreaEl) {
+				parent.insertBefore(this.inputAreaEl, this.listAreaEl.nextSibling);
+			}
+		}
 	}
 
 	//! カレンダーの表示/非表示を切り替える。

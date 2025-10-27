@@ -52,6 +52,9 @@ export interface GlobalSettings {
 
 	//! 検索履歴の最大サイズ。
 	searchHistoryMaxSize: number;
+
+	//! カテゴリタブにアイコンを表示するか。
+	showCategoryIcons: boolean;
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -95,4 +98,5 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	pathFormat: "%Y/%m/%d",
 	attachmentPath: "./attachments",
 	searchHistoryMaxSize: 50,
+	showCategoryIcons: true,
 };

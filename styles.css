@@ -43,24 +43,32 @@
 	display: flex;
 	align-items: center;
 	gap: 0.25rem;
-	padding: 0.35rem 0.75rem;
-	background-color: transparent;
-	border-bottom: 2px solid transparent;
+	padding: 0.5rem 1rem;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-bottom: none;
+	border-radius: 8px 8px 0 0;
 	margin-bottom: -2px;
+	margin-right: 0.125rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
 	white-space: nowrap;
 	user-select: none;
 	position: relative;
+	box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .memolog-category-tab:hover {
 	background-color: var(--background-modifier-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 -3px 6px rgba(0, 0, 0, 0.1);
 }
 
 .memolog-category-tab-active {
-	border-bottom-color: var(--category-color, var(--interactive-accent));
+	background-color: var(--background-primary);
+	border-bottom: 2px solid var(--category-color, var(--interactive-accent));
 	font-weight: 600;
+	z-index: 1;
 }
 
 .memolog-category-tab-icon {

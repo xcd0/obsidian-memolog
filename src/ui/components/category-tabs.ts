@@ -13,16 +13,19 @@ export class CategoryTabs {
 	private handlers: CategoryTabsHandlers;
 	private activeCategory: string;
 	private tabElements: Map<string, HTMLElement> = new Map();
+	private showIcons: boolean;
 
 	constructor(
 		container: HTMLElement,
 		categories: CategoryConfig[],
-		handlers: CategoryTabsHandlers
+		handlers: CategoryTabsHandlers,
+		showIcons = true
 	) {
 		this.container = container;
 		this.categories = categories;
 		this.handlers = handlers;
 		this.activeCategory = categories[0]?.name || "";
+		this.showIcons = showIcons;
 	}
 
 	//! タブを描画する。
@@ -58,8 +61,8 @@ export class CategoryTabs {
 		//! カテゴリカラーを設定。
 		tab.style.setProperty("--category-color", category.color);
 
-		//! アイコンを追加。
-		if (category.icon) {
+		//! アイコンを追加（showIconsがtrueの場合のみ）。
+		if (this.showIcons && category.icon) {
 			const iconEl = tab.createDiv({ cls: "memolog-category-tab-icon" });
 			setIcon(iconEl, category.icon);
 		}

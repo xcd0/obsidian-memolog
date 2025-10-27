@@ -213,9 +213,14 @@ export class MemologSidebar extends ItemView {
 
 		//! カテゴリタブを初期化。
 		if (settings.categories.length > 0) {
-			this.categoryTabs = new CategoryTabs(categoryTabsAreaEl, settings.categories, {
-				onCategoryChange: (category) => void this.handleCategoryChange(category),
-			});
+			this.categoryTabs = new CategoryTabs(
+				categoryTabsAreaEl,
+				settings.categories,
+				{
+					onCategoryChange: (category) => void this.handleCategoryChange(category),
+				},
+				settings.showCategoryIcons
+			);
 			this.currentCategory = settings.defaultCategory || settings.categories[0].name;
 			this.categoryTabs.render(this.currentCategory);
 		} else {

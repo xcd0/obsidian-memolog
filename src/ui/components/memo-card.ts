@@ -124,6 +124,17 @@ export class MemoCard {
 			//! 保存・キャンセルボタン。
 			const editActions = contentDiv.createDiv({ cls: "memolog-card-edit-actions" });
 
+			//! キャンセルボタン（左側）。
+			const cancelBtn = editActions.createEl("button", {
+				cls: "memolog-btn memolog-btn-cancel",
+				text: "キャンセル",
+			});
+
+			cancelBtn.addEventListener("click", () => {
+				this.toggleEditMode();
+			});
+
+			//! 保存ボタン（右側）。
 			const saveBtn = editActions.createEl("button", {
 				cls: "memolog-btn memolog-btn-save",
 				text: "保存",
@@ -136,15 +147,6 @@ export class MemoCard {
 					this.memo.content = newContent;
 					this.toggleEditMode();
 				}
-			});
-
-			const cancelBtn = editActions.createEl("button", {
-				cls: "memolog-btn memolog-btn-cancel",
-				text: "キャンセル",
-			});
-
-			cancelBtn.addEventListener("click", () => {
-				this.toggleEditMode();
 			});
 		} else {
 			//! 通常モード: Markdownとしてレンダリング。
@@ -239,6 +241,19 @@ export class MemoCard {
 			//! 添付ファイルを再描画。
 			if (this.memo.attachments && this.memo.attachments.length > 0) {
 				this.renderAttachments(this.cardElement);
+			}
+
+			//! 編集モードに入った場合、カード全体が表示されるようにスクロール。
+			if (this.isEditMode) {
+				//! レンダリング完了を待ってスクロール。
+				setTimeout(() => {
+					if (this.cardElement) {
+						this.cardElement.scrollIntoView({
+							behavior: "smooth",
+							block: "nearest",
+						});
+					}
+				}, 100);
 			}
 		}
 	}

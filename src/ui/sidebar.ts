@@ -33,7 +33,7 @@ export class MemologSidebar extends ItemView {
 	private inputAreaEl: HTMLElement | null = null;
 
 	//! 現在の状態。
-	private currentCategory: string = "";
+	private currentCategory: string = ""; //! ディレクトリ名を保存（"all"は特別扱い）。
 	private currentOrder: SortOrder = "asc";
 	private selectedDate: Date | null = null;
 	private calendarVisible: boolean = false;
@@ -217,15 +217,22 @@ export class MemologSidebar extends ItemView {
 				categoryTabsAreaEl,
 				settings.categories,
 				{
-					onCategoryChange: (category) => void this.handleCategoryChange(category),
+					onCategoryChange: (categoryDirectory) => void this.handleCategoryChange(categoryDirectory),
 				},
 				settings.showAllTab
 			);
-			this.currentCategory = settings.defaultCategory || settings.categories[0].name;
+			//! defaultCategoryからディレクトリ名を取得。
+			const defaultCategoryConfig = settings.categories.find(
+				(c) => c.name === settings.defaultCategory
+			);
+			this.currentCategory = defaultCategoryConfig?.directory || settings.categories[0].directory;
 			this.categoryTabs.render(this.currentCategory);
 		} else {
-			//! カテゴリが設定されていない場合はデフォルトカテゴリを使用。
-			this.currentCategory = settings.defaultCategory;
+			//! カテゴリが設定されていない場合はデフォルトカテゴリのディレクトリ名を使用。
+			const defaultCategoryConfig = settings.categories.find(
+				(c) => c.name === settings.defaultCategory
+			);
+			this.currentCategory = defaultCategoryConfig?.directory || settings.defaultCategory;
 		}
 
 		//! カレンダーを初期化。
@@ -283,7 +290,7 @@ export class MemologSidebar extends ItemView {
 
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
 					if (fileExists) {
-						const categoryMemos = await this.memoManager.getMemos(filePath, cat.name);
+						const categoryMemos = await this.memoManager.getMemos(filePath, cat.directory);
 						this.memos.push(...categoryMemos);
 					}
 				}
@@ -291,20 +298,20 @@ export class MemologSidebar extends ItemView {
 				//! ソート順に応じて並べ替え。
 				this.sortMemos();
 			} else {
-				//! 特定のカテゴリのメモを読み込む。
-				const category = this.currentCategory || settings.defaultCategory;
+				//! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
+				const categoryDirectory = this.currentCategory;
 
 				//! ファイルパスを生成。
 				const filePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
 							settings.rootDirectory,
-							category,
+							categoryDirectory,
 							settings.pathFormat,
 							settings.useDirectoryCategory
 						)
 					: PathGenerator.generateFilePath(
 							settings.rootDirectory,
-							category,
+							categoryDirectory,
 							settings.saveUnit,
 							settings.useDirectoryCategory
 						);
@@ -314,7 +321,7 @@ export class MemologSidebar extends ItemView {
 
 				if (fileExists) {
 					//! メモを読み込む。
-					this.memos = await this.memoManager.getMemos(filePath, category);
+					this.memos = await this.memoManager.getMemos(filePath, categoryDirectory);
 
 					//! ソート順に応じて並べ替え。
 					this.sortMemos();
@@ -571,23 +578,20 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			//! "all"が選択されている場合はデフォルトカテゴリを使用。
-			const category =
-				this.currentCategory === "all"
-					? settings.defaultCategory
-					: this.currentCategory || settings.defaultCategory;
 
-			//! カテゴリ名からカテゴリ設定を取得。
-			//! 見つからない場合はカテゴリ名をそのままdirectoryとして使用。
-			const categoryConfig = settings.categories.find((c) => c.name === category);
-			const categoryDirectory = categoryConfig?.directory || category;
+			//! "all"が選択されている場合はデフォルトカテゴリのディレクトリ名を取得。
+			let categoryDirectory = this.currentCategory;
+			if (categoryDirectory === "all") {
+				const defaultCategoryConfig = settings.categories.find(
+					(c) => c.name === settings.defaultCategory
+				);
+				categoryDirectory = defaultCategoryConfig?.directory || settings.defaultCategory;
+			}
 
 			//! デバッグ: 設定を確認。
 			console.log("[memolog DEBUG] Settings:", {
 				rootDirectory: settings.rootDirectory,
-				category,
 				categoryDirectory,
-				categoryConfigFound: !!categoryConfig,
 				pathFormat: settings.pathFormat,
 				saveUnit: settings.saveUnit,
 				useDirectoryCategory: settings.useDirectoryCategory,
@@ -647,11 +651,11 @@ export class MemologSidebar extends ItemView {
 				this.memoManager.vaultHandler.folderExists(dirPath)
 			);
 
-			//! メモを追加。
+			//! メモを追加（categoryDirectoryをカテゴリとして保存）。
 			console.log("[memolog DEBUG] Calling addMemo...");
 			const result = await this.memoManager.addMemo(
 				filePath,
-				category,
+				categoryDirectory,
 				content,
 				this.currentOrder,
 				settings.memoTemplate,

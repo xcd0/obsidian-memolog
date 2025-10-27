@@ -786,3 +786,9 @@
 		padding: 0.75rem;
 	}
 }
+
+/* 設定画面のバリデーションエラー */
+.memolog-input-error {
+	border-color: var(--text-error) !important;
+	background-color: var(--background-modifier-error) !important;
+}

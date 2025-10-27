@@ -452,20 +452,40 @@ export class MemologSettingTab extends PluginSettingTab {
 			);
 
 		//! ディレクトリ名。
-		new Setting(categoryDiv)
-			.setName("ディレクトリ名")
-			.addText((text) =>
-				text
-					.setPlaceholder("directory-name")
-					.setValue(category.directory)
-					.onChange(async (value) => {
-						const updatedCategories = [...settings.categories];
-						updatedCategories[index] = { ...updatedCategories[index], directory: value };
-						await this.plugin.settingsManager.updateGlobalSettings({
-							categories: updatedCategories,
-						});
-					})
-			);
+		const directorySetting = new Setting(categoryDiv)
+			.setName("ディレクトリ名 (必須)")
+			.setDesc("内部で使用されるディレクトリ名です。カテゴリ名はタブ表示のみに使用されます。");
+
+		directorySetting.addText((text) => {
+			text
+				.setPlaceholder("directory-name")
+				.setValue(category.directory)
+				.onChange(async (value) => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], directory: value };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.refreshSidebar();
+
+					//! ディレクトリ名が空の場合はエラーメッセージを表示。
+					if (!value.trim()) {
+						text.inputEl.addClass("memolog-input-error");
+						directorySetting.setDesc("⚠️ ディレクトリ名は必須です。カテゴリ名はタブ表示のみに使用されます。");
+					} else {
+						text.inputEl.removeClass("memolog-input-error");
+						directorySetting.setDesc("内部で使用されるディレクトリ名です。カテゴリ名はタブ表示のみに使用されます。");
+					}
+				});
+
+			//! 初期表示時のチェック。
+			if (!category.directory.trim()) {
+				text.inputEl.addClass("memolog-input-error");
+				directorySetting.setDesc("⚠️ ディレクトリ名は必須です。カテゴリ名はタブ表示のみに使用されます。");
+			}
+
+			return text;
+		});
 
 		//! プリセットカラー選択。
 		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー");

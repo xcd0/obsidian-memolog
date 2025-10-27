@@ -3,7 +3,7 @@ import { setIcon } from "obsidian";
 
 //! カテゴリタブのハンドラー。
 interface CategoryTabsHandlers {
-	onCategoryChange: (category: string) => void;
+	onCategoryChange: (categoryDirectory: string) => void;
 }
 
 //! カテゴリタブUI。
@@ -11,8 +11,8 @@ export class CategoryTabs {
 	private container: HTMLElement;
 	private categories: CategoryConfig[];
 	private handlers: CategoryTabsHandlers;
-	private activeCategory: string;
-	private tabElements: Map<string, HTMLElement> = new Map();
+	private activeCategory: string; //! アクティブなカテゴリのディレクトリ名。
+	private tabElements: Map<string, HTMLElement> = new Map(); //! キーはディレクトリ名。
 	private showAllTab: boolean;
 
 	constructor(
@@ -25,7 +25,7 @@ export class CategoryTabs {
 		this.categories = categories;
 		this.handlers = handlers;
 		this.showAllTab = showAllTab;
-		this.activeCategory = categories[0]?.name || "";
+		this.activeCategory = categories[0]?.directory || "";
 	}
 
 	//! タブを描画する。
@@ -53,13 +53,18 @@ export class CategoryTabs {
 			}
 		}
 
-		//! 各カテゴリのタブを作成。
+		//! 各カテゴリのタブを作成（ディレクトリ名が空のものは除外）。
 		for (const category of this.categories) {
+			//! ディレクトリ名が空の場合はスキップ。
+			if (!category.directory || !category.directory.trim()) {
+				continue;
+			}
+
 			const tab = this.createTab(tabsContainer, category);
-			this.tabElements.set(category.name, tab);
+			this.tabElements.set(category.directory, tab);
 
 			//! アクティブなタブをハイライト。
-			if (category.name === this.activeCategory) {
+			if (category.directory === this.activeCategory) {
 				tab.addClass("memolog-category-tab-active");
 			}
 		}
@@ -78,7 +83,7 @@ export class CategoryTabs {
 			text: "All",
 		});
 
-		//! クリックイベントを設定。
+		//! クリックイベントを設定（ディレクトリ名"all"を渡す）。
 		tab.addEventListener("click", () => {
 			this.setActiveCategory("all");
 			this.handlers.onCategoryChange("all");
@@ -100,16 +105,16 @@ export class CategoryTabs {
 			setIcon(iconEl, category.icon);
 		}
 
-		//! カテゴリ名を追加。
+		//! カテゴリ名を表示（UIのみ）。
 		tab.createDiv({
 			cls: "memolog-category-tab-name",
 			text: category.name,
 		});
 
-		//! クリックイベントを設定。
+		//! クリックイベントを設定（ディレクトリ名を渡す）。
 		tab.addEventListener("click", () => {
-			this.setActiveCategory(category.name);
-			this.handlers.onCategoryChange(category.name);
+			this.setActiveCategory(category.directory);
+			this.handlers.onCategoryChange(category.directory);
 		});
 
 		return tab;

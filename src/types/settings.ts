@@ -29,7 +29,7 @@ export interface GlobalSettings {
 	//! カテゴリ情報配列。
 	categories: CategoryConfig[];
 
-	//! 既定のカテゴリ。
+	//! 既定のカテゴリのディレクトリ名。
 	defaultCategory: string;
 
 	//! 保存単位。
@@ -92,7 +92,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 			icon: "gamepad-2",
 		},
 	],
-	defaultCategory: "仕事",
+	defaultCategory: "work",
 	saveUnit: "day",
 	order: "asc",
 	enableDailyNotes: false,

@@ -423,20 +423,20 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 
 		//! デフォルトカテゴリが存在しない場合、一番上のカテゴリを選択。
-		const categoryExists = settings.categories.some((c) => c.name === settings.defaultCategory);
+		const categoryExists = settings.categories.some((c) => c.directory === settings.defaultCategory);
 		if (!categoryExists || !settings.defaultCategory) {
 			const firstCategory = settings.categories[0];
 			//! 非同期で設定を更新（awaitしない）。
 			this.plugin.settingsManager
 				.updateGlobalSettings({
-					defaultCategory: firstCategory.name,
+					defaultCategory: firstCategory.directory,
 				})
 				.then(() => {
 					//! 更新後にサイドバーを再描画。
 					this.refreshSidebar();
 				});
 			//! 表示用に現在の設定を更新。
-			settings.defaultCategory = firstCategory.name;
+			settings.defaultCategory = firstCategory.directory;
 		}
 
 		//! 表を作成。
@@ -459,7 +459,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" });
 
 			//! 選択されているカテゴリをハイライト。
-			if (category.name === settings.defaultCategory) {
+			if (category.directory === settings.defaultCategory) {
 				row.addClass("memolog-default-category-selected");
 			}
 
@@ -467,7 +467,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			const radioCell = row.createEl("td");
 			const radio = radioCell.createEl("input", { type: "radio" });
 			radio.name = "default-category";
-			radio.checked = category.name === settings.defaultCategory;
+			radio.checked = category.directory === settings.defaultCategory;
 
 			//! カテゴリ名。
 			row.createEl("td", { text: category.name });
@@ -495,7 +495,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 				//! 設定を更新。
 				await this.plugin.settingsManager.updateGlobalSettings({
-					defaultCategory: category.name,
+					defaultCategory: category.directory,
 				});
 
 				//! サイドバーを再描画。

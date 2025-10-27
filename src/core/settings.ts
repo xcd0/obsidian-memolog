@@ -154,8 +154,8 @@ export class SettingsManager {
 
 		//! defaultCategoryが存在する場合、categoriesに含まれていること。
 		if (settings.defaultCategory && settings.categories) {
-			const categoryNames = settings.categories.map((c) => c.name);
-			if (!categoryNames.includes(settings.defaultCategory)) {
+			const categoryDirectories = settings.categories.map((c) => c.directory);
+			if (!categoryDirectories.includes(settings.defaultCategory)) {
 				return false;
 			}
 		}

@@ -230,14 +230,14 @@ export class MemologSidebar extends ItemView {
 			);
 			//! defaultCategoryからディレクトリ名を取得。
 			const defaultCategoryConfig = settings.categories.find(
-				(c) => c.name === settings.defaultCategory
+				(c) => c.directory === settings.defaultCategory
 			);
 			this.currentCategory = defaultCategoryConfig?.directory || settings.categories[0].directory;
 			this.categoryTabs.render(this.currentCategory);
 		} else {
 			//! カテゴリが設定されていない場合はデフォルトカテゴリのディレクトリ名を使用。
 			const defaultCategoryConfig = settings.categories.find(
-				(c) => c.name === settings.defaultCategory
+				(c) => c.directory === settings.defaultCategory
 			);
 			this.currentCategory = defaultCategoryConfig?.directory || settings.defaultCategory;
 		}
@@ -606,7 +606,7 @@ export class MemologSidebar extends ItemView {
 			let categoryDirectory = this.currentCategory;
 			if (categoryDirectory === "all") {
 				const defaultCategoryConfig = settings.categories.find(
-					(c) => c.name === settings.defaultCategory
+					(c) => c.directory === settings.defaultCategory
 				);
 				categoryDirectory = defaultCategoryConfig?.directory || settings.defaultCategory;
 			}

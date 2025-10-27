@@ -67,18 +67,18 @@ describe("SettingsManager", () => {
 			mockModify.mockResolvedValue(undefined);
 
 			const updates: Partial<GlobalSettings> = {
-				defaultCategory: "趣味",
+				defaultCategory: "hobby",
 				searchHistoryMaxSize: 100,
 			};
 
 			await settingsManager.updateGlobalSettings(updates);
 
 			const settings = settingsManager.getGlobalSettings();
-			expect(settings.defaultCategory).toBe("趣味");
+			expect(settings.defaultCategory).toBe("hobby");
 			expect(settings.searchHistoryMaxSize).toBe(100);
 			expect(mockModify).toHaveBeenCalledWith(
 				mockFile,
-				expect.stringContaining('"defaultCategory": "趣味"')
+				expect.stringContaining('"defaultCategory": "hobby"')
 			);
 		});
 
@@ -103,7 +103,7 @@ describe("SettingsManager", () => {
 		it("設定ファイルが存在する場合は読み込む", async () => {
 			const mockFile = createMockTFile("memolog/global-setting.json");
 			const savedSettings: Partial<GlobalSettings> = {
-				defaultCategory: "趣味",
+				defaultCategory: "hobby",
 				searchHistoryMaxSize: 100,
 			};
 
@@ -113,7 +113,7 @@ describe("SettingsManager", () => {
 			await settingsManager.loadGlobalSettings();
 
 			const settings = settingsManager.getGlobalSettings();
-			expect(settings.defaultCategory).toBe("趣味");
+			expect(settings.defaultCategory).toBe("hobby");
 			expect(settings.searchHistoryMaxSize).toBe(100);
 		});
 
@@ -428,7 +428,7 @@ describe("SettingsManager", () => {
 						icon: "briefcase",
 					},
 				],
-				defaultCategory: "仕事",
+				defaultCategory: "work",
 			};
 
 			expect(settingsManager.validateSettings(validSettings)).toBe(true);
@@ -452,7 +452,7 @@ describe("SettingsManager", () => {
 						icon: "briefcase",
 					},
 				],
-				defaultCategory: "趣味", //! categoriesに存在しない。
+				defaultCategory: "invalid", //! categoriesに存在しない。
 			};
 
 			expect(settingsManager.validateSettings(invalidSettings)).toBe(false);

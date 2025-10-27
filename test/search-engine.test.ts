@@ -207,8 +207,9 @@ describe("SearchEngine", () => {
 			const diffMs = end.getTime() - start.getTime();
 			const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-			//! 日付文字列のみが返されるため、時刻は00:00:00となり、7日間の差になる。
-			expect(diffDays).toBe(7);
+			//! 今日を含めて7日間（today, today-1, ..., today-6）。
+			//! startDate = today - 6日、endDate = today なので、差は6日。
+			expect(diffDays).toBe(6);
 		});
 
 		test("過去30日のプリセットを取得できる", () => {

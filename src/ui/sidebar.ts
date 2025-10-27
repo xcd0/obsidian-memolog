@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice, TFile, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, TFile, setIcon, EventRef } from "obsidian";
 import MemologPlugin from "../../main";
 import { MemoEntry, SortOrder } from "../types";
 import { MemoManager } from "../core/memo-manager";
@@ -36,6 +36,9 @@ export class MemologSidebar extends ItemView {
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
+
+	//! ファイル変更監視用のイベントリファレンス。
+	private fileModifyRef: EventRef | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: MemologPlugin) {
 		super(leaf);
@@ -95,11 +98,17 @@ export class MemologSidebar extends ItemView {
 
 		//! 初期データを読み込む。
 		await this.loadMemos();
+
+		//! ファイル変更イベントリスナーを登録。
+		this.registerFileWatcher();
 	}
 
 	//! ビューを閉じたときの処理。
 	// eslint-disable-next-line @typescript-eslint/require-await
 	override async onClose(): Promise<void> {
+		//! ファイル変更イベントリスナーを解除。
+		this.unregisterFileWatcher();
+
 		//! クリーンアップ処理。
 		this.containerEl.empty();
 	}
@@ -293,6 +302,44 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
+	//! ファイル変更イベントリスナーを登録する。
+	private registerFileWatcher(): void {
+		this.fileModifyRef = this.app.metadataCache.on("changed", (file: TFile) => {
+			void this.handleFileModified(file);
+		});
+	}
+
+	//! ファイル変更イベントリスナーを解除する。
+	private unregisterFileWatcher(): void {
+		if (this.fileModifyRef) {
+			this.app.metadataCache.offref(this.fileModifyRef);
+			this.fileModifyRef = null;
+		}
+	}
+
+	//! ファイルが変更されたときの処理。
+	private async handleFileModified(file: TFile): Promise<void> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+
+			//! 変更されたファイルがmemologの管理下にあるか確認。
+			if (!file.path.startsWith(settings.rootDirectory)) {
+				return;
+			}
+
+			//! .mdファイルでない場合は無視。
+			if (!file.path.endsWith(".md")) {
+				return;
+			}
+
+			//! メモを再読み込み。
+			await this.loadMemos();
+		} catch (error) {
+			console.error("ファイル変更処理エラー:", error);
+		}
+	}
+
 	//! 日付でメモをフィルタリングする。
 	private filterMemosByDate(memos: MemoEntry[], date: Date): MemoEntry[] {
 		const targetDate = new Date(date.getTime());
@@ -461,8 +508,8 @@ export class MemologSidebar extends ItemView {
 			const arrayBuffer = await file.arrayBuffer();
 			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer);
 
-			//! Obsidian Wikilink形式で画像リンクを生成。
-			const markdownLink = `![[${filePath}]]`;
+			//! HTMLのimg形式で画像リンクを生成（MarkdownRendererで正しく表示されるため）。
+			const markdownLink = `<img alt="${fileName}" src="${filePath}">`;
 
 			return markdownLink;
 		} catch (error) {

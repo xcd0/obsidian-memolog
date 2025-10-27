@@ -145,12 +145,30 @@ export class MemoManager {
 			timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
 		}
 
+		//! timestampがnullの場合はデフォルト値を設定。
+		const finalTimestamp = timestamp || this.generateTimestamp();
+
 		//! 本文を抽出。
 		let content: string;
 
-		//! テンプレートに{{content}}が含まれている場合、HTMLコメントの次の行から全体がコンテンツ。
+		//! テンプレートに{{content}}が含まれている場合、テンプレートから{{content}}部分のみを逆算。
 		if (template && template.includes("{{content}}")) {
-			content = lines.slice(contentStartIndex).join("\n").trim();
+			const bodyText = lines.slice(contentStartIndex).join("\n");
+
+			//! テンプレートを{{content}}で分割。
+			const parts = template.split("{{content}}");
+			const beforeContent = parts[0] ? this.formatTimestamp(finalTimestamp, parts[0]) : "";
+			const afterContent = parts[1] ? this.formatTimestamp(finalTimestamp, parts[1]) : "";
+
+			//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
+			let extracted = bodyText;
+			if (beforeContent && extracted.startsWith(beforeContent)) {
+				extracted = extracted.slice(beforeContent.length);
+			}
+			if (afterContent && extracted.endsWith(afterContent)) {
+				extracted = extracted.slice(0, -afterContent.length);
+			}
+			content = extracted.trim();
 		} else {
 			//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
 			const actualContentStartIndex = contentStartIndex + 1;
@@ -162,9 +180,6 @@ export class MemoManager {
 		const attachments = attachmentMatches
 			? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
 			: undefined;
-
-		//! timestampがnullの場合はデフォルト値を設定。
-		const finalTimestamp = timestamp || this.generateTimestamp();
 
 		return {
 			id,

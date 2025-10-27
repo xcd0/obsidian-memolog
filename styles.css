@@ -458,9 +458,16 @@
 .memolog-input-area {
 	padding: 1rem;
 	border-top: 1px solid var(--background-modifier-border);
+	border-bottom: none;
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+}
+
+/* 降順時は下部に線を表示 */
+.memolog-input-area-order-desc {
+	border-top: none;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .memolog-input {

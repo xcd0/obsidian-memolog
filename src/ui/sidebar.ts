@@ -755,11 +755,15 @@ export class MemologSidebar extends ItemView {
 		if (this.currentOrder === "desc") {
 			//! 降順: 入力エリアをメモリストの前に配置。
 			parent.insertBefore(this.inputAreaEl, this.listAreaEl);
+			//! 降順用のクラスを追加。
+			this.inputAreaEl.addClass("memolog-input-area-order-desc");
 		} else {
 			//! 昇順: 入力エリアをメモリストの後に配置。
 			if (this.listAreaEl.nextSibling !== this.inputAreaEl) {
 				parent.insertBefore(this.inputAreaEl, this.listAreaEl.nextSibling);
 			}
+			//! 降順用のクラスを削除。
+			this.inputAreaEl.removeClass("memolog-input-area-order-desc");
 		}
 	}
 

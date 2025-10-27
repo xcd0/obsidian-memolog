@@ -379,6 +379,32 @@
 	right: 0.5rem;
 }
 
+/* 編集モードのテキストエリア */
+.memolog-card-edit-textarea {
+	width: 100%;
+	min-height: 150px;
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	resize: vertical;
+	font-family: var(--font-text);
+	font-size: var(--font-ui-medium);
+	margin-bottom: 0.5rem;
+}
+
+.memolog-card-edit-textarea:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+}
+
+.memolog-card-edit-actions {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+}
+
 .memolog-card-attachments {
 	margin-top: 0.75rem;
 	display: flex;
@@ -428,7 +454,7 @@
 
 .memolog-input {
 	width: 100%;
-	min-height: 120px;
+	min-height: 60px;
 	padding: 0.5rem;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;

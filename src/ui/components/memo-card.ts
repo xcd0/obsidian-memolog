@@ -94,9 +94,7 @@ export class MemoCard {
 			text: "編集",
 		});
 		editBtn.addEventListener("click", () => {
-			if (this.handlers.onEdit) {
-				this.handlers.onEdit(this.memo.id);
-			}
+			this.toggleEditMode();
 		});
 
 		//! 削除ボタン。

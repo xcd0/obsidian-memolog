@@ -346,7 +346,7 @@
 
 /* Markdownコード要素のスタイル */
 .memolog-card-content code {
-	background-color: var(--code-background);
+	background-color: rgba(0, 0, 0, 0.15);
 	color: var(--code-normal);
 	padding: 0.1rem 0.3rem;
 	border-radius: 3px;
@@ -355,9 +355,11 @@
 }
 
 .memolog-card-content pre {
-	background-color: var(--code-background);
+	position: relative;
+	background-color: rgba(0, 0, 0, 0.15);
 	color: var(--code-normal);
 	padding: 0.75rem;
+	padding-right: 3rem;
 	border-radius: 6px;
 	overflow-x: auto;
 	margin: 0.5rem 0;
@@ -368,6 +370,13 @@
 	background-color: transparent;
 	padding: 0;
 	border-radius: 0;
+}
+
+/* コードブロックのコピーボタンを右端に配置 */
+.memolog-card-content pre .copy-code-button {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
 }
 
 .memolog-card-attachments {

@@ -29,11 +29,13 @@
 .memolog-category-tabs-wrapper {
 	flex: 1;
 	overflow-x: auto;
+	overflow-y: hidden;
 	min-width: 0;
 }
 
 .memolog-category-tabs {
 	display: flex;
+	align-items: center;
 	gap: 0.25rem;
 }
 

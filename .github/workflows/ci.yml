@@ -15,10 +15,6 @@ jobs:
       matrix:
         node-version: [18.x, 20.x]
 
-    defaults:
-      run:
-        working-directory: v0
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,16 +42,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-output
-          path: v0/main.js
+          path: main.js
           retention-days: 7
 
   coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: v0
 
     steps:
       - name: Checkout repository
@@ -75,7 +67,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: v0/coverage/lcov.info
+          files: coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false

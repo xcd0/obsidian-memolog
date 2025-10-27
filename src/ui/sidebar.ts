@@ -217,6 +217,7 @@ export class MemologSidebar extends ItemView {
 			this.memos,
 			{
 				onDelete: (memoId) => void this.handleDelete(memoId),
+				onEdit: (memoId) => this.handleEdit(memoId),
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 			},
@@ -507,6 +508,21 @@ export class MemologSidebar extends ItemView {
 				console.error("[memolog DEBUG] Error stack:", error.stack);
 			}
 			new Notice("メモの追加に失敗しました");
+		}
+	}
+
+	//! メモ編集処理（入力欄にコンテンツをセット）。
+	private handleEdit(memoId: string): void {
+		//! メモIDからメモを検索。
+		const memo = this.memos.find((m) => m.id === memoId);
+		if (!memo) {
+			return;
+		}
+
+		//! 入力欄にメモのコンテンツをセット。
+		if (this.inputForm) {
+			this.inputForm.setValue(memo.content);
+			this.inputForm.focus();
 		}
 	}
 

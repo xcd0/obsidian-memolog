@@ -428,7 +428,7 @@
 
 .memolog-input {
 	width: 100%;
-	min-height: 60px;
+	min-height: 120px;
 	padding: 0.5rem;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;

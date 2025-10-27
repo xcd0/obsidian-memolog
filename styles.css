@@ -844,3 +844,8 @@
 	border-radius: 4px;
 	border: 1px solid var(--background-modifier-border);
 }
+
+/* 設定ボタン */
+.memolog-settings-btn {
+	flex-shrink: 0;
+}

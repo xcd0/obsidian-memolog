@@ -122,7 +122,7 @@ export class MemologSidebar extends ItemView {
 		this.containerEl.empty();
 	}
 
-	//! カテゴリタブ領域を作成する（ハンバーガーメニューとソートボタンも含む）。
+	//! カテゴリタブ領域を作成する（ハンバーガーメニュー、設定ボタン、ソートボタンも含む）。
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
 
@@ -134,6 +134,9 @@ export class MemologSidebar extends ItemView {
 
 		//! カテゴリタブコンテナ。
 		const tabsContainer = innerContainer.createDiv({ cls: "memolog-category-tabs-wrapper" });
+
+		//! 設定ボタン。
+		innerContainer.createDiv({ cls: "memolog-settings-btn" });
 
 		//! ソート順ボタン。
 		innerContainer.createDiv({ cls: "memolog-sort-btn-wrapper" });
@@ -199,16 +202,20 @@ export class MemologSidebar extends ItemView {
 			const hamburgerBtn = categoryTabsContainer.querySelector(
 				".memolog-hamburger-btn"
 			) as HTMLElement;
+			const settingsBtn = categoryTabsContainer.querySelector(
+				".memolog-settings-btn"
+			) as HTMLElement;
 			const sortBtnWrapper = categoryTabsContainer.querySelector(
 				".memolog-sort-btn-wrapper"
 			) as HTMLElement;
 
-			//! ボタンバーを初期化（ハンバーガーとソートボタンのみ）。
+			//! ボタンバーを初期化（ハンバーガー、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsContainer, {
 				onSortOrderChange: (order) => this.handleSortOrderChange(order),
 				onCalendarClick: () => this.toggleCalendar(),
+				onSettingsClick: () => this.openSettings(),
 			});
-			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, sortBtnWrapper);
+			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, settingsBtn, sortBtnWrapper);
 		}
 
 		//! カテゴリタブを初期化。
@@ -824,5 +831,21 @@ export class MemologSidebar extends ItemView {
 		if (this.calendarAreaEl) {
 			this.calendarAreaEl.style.display = this.calendarVisible ? "block" : "none";
 		}
+	}
+
+	//! 設定画面を開く。
+	private openSettings(): void {
+		//! Obsidianの設定画面を開くコマンドを実行。
+		// @ts-expect-error - Obsidian internal API
+		this.app.commands.executeCommandById("app:open-settings");
+
+		//! 設定画面が開くまで少し待ってから、プラグイン設定タブに移動。
+		setTimeout(() => {
+			// @ts-expect-error - Obsidian internal API
+			const settingTab = this.app.setting;
+			if (settingTab) {
+				settingTab.openTabById(this.plugin.manifest.id);
+			}
+		}, 100);
 	}
 }

@@ -29,6 +29,7 @@ export class ButtonBar {
 	renderInline(
 		initialOrder: SortOrder = "asc",
 		hamburgerContainer: HTMLElement,
+		settingsContainer: HTMLElement,
 		sortContainer: HTMLElement
 	): void {
 		this.currentOrder = initialOrder;
@@ -44,6 +45,20 @@ export class ButtonBar {
 		calendarBtn.addEventListener("click", () => {
 			if (this.handlers.onCalendarClick) {
 				this.handlers.onCalendarClick();
+			}
+		});
+
+		//! 設定ボタン。
+		settingsContainer.empty();
+		const settingsBtn = settingsContainer.createEl("button", {
+			cls: "memolog-btn memolog-settings-toggle-btn",
+			attr: { "aria-label": "設定を開く" },
+		});
+		const settingsIcon = settingsBtn.createDiv({ cls: "memolog-btn-icon" });
+		setIcon(settingsIcon, "settings");
+		settingsBtn.addEventListener("click", () => {
+			if (this.handlers.onSettingsClick) {
+				this.handlers.onSettingsClick();
 			}
 		});
 

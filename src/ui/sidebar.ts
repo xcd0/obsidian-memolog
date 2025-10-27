@@ -218,8 +218,7 @@ export class MemologSidebar extends ItemView {
 				settings.categories,
 				{
 					onCategoryChange: (category) => void this.handleCategoryChange(category),
-				},
-				settings.showCategoryIcons
+				}
 			);
 			this.currentCategory = settings.defaultCategory || settings.categories[0].name;
 			this.categoryTabs.render(this.currentCategory);

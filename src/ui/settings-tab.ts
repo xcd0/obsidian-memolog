@@ -398,19 +398,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 		);
 
-		//! カテゴリアイコン表示設定。
-		new Setting(containerEl)
-			.setName("カテゴリアイコンを表示")
-			.setDesc("カテゴリタブにアイコンを表示します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showCategoryIcons).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						showCategoryIcons: value,
-					});
-					this.refreshSidebar();
-				})
-			);
-
 		//! デフォルトカテゴリ設定。
 		new Setting(containerEl)
 			.setName("デフォルトカテゴリ")
@@ -556,6 +543,21 @@ export class MemologSettingTab extends PluginSettingTab {
 				})();
 			});
 		}
+
+		//! アイコン表示トグル。
+		new Setting(categoryDiv)
+			.setName("アイコンを表示")
+			.setDesc("このカテゴリのタブにアイコンを表示します")
+			.addToggle((toggle) =>
+				toggle.setValue(category.showIcon ?? true).onChange(async (value) => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], showIcon: value };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.refreshSidebar();
+				})
+			);
 
 		//! 削除ボタン。
 		new Setting(categoryDiv)

@@ -353,7 +353,8 @@ export class MemoManager {
 				const memos: MemoEntry[] = [];
 				for (const text of memoTexts) {
 					const memo = this.parseTextToMemo(text, category);
-					if (memo && memo.category === category) {
+					//! categoryが空文字の場合はフィルタリングしない（全メモを取得）。
+					if (memo && (!category || memo.category === category)) {
 						memos.push(memo);
 					}
 				}

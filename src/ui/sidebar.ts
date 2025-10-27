@@ -280,6 +280,8 @@ export class MemologSidebar extends ItemView {
 			//! "all"が選択されている場合は全カテゴリのメモを読み込む。
 			if (this.currentCategory === "all") {
 				this.memos = [];
+				const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
+
 				for (const cat of settings.categories) {
 					const filePath = settings.pathFormat
 						? PathGenerator.generateCustomPath(
@@ -295,10 +297,24 @@ export class MemologSidebar extends ItemView {
 								settings.useDirectoryCategory
 							);
 
+					//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
+					if (processedFiles.has(filePath)) {
+						continue;
+					}
+					processedFiles.add(filePath);
+
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
 					if (fileExists) {
-						const categoryMemos = await this.memoManager.getMemos(filePath, cat.directory);
-						this.memos.push(...categoryMemos);
+						//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
+						//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
+						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+						for (const text of memoTexts) {
+							const memo = this.memoManager["parseTextToMemo"](text, "");
+							if (memo) {
+								this.memos.push(memo);
+							}
+						}
 					}
 				}
 

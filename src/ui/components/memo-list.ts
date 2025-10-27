@@ -1,4 +1,4 @@
-import { MemoEntry } from "../../types";
+import { MemoEntry, SortOrder } from "../../types";
 import { MemoCard, MemoCardHandlers } from "./memo-card";
 
 //! メモリストコンポーネント。
@@ -7,17 +7,20 @@ export class MemoList {
 	private memos: MemoEntry[];
 	private handlers: MemoCardHandlers;
 	private enableDailyNotes: boolean;
+	private sourcePath: string;
 
 	constructor(
 		container: HTMLElement,
 		memos: MemoEntry[] = [],
 		handlers: MemoCardHandlers = {},
-		enableDailyNotes = false
+		enableDailyNotes = false,
+		sourcePath = ""
 	) {
 		this.container = container;
 		this.memos = memos;
 		this.handlers = handlers;
 		this.enableDailyNotes = enableDailyNotes;
+		this.sourcePath = sourcePath;
 	}
 
 	//! メモリストを描画する。
@@ -33,7 +36,13 @@ export class MemoList {
 
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
-			const card = new MemoCard(this.container, memo, this.handlers, this.enableDailyNotes);
+			const card = new MemoCard(
+				this.container,
+				memo,
+				this.handlers,
+				this.enableDailyNotes,
+				this.sourcePath
+			);
 			card.render();
 		}
 	}
@@ -72,5 +81,19 @@ export class MemoList {
 	clear(): void {
 		this.memos = [];
 		this.render();
+	}
+
+	//! 最新のメモが表示される位置にスクロールする。
+	scrollToLatest(order: SortOrder): void {
+		//! レンダリング完了を待つ。
+		setTimeout(() => {
+			if (order === "asc") {
+				//! 昇順の場合、最新メモは最下部にあるので最下部にスクロール。
+				this.container.scrollTop = this.container.scrollHeight;
+			} else {
+				//! 降順の場合、最新メモは最上部にあるので最上部にスクロール。
+				this.container.scrollTop = 0;
+			}
+		}, 0);
 	}
 }

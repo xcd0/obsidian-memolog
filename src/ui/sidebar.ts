@@ -220,7 +220,8 @@ export class MemologSidebar extends ItemView {
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 			},
-			settings.enableDailyNotes
+			settings.enableDailyNotes,
+			"" //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 		);
 		this.memoList.render();
 
@@ -492,6 +493,11 @@ export class MemologSidebar extends ItemView {
 
 			//! メモリストを再読み込み。
 			await this.loadMemos();
+
+			//! 最新メモが表示されるようにスクロール。
+			if (this.memoList) {
+				this.memoList.scrollToLatest(this.currentOrder);
+			}
 
 			new Notice("メモを追加しました");
 		} catch (error) {

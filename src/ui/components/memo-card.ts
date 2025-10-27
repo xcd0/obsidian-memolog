@@ -1,4 +1,5 @@
 import { MemoEntry } from "../../types";
+import { MarkdownRenderer, Component } from "obsidian";
 
 //! メモカードのイベントハンドラー。
 export interface MemoCardHandlers {
@@ -23,17 +24,22 @@ export class MemoCard {
 	private enableDailyNotes: boolean;
 	private isEditMode = false;
 	private cardElement: HTMLElement | null = null;
+	private sourcePath: string;
+	private component: Component;
 
 	constructor(
 		container: HTMLElement,
 		memo: MemoEntry,
 		handlers: MemoCardHandlers = {},
-		enableDailyNotes = false
+		enableDailyNotes = false,
+		sourcePath = ""
 	) {
 		this.container = container;
 		this.memo = memo;
 		this.handlers = handlers;
 		this.enableDailyNotes = enableDailyNotes;
+		this.sourcePath = sourcePath;
+		this.component = new Component();
 	}
 
 	//! カードを描画する。
@@ -44,8 +50,8 @@ export class MemoCard {
 		//! ヘッダー（タイムスタンプとアクション）。
 		this.renderHeader(card);
 
-		//! 本文。
-		this.renderContent(card);
+		//! 本文（非同期でレンダリング）。
+		void this.renderContent(card);
 
 		//! 添付ファイル。
 		if (this.memo.attachments && this.memo.attachments.length > 0) {
@@ -104,7 +110,7 @@ export class MemoCard {
 	}
 
 	//! 本文を描画する。
-	private renderContent(card: HTMLElement): void {
+	private async renderContent(card: HTMLElement): Promise<void> {
 		const contentDiv = card.createDiv({ cls: "memolog-card-content" });
 
 		if (this.isEditMode) {
@@ -140,8 +146,13 @@ export class MemoCard {
 				this.toggleEditMode();
 			});
 		} else {
-			//! 通常モード: テキストを表示。
-			contentDiv.setText(this.memo.content);
+			//! 通常モード: Markdownとしてレンダリング。
+			await MarkdownRenderer.renderMarkdown(
+				this.memo.content,
+				contentDiv,
+				this.sourcePath,
+				this.component
+			);
 		}
 	}
 
@@ -221,8 +232,8 @@ export class MemoCard {
 			//! ヘッダーを再描画。
 			this.renderHeader(this.cardElement);
 
-			//! 本文を再描画（編集モードに応じて変わる）。
-			this.renderContent(this.cardElement);
+			//! 本文を再描画（編集モードに応じて変わる）（非同期）。
+			void this.renderContent(this.cardElement);
 
 			//! 添付ファイルを再描画。
 			if (this.memo.attachments && this.memo.attachments.length > 0) {

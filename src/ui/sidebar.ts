@@ -461,8 +461,8 @@ export class MemologSidebar extends ItemView {
 			const arrayBuffer = await file.arrayBuffer();
 			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer);
 
-			//! Markdownリンクを生成。
-			const markdownLink = `![${fileName}](${filePath})`;
+			//! Obsidian Wikilink形式で画像リンクを生成。
+			const markdownLink = `![[${filePath}]]`;
 
 			return markdownLink;
 		} catch (error) {

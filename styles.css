@@ -346,6 +346,15 @@
 	word-wrap: break-word;
 }
 
+/* Markdown内の画像 */
+.memolog-card-content img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 4px;
+	margin: 0.5rem 0;
+	display: block;
+}
+
 /* Markdownコード要素のスタイル */
 .memolog-card-content code {
 	background-color: rgba(0, 0, 0, 0.08);

@@ -81,7 +81,7 @@ export class InputForm {
 		//! ファイル選択時の処理。
 		fileInput.addEventListener("change", () => {
 			if (fileInput.files) {
-				this.handleFileSelect(fileInput.files);
+				void this.handleFileSelect(fileInput.files);
 				fileInput.value = "";
 			}
 		});
@@ -174,7 +174,7 @@ export class InputForm {
 	}
 
 	//! ファイル選択処理。
-	private handleFileSelect(files: FileList): void {
+	private async handleFileSelect(files: FileList): Promise<void> {
 		try {
 			//! ファイルサイズチェック（10MB制限）。
 			const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -188,7 +188,30 @@ export class InputForm {
 							{ filename: file.name, size: file.size, maxSize: MAX_FILE_SIZE }
 						);
 					}
-					this.selectedFiles.push(file);
+
+					//! 画像ファイルの場合は自動的に保存してMarkdownリンクを挿入。
+					if (file.type.startsWith("image/") && this.handlers.onImagePaste && this.textarea) {
+						const markdownLink = await this.handlers.onImagePaste(file);
+						if (markdownLink) {
+							//! カーソル位置にMarkdownリンクを挿入。
+							const start = this.textarea.selectionStart;
+							const end = this.textarea.selectionEnd;
+							const currentValue = this.textarea.value;
+							const newValue =
+								currentValue.substring(0, start) +
+								markdownLink +
+								"\n" +
+								currentValue.substring(end);
+							this.textarea.value = newValue;
+							//! カーソル位置を更新。
+							const newCursorPos = start + markdownLink.length + 1;
+							this.textarea.setSelectionRange(newCursorPos, newCursorPos);
+							this.textarea.focus();
+						}
+					} else {
+						//! 画像以外のファイルは添付リストに追加。
+						this.selectedFiles.push(file);
+					}
 				}
 			}
 			this.renderAttachments();

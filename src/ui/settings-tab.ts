@@ -164,6 +164,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! 説明文と表を追加。
 		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" });
+		templateSetting.descEl.createDiv({
+			text: "※この書式はファイルに保存される形式です。カード形式の表示では{{content}}の内容のみが表示されます。",
+			attr: { style: "margin-top: 4px; color: var(--text-muted); font-size: 0.9em;" }
+		});
 		templateSetting.descEl.createEl("br");
 
 		//! プレビュー表示領域を追加。

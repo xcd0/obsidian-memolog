@@ -219,6 +219,7 @@ export class MemologSidebar extends ItemView {
 				onDelete: (memoId) => void this.handleDelete(memoId),
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
+				onImagePaste: (file) => this.handleImagePaste(file),
 			},
 			settings.enableDailyNotes,
 			"" //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
@@ -228,6 +229,7 @@ export class MemologSidebar extends ItemView {
 		//! 入力フォームを初期化。
 		this.inputForm = new InputForm(inputAreaEl, {
 			onSubmit: (content, attachments) => void this.handleSubmit(content, attachments),
+			onImagePaste: (file) => this.handleImagePaste(file),
 		});
 		this.inputForm.render();
 	}
@@ -401,6 +403,40 @@ export class MemologSidebar extends ItemView {
 		}
 
 		return text;
+	}
+
+	//! 画像ペースト処理（画像を保存してMarkdownリンクを返す）。
+	private async handleImagePaste(file: File): Promise<string | null> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const attachmentDir = `${settings.rootDirectory}/attachments`;
+
+			//! 添付ファイルディレクトリを作成。
+			const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir);
+			if (!dirExists) {
+				await this.memoManager.vaultHandler.createFolder(attachmentDir);
+			}
+
+			//! ファイル名を生成（タイムスタンプ + 拡張子）。
+			const timestamp = Date.now();
+			const extension = file.name.split(".").pop() || "png";
+			const fileName = `pasted-image-${timestamp}.${extension}`;
+			const filePath = `${attachmentDir}/${fileName}`;
+
+			//! ファイルを保存。
+			const arrayBuffer = await file.arrayBuffer();
+			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer);
+
+			//! Markdownリンクを生成。
+			const markdownLink = `![${fileName}](${filePath})`;
+
+			return markdownLink;
+		} catch (error) {
+			console.error("Failed to save pasted image:", error);
+			new Notice("画像の保存に失敗しました");
+			return null;
+		}
 	}
 
 	//! メモ送信処理。

@@ -116,6 +116,30 @@ export class MemologVaultHandler {
 		}
 	}
 
+	//! バイナリファイルを作成する。
+	async createBinaryFile(filePath: string, data: ArrayBuffer): Promise<TFile> {
+		console.log("[memolog DEBUG] createBinaryFile called with:", filePath);
+		try {
+			await this.fileLock.acquire(filePath);
+
+			//! ディレクトリが存在しない場合は作成。
+			const dirPath = filePath.substring(0, filePath.lastIndexOf("/"));
+			if (dirPath && !this.folderExists(dirPath)) {
+				await this.createFolder(dirPath);
+			}
+
+			//! バイナリファイルを作成。
+			const file = await this.app.vault.createBinary(filePath, data);
+			console.log("[memolog DEBUG] Binary file created successfully:", filePath);
+			return file;
+		} catch (error) {
+			console.error("[memolog DEBUG] createBinaryFile error:", error);
+			throw error;
+		} finally {
+			this.fileLock.release(filePath);
+		}
+	}
+
 	//! ファイルを読み込む。
 	async readFile(filePath: string): Promise<string> {
 		const file = this.app.vault.getAbstractFileByPath(filePath);

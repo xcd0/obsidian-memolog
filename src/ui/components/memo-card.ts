@@ -14,6 +14,9 @@ export interface MemoCardHandlers {
 
 	//! Daily Noteに追加ボタンクリック時のハンドラー。
 	onAddToDailyNote?: (memo: MemoEntry) => void;
+
+	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
+	onImagePaste?: (file: File) => Promise<string | null>;
 }
 
 //! メモカードコンポーネント。
@@ -123,6 +126,11 @@ export class MemoCard {
 			//! テキストエリアの値を設定。
 			textarea.value = this.memo.content;
 
+			//! 画像ペーストイベント。
+			textarea.addEventListener("paste", (e) => {
+				void this.handlePaste(e, textarea);
+			});
+
 			//! 保存・キャンセルボタン。
 			const editActions = contentDiv.createDiv({ cls: "memolog-card-edit-actions" });
 
@@ -158,6 +166,52 @@ export class MemoCard {
 				this.sourcePath,
 				this.component
 			);
+		}
+	}
+
+	//! ペースト処理（画像の場合はファイルとして保存）。
+	private async handlePaste(e: ClipboardEvent, textarea: HTMLTextAreaElement): Promise<void> {
+		try {
+			if (!e.clipboardData) {
+				return;
+			}
+
+			const items = e.clipboardData.items;
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
+				//! 画像ファイルの場合。
+				if (item.type.startsWith("image/")) {
+					e.preventDefault();
+
+					const file = item.getAsFile();
+					if (!file) {
+						continue;
+					}
+
+					//! onImagePasteハンドラーを呼び出してMarkdownリンクを取得。
+					if (this.handlers.onImagePaste) {
+						const markdownLink = await this.handlers.onImagePaste(file);
+						if (markdownLink) {
+							//! カーソル位置にMarkdownリンクを挿入。
+							const start = textarea.selectionStart;
+							const end = textarea.selectionEnd;
+							const currentValue = textarea.value;
+							const newValue =
+								currentValue.substring(0, start) +
+								markdownLink +
+								currentValue.substring(end);
+							textarea.value = newValue;
+							//! カーソル位置を更新。
+							const newCursorPos = start + markdownLink.length;
+							textarea.setSelectionRange(newCursorPos, newCursorPos);
+							textarea.focus();
+						}
+					}
+					break;
+				}
+			}
+		} catch (error) {
+			console.error("Failed to handle paste:", error);
 		}
 	}
 

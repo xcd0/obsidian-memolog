@@ -10,6 +10,9 @@ export interface InputFormHandlers {
 
 	//! 入力変更時のハンドラー（debounce適用済み）。
 	onChange?: (content: string) => void;
+
+	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
+	onImagePaste?: (file: File) => Promise<string | null>;
 }
 
 //! 入力フォームコンポーネント。
@@ -110,6 +113,59 @@ export class InputForm {
 				if (this.textarea && this.debouncedOnChange) {
 					this.debouncedOnChange(this.textarea.value);
 				}
+			});
+		}
+
+		//! 画像ペーストイベント。
+		this.textarea.addEventListener("paste", (e) => {
+			void this.handlePaste(e);
+		});
+	}
+
+	//! ペースト処理（画像の場合はファイルとして保存）。
+	private async handlePaste(e: ClipboardEvent): Promise<void> {
+		try {
+			if (!e.clipboardData || !this.textarea) {
+				return;
+			}
+
+			const items = e.clipboardData.items;
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
+				//! 画像ファイルの場合。
+				if (item.type.startsWith("image/")) {
+					e.preventDefault();
+
+					const file = item.getAsFile();
+					if (!file) {
+						continue;
+					}
+
+					//! onImagePasteハンドラーを呼び出してMarkdownリンクを取得。
+					if (this.handlers.onImagePaste) {
+						const markdownLink = await this.handlers.onImagePaste(file);
+						if (markdownLink && this.textarea) {
+							//! カーソル位置にMarkdownリンクを挿入。
+							const start = this.textarea.selectionStart;
+							const end = this.textarea.selectionEnd;
+							const currentValue = this.textarea.value;
+							const newValue =
+								currentValue.substring(0, start) +
+								markdownLink +
+								currentValue.substring(end);
+							this.textarea.value = newValue;
+							//! カーソル位置を更新。
+							const newCursorPos = start + markdownLink.length;
+							this.textarea.setSelectionRange(newCursorPos, newCursorPos);
+							this.textarea.focus();
+						}
+					}
+					break;
+				}
+			}
+		} catch (error) {
+			this.errorHandler.handle(error as Error, {
+				context: "InputForm.handlePaste",
 			});
 		}
 	}

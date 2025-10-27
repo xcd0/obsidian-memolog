@@ -117,8 +117,9 @@ export class MemoCard {
 			//! 編集モード: テキストエリアを表示。
 			const textarea = contentDiv.createEl("textarea", {
 				cls: "memolog-card-edit-textarea",
-				value: this.memo.content,
 			});
+			//! テキストエリアの値を設定。
+			textarea.value = this.memo.content;
 
 			//! 保存・キャンセルボタン。
 			const editActions = contentDiv.createDiv({ cls: "memolog-card-edit-actions" });

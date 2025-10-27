@@ -563,6 +563,9 @@
 .memolog-attach-icon {
 	width: 20px;
 	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .memolog-file-input {
@@ -597,6 +600,9 @@
 .memolog-submit-icon {
 	width: 24px;
 	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* ボタン */

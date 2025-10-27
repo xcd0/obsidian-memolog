@@ -346,7 +346,7 @@
 
 /* Markdownコード要素のスタイル */
 .memolog-card-content code {
-	background-color: rgba(0, 0, 0, 0.15);
+	background-color: rgba(0, 0, 0, 0.08);
 	color: var(--code-normal);
 	padding: 0.1rem 0.3rem;
 	border-radius: 3px;
@@ -356,7 +356,7 @@
 
 .memolog-card-content pre {
 	position: relative;
-	background-color: rgba(0, 0, 0, 0.15);
+	background-color: rgba(0, 0, 0, 0.08);
 	color: var(--code-normal);
 	padding: 0.75rem;
 	padding-right: 3rem;

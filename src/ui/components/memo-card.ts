@@ -1,5 +1,5 @@
 import { MemoEntry } from "../../types";
-import { MarkdownRenderer, Component } from "obsidian";
+import { MarkdownRenderer, Component, setIcon } from "obsidian";
 
 //! メモカードのイベントハンドラー。
 export interface MemoCardHandlers {
@@ -91,8 +91,9 @@ export class MemoCard {
 		//! 編集ボタン。
 		const editBtn = actions.createEl("button", {
 			cls: "memolog-btn memolog-btn-edit",
-			text: "編集",
+			attr: { "aria-label": "編集" },
 		});
+		setIcon(editBtn, "pencil");
 		editBtn.addEventListener("click", () => {
 			this.toggleEditMode();
 		});
@@ -100,8 +101,9 @@ export class MemoCard {
 		//! 削除ボタン。
 		const deleteBtn = actions.createEl("button", {
 			cls: "memolog-btn memolog-btn-delete",
-			text: "削除",
+			attr: { "aria-label": "削除" },
 		});
+		setIcon(deleteBtn, "trash");
 		deleteBtn.addEventListener("click", () => {
 			if (this.handlers.onDelete) {
 				this.handlers.onDelete(this.memo.id);

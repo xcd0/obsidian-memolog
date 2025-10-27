@@ -608,13 +608,29 @@
 	background-color: var(--interactive-accent-hover);
 }
 
+.memolog-btn-edit,
 .memolog-btn-delete {
-	background-color: var(--background-modifier-error);
+	padding: 0.25rem;
+	min-width: 28px;
+	min-height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: transparent;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-btn-edit:hover,
+.memolog-btn-delete:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-btn-delete {
 	color: var(--text-error);
 }
 
 .memolog-btn-delete:hover {
-	opacity: 0.8;
+	background-color: var(--background-modifier-error);
 }
 
 /* 設定画面 */

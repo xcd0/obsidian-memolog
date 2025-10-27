@@ -792,3 +792,55 @@
 	border-color: var(--text-error) !important;
 	background-color: var(--background-modifier-error) !important;
 }
+
+/* デフォルトカテゴリ選択テーブル */
+.memolog-default-category-table-container {
+	margin-top: 0.5rem;
+	width: 100%;
+}
+
+.memolog-default-category-table {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-default-category-table thead {
+	background-color: var(--background-secondary);
+}
+
+.memolog-default-category-table th,
+.memolog-default-category-table td {
+	padding: 0.5rem;
+	text-align: left;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-default-category-table th {
+	font-weight: 600;
+}
+
+.memolog-default-category-row {
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-default-category-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-default-category-selected {
+	background-color: var(--background-modifier-active-hover) !important;
+}
+
+.memolog-directory-name {
+	font-family: var(--font-monospace);
+	color: var(--text-muted);
+}
+
+.memolog-color-box {
+	width: 2rem;
+	height: 1.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+}

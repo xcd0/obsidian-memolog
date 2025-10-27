@@ -412,20 +412,76 @@ export class MemologSettingTab extends PluginSettingTab {
 			);
 
 		//! デフォルトカテゴリ設定。
-		new Setting(containerEl)
+		const defaultCategorySetting = new Setting(containerEl)
 			.setName("デフォルトカテゴリ")
-			.setDesc("新規メモ作成時のデフォルトカテゴリ")
-			.addDropdown((dropdown) => {
-				for (const category of settings.categories) {
-					dropdown.addOption(category.name, category.name);
-				}
-				dropdown.setValue(settings.defaultCategory).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						defaultCategory: value,
-					});
+			.setDesc("新規メモ作成時のデフォルトカテゴリ（行をクリックして選択）");
+
+		//! カテゴリが1つもない場合。
+		if (settings.categories.length === 0) {
+			defaultCategorySetting.setDesc("カテゴリを追加してください");
+			return;
+		}
+
+		//! 表を作成。
+		const tableContainer = defaultCategorySetting.controlEl.createDiv({
+			cls: "memolog-default-category-table-container",
+		});
+		const table = tableContainer.createEl("table", { cls: "memolog-default-category-table" });
+
+		//! ヘッダー。
+		const thead = table.createEl("thead");
+		const headerRow = thead.createEl("tr");
+		headerRow.createEl("th", { text: "選択" });
+		headerRow.createEl("th", { text: "カテゴリ名" });
+		headerRow.createEl("th", { text: "ディレクトリ名" });
+		headerRow.createEl("th", { text: "色" });
+
+		//! ボディ。
+		const tbody = table.createEl("tbody");
+		for (const category of settings.categories) {
+			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" });
+
+			//! 選択されているカテゴリをハイライト。
+			if (category.name === settings.defaultCategory) {
+				row.addClass("memolog-default-category-selected");
+			}
+
+			//! ラジオボタン。
+			const radioCell = row.createEl("td");
+			const radio = radioCell.createEl("input", { type: "radio" });
+			radio.name = "default-category";
+			radio.checked = category.name === settings.defaultCategory;
+
+			//! カテゴリ名。
+			row.createEl("td", { text: category.name });
+
+			//! ディレクトリ名。
+			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" });
+
+			//! 色。
+			const colorCell = row.createEl("td");
+			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" });
+			colorBox.style.backgroundColor = category.color;
+
+			//! 行クリックで選択。
+			row.addEventListener("click", async () => {
+				//! 全ての行から選択状態を解除。
+				tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
+					r.removeClass("memolog-default-category-selected");
+					const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
+					if (radioInput) radioInput.checked = false;
 				});
-				return dropdown;
+
+				//! この行を選択。
+				row.addClass("memolog-default-category-selected");
+				radio.checked = true;
+
+				//! 設定を更新。
+				await this.plugin.settingsManager.updateGlobalSettings({
+					defaultCategory: category.name,
+				});
 			});
+		}
 	}
 
 	//! カテゴリアイテムを追加する。

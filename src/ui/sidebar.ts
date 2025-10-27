@@ -410,7 +410,40 @@ export class MemologSidebar extends ItemView {
 		try {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const attachmentDir = `${settings.rootDirectory}/attachments`;
+			const category = this.currentCategory || settings.defaultCategory;
+
+			//! 添付ファイル保存先を決定。
+			let attachmentDir: string;
+			if (settings.attachmentPath.startsWith("./")) {
+				//! ./で始まる場合: 投稿ファイルのディレクトリからの相対パス。
+				//! 現在のメモが保存されるディレクトリを取得。
+				const memoFilePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							category,
+							settings.pathFormat,
+							settings.useDirectoryCategory
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							category,
+							settings.saveUnit,
+							settings.useDirectoryCategory
+						);
+				//! ファイルパスからディレクトリパスを取得。
+				const memoDir = memoFilePath.substring(0, memoFilePath.lastIndexOf("/"));
+				//! ./を除去して相対パスを結合。
+				const relativePath = settings.attachmentPath.substring(2);
+				attachmentDir = `${memoDir}/${relativePath}`;
+			} else if (settings.attachmentPath.startsWith("/")) {
+				//! /で始まる場合: ルートディレクトリからの相対パス。
+				//! /を除去してルートディレクトリと結合。
+				const relativePath = settings.attachmentPath.substring(1);
+				attachmentDir = `${settings.rootDirectory}/${relativePath}`;
+			} else {
+				//! それ以外: そのままルートディレクトリからの相対パスとして扱う。
+				attachmentDir = `${settings.rootDirectory}/${settings.attachmentPath}`;
+			}
 
 			//! 添付ファイルディレクトリを作成。
 			const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir);

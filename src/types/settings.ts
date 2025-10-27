@@ -47,6 +47,9 @@ export interface GlobalSettings {
 	//! ファイルパスの書式（%Y/%m/%d/%H-%M.mdなど）。
 	pathFormat: string;
 
+	//! 添付ファイルの保存先（./相対パスまたは/ルート相対パス）。
+	attachmentPath: string;
+
 	//! 検索履歴の最大サイズ。
 	searchHistoryMaxSize: number;
 }
@@ -90,5 +93,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	rootDirectory: "memolog",
 	memoTemplate: "{{content}}",
 	pathFormat: "%Y/%m/%d",
+	attachmentPath: "./attachments",
 	searchHistoryMaxSize: 50,
 };

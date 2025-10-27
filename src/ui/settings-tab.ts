@@ -258,6 +258,21 @@ export class MemologSettingTab extends PluginSettingTab {
 						});
 					})
 			);
+
+		//! 添付ファイル保存先設定。
+		new Setting(containerEl)
+			.setName("添付ファイルの保存先")
+			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。")
+			.addText((text) =>
+				text
+					.setPlaceholder("./attachments")
+					.setValue(settings.attachmentPath)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							attachmentPath: value,
+						});
+					})
+			);
 	}
 
 	//! 高度な機能設定を追加する。

@@ -65,8 +65,11 @@ export class IconPicker {
 
 		this.isOpen = true;
 
-		//! ピッカー要素を作成。
-		this.pickerElement = this.container.createDiv({ cls: "memolog-icon-picker-dropdown" });
+		//! オーバーレイ背景を作成（document.bodyに追加）。
+		const overlay = document.body.createDiv({ cls: "memolog-icon-picker-overlay" });
+
+		//! ピッカー要素を作成（オーバーレイ内に配置）。
+		this.pickerElement = overlay.createDiv({ cls: "memolog-icon-picker-dropdown" });
 
 		//! 検索ボックス。
 		const searchContainer = this.pickerElement.createDiv({
@@ -150,22 +153,13 @@ export class IconPicker {
 			}
 		});
 
-		//! 外部クリックで閉じる。
-		const outsideClickHandler = (e: MouseEvent) => {
-			if (
-				this.pickerElement &&
-				!this.pickerElement.contains(e.target as Node) &&
-				!this.container.contains(e.target as Node)
-			) {
+		//! オーバーレイクリックで閉じる。
+		overlay.addEventListener("click", (e) => {
+			//! オーバーレイ自体がクリックされた場合のみ閉じる（ピッカー内部のクリックは除外）。
+			if (e.target === overlay) {
 				this.close();
-				document.removeEventListener("click", outsideClickHandler);
 			}
-		};
-
-		//! 少し遅延させてから外部クリックハンドラーを登録（即座に閉じるのを防ぐ）。
-		setTimeout(() => {
-			document.addEventListener("click", outsideClickHandler);
-		}, 100);
+		});
 
 		//! 検索ボックスにフォーカス。
 		searchInput.focus();
@@ -177,10 +171,13 @@ export class IconPicker {
 
 		this.isOpen = false;
 
-		if (this.pickerElement) {
-			this.pickerElement.remove();
-			this.pickerElement = null;
+		//! オーバーレイ全体を削除（ピッカーも含まれる）。
+		const overlay = document.querySelector(".memolog-icon-picker-overlay");
+		if (overlay) {
+			overlay.remove();
 		}
+
+		this.pickerElement = null;
 	}
 
 	//! アイコングリッドを描画。

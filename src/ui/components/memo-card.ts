@@ -1,4 +1,4 @@
-import { MemoEntry } from "../../types";
+import { MemoEntry, CategoryConfig } from "../../types";
 import { MarkdownRenderer, Component, setIcon } from "obsidian";
 
 //! メモカードのイベントハンドラー。
@@ -17,6 +17,9 @@ export interface MemoCardHandlers {
 
 	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
 	onImagePaste?: (file: File) => Promise<string | null>;
+
+	//! カテゴリ変更時のハンドラー。
+	onCategoryChange?: (memoId: string, newCategory: string) => void;
 }
 
 //! メモカードコンポーネント。
@@ -29,13 +32,15 @@ export class MemoCard {
 	private cardElement: HTMLElement | null = null;
 	private sourcePath: string;
 	private component: Component;
+	private categories: CategoryConfig[];
 
 	constructor(
 		container: HTMLElement,
 		memo: MemoEntry,
 		handlers: MemoCardHandlers = {},
 		enableDailyNotes = false,
-		sourcePath = ""
+		sourcePath = "",
+		categories: CategoryConfig[] = []
 	) {
 		this.container = container;
 		this.memo = memo;
@@ -43,6 +48,7 @@ export class MemoCard {
 		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
 		this.component = new Component();
+		this.categories = categories;
 	}
 
 	//! カードを描画する。
@@ -88,6 +94,27 @@ export class MemoCard {
 				if (this.handlers.onAddToDailyNote) {
 					this.handlers.onAddToDailyNote(this.memo);
 				}
+			});
+		}
+
+		//! カテゴリ変更ボタン。
+		if (this.categories.length > 0 && this.handlers.onCategoryChange) {
+			const categoryBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-category",
+				attr: { "aria-label": "カテゴリ変更" },
+			});
+
+			//! 現在のカテゴリのアイコンを表示。
+			const currentCategory = this.categories.find((cat) => cat.directory === this.memo.category);
+			if (currentCategory) {
+				setIcon(categoryBtn, currentCategory.icon);
+			} else {
+				setIcon(categoryBtn, "folder");
+			}
+
+			//! カテゴリ変更メニューを表示。
+			categoryBtn.addEventListener("click", (e) => {
+				this.showCategoryMenu(categoryBtn, e);
 			});
 		}
 
@@ -286,6 +313,67 @@ export class MemoCard {
 
 		//! 常に西暦+日付+時刻を表示。
 		return `${year}-${month}-${day} ${hours}:${minutes}`;
+	}
+
+	//! カテゴリ変更メニューを表示する。
+	private showCategoryMenu(button: HTMLElement, event: MouseEvent): void {
+		event.stopPropagation();
+
+		//! 既存のメニューを削除。
+		const existingMenu = document.querySelector(".memolog-category-menu");
+		if (existingMenu) {
+			existingMenu.remove();
+		}
+
+		//! メニューを作成。
+		const menu = document.body.createDiv({ cls: "memolog-category-menu" });
+
+		//! メニューの位置を設定（ボタンの下）。
+		const buttonRect = button.getBoundingClientRect();
+		menu.style.position = "absolute";
+		menu.style.top = `${buttonRect.bottom + 4}px`;
+		menu.style.left = `${buttonRect.left}px`;
+		menu.style.zIndex = "1000";
+
+		//! カテゴリ一覧を表示。
+		for (const category of this.categories) {
+			const item = menu.createDiv({ cls: "memolog-category-menu-item" });
+
+			//! アイコンを表示。
+			const icon = item.createDiv({ cls: "memolog-category-menu-icon" });
+			setIcon(icon, category.icon);
+
+			//! カテゴリ名を表示。
+			item.createSpan({
+				cls: "memolog-category-menu-name",
+				text: category.name,
+			});
+
+			//! 現在のカテゴリにチェックマークを表示。
+			if (category.directory === this.memo.category) {
+				const check = item.createDiv({ cls: "memolog-category-menu-check" });
+				setIcon(check, "check");
+			}
+
+			//! クリックでカテゴリを変更。
+			item.addEventListener("click", () => {
+				if (this.handlers.onCategoryChange) {
+					this.handlers.onCategoryChange(this.memo.id, category.directory);
+				}
+				menu.remove();
+			});
+		}
+
+		//! メニュー外をクリックしたら閉じる。
+		const closeMenu = (e: MouseEvent) => {
+			if (!menu.contains(e.target as Node)) {
+				menu.remove();
+				document.removeEventListener("click", closeMenu);
+			}
+		};
+		setTimeout(() => {
+			document.addEventListener("click", closeMenu);
+		}, 0);
 	}
 
 	//! 編集モードを切り替える。

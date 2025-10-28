@@ -258,7 +258,7 @@ export class MemologSidebar extends ItemView {
 				categoryTabsAreaEl,
 				settings.categories,
 				{
-					onCategoryChange: (categoryDirectory) => void this.handleCategoryChange(categoryDirectory),
+					onCategoryChange: (categoryDirectory) => void this.handleCategoryTabChange(categoryDirectory),
 				},
 				settings.showAllTab
 			);
@@ -304,9 +304,11 @@ export class MemologSidebar extends ItemView {
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 				onImagePaste: (file) => this.handleImagePaste(file),
+				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
 			},
 			settings.enableDailyNotes,
-			"" //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
+			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
+			settings.categories
 		);
 		this.memoList.render();
 
@@ -339,8 +341,6 @@ export class MemologSidebar extends ItemView {
 				//! ファイルパス生成用の日付（selectedDateがあればその日付を使用）。
 				const targetDate = this.selectedDate || new Date();
 
-				console.log(`[memolog DEBUG] loadMemos: category=all, targetDate=${targetDate.toISOString()}, processing ${settings.categories.length} categories`);
-
 				for (const cat of settings.categories) {
 					const filePath = settings.pathFormat
 						? PathGenerator.generateCustomPath(
@@ -358,24 +358,19 @@ export class MemologSidebar extends ItemView {
 								targetDate
 							);
 
-					console.log(`[memolog DEBUG] loadMemos: checking category=${cat.directory}, filePath=${filePath}`);
-
 					//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
 					if (processedFiles.has(filePath)) {
-						console.log(`[memolog DEBUG] loadMemos: skipping duplicate file=${filePath}`);
 						continue;
 					}
 					processedFiles.add(filePath);
 
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
-					console.log(`[memolog DEBUG] loadMemos: file exists=${fileExists}`);
 
 					if (fileExists) {
 						//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
 						//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
 						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-						console.log(`[memolog DEBUG] loadMemos: found ${memoTexts.length} memos in ${filePath}`);
 						for (const text of memoTexts) {
 							const memo = this.memoManager["parseTextToMemo"](text, "");
 							if (memo) {
@@ -409,8 +404,6 @@ export class MemologSidebar extends ItemView {
 							targetDate
 						);
 
-				console.log(`[memolog DEBUG] loadMemos: category=${categoryDirectory}, targetDate=${targetDate.toISOString()}, filePath=${filePath}`);
-
 				//! ファイルが存在するか確認。
 				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
 
@@ -428,9 +421,7 @@ export class MemologSidebar extends ItemView {
 
 			//! 日付でフィルタリング。
 			let displayMemos = this.memos;
-			console.log(`[memolog DEBUG] loadMemos: loaded ${this.memos.length} memos for category=${this.currentCategory}`);
 			if (this.selectedDate) {
-				console.log(`[memolog DEBUG] loadMemos: selectedDate = ${this.selectedDate.toISOString()}`);
 				displayMemos = this.filterMemosByDate(this.memos, this.selectedDate);
 			}
 
@@ -450,7 +441,6 @@ export class MemologSidebar extends ItemView {
 			//! カレンダーのメモカウントを更新（全カテゴリのメモを集計）。
 			if (this.calendarView) {
 				const timestamps = await this.getAllMemoTimestamps();
-				console.log(`[memolog DEBUG] Passing ${timestamps.length} timestamps to CalendarView`);
 				this.calendarView.updateMemoCounts(timestamps);
 			}
 		} catch (error) {
@@ -556,9 +546,6 @@ export class MemologSidebar extends ItemView {
 		const targetMonth = date.getMonth();
 		const targetDay = date.getDate();
 
-		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`);
-		console.log(`[memolog DEBUG] filterMemosByDate: filtering ${memos.length} memos`);
-
 		const filtered = memos.filter((memo) => {
 			//! メモのタイムスタンプをローカル日付に変換。
 			const memoDate = new Date(memo.timestamp);
@@ -566,13 +553,9 @@ export class MemologSidebar extends ItemView {
 			const memoMonth = memoDate.getMonth();
 			const memoDay = memoDate.getDate();
 
-			const matches = targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay;
-
-			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, local date=${memoYear}-${String(memoMonth + 1).padStart(2, '0')}-${String(memoDay).padStart(2, '0')}, matches=${matches}`);
-			return matches;
+			return targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay;
 		});
 
-		console.log(`[memolog DEBUG] filterMemosByDate: result = ${filtered.length} memos`);
 		return filtered;
 	}
 
@@ -585,8 +568,8 @@ export class MemologSidebar extends ItemView {
 		});
 	}
 
-	//! カテゴリ変更処理。
-	private async handleCategoryChange(category: string): Promise<void> {
+	//! カテゴリタブ変更処理。
+	private async handleCategoryTabChange(category: string): Promise<void> {
 		this.currentCategory = category;
 		await this.loadMemos();
 	}
@@ -930,24 +913,101 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
+	//! カテゴリ変更処理。
+	private async handleCategoryChange(memoId: string, newCategory: string): Promise<void> {
+		try {
+			//! 対象のメモを検索。
+			const memo = this.memos.find((m) => m.id === memoId);
+			if (!memo) {
+				new Notice("メモが見つかりませんでした");
+				return;
+			}
+
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const oldCategory = memo.category;
+
+			//! 同じカテゴリの場合は何もしない。
+			if (oldCategory === newCategory) {
+				return;
+			}
+
+			//! 日付を取得（メモのタイムスタンプから）。
+			const memoDate = new Date(memo.timestamp);
+
+			//! 古いカテゴリのファイルパスを生成。
+			const oldFilePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						oldCategory,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						memoDate
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						oldCategory,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						memoDate
+					);
+
+			//! 新しいカテゴリのファイルパスを生成。
+			const newFilePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						newCategory,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						memoDate
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						newCategory,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						memoDate
+					);
+
+			//! 古いファイルからメモを削除。
+			const deleted = await this.memoManager.deleteMemo(oldFilePath, oldCategory, memoId);
+
+			if (!deleted) {
+				new Notice("メモの削除に失敗しました");
+				return;
+			}
+
+			//! 新しいファイルにメモを追加。
+			await this.memoManager.addMemo(
+				newFilePath,
+				newCategory,
+				memo.content,
+				this.currentOrder,
+				settings.memoTemplate,
+				memo.attachments || []
+			);
+
+			//! メモリストを再読み込み。
+			await this.loadMemos();
+
+			new Notice("カテゴリを変更しました");
+		} catch (error) {
+			console.error("カテゴリ変更エラー:", error);
+			new Notice("カテゴリの変更に失敗しました");
+		}
+	}
+
 	//! ソート順変更処理。
 	private handleSortOrderChange(order: SortOrder): void {
-		console.log("[memolog DEBUG] handleSortOrderChange called with order:", order);
-		console.log("[memolog DEBUG] Current memos count:", this.memos.length);
 		this.currentOrder = order;
 
 		//! メモをソート。
 		this.sortMemos();
-		console.log("[memolog DEBUG] After sort, first memo:", this.memos[0]?.timestamp);
-		console.log("[memolog DEBUG] After sort, last memo:", this.memos[this.memos.length - 1]?.timestamp);
 
 		if (this.memoList) {
-			console.log("[memolog DEBUG] Calling memoList.updateMemos");
 			this.memoList.updateMemos(this.memos);
 			//! 最新メモが表示されるようにスクロール。
 			this.memoList.scrollToLatest(this.currentOrder);
-		} else {
-			console.log("[memolog DEBUG] memoList is null/undefined");
 		}
 
 		//! 入力エリアの位置を更新。
@@ -1015,8 +1075,6 @@ export class MemologSidebar extends ItemView {
 
 		//! 検索を実行。
 		const result = SearchEngine.search(this.memos, query);
-
-		console.log(`[memolog DEBUG] Search result: ${result.matches.length} matches in ${result.duration.toFixed(2)}ms`);
 
 		//! 検索結果を表示。
 		if (this.memoList) {

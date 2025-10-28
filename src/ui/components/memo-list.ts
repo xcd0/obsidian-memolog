@@ -1,4 +1,4 @@
-import { MemoEntry, SortOrder } from "../../types";
+import { MemoEntry, SortOrder, CategoryConfig } from "../../types";
 import { MemoCard, MemoCardHandlers } from "./memo-card";
 
 //! メモリストコンポーネント。
@@ -8,19 +8,22 @@ export class MemoList {
 	private handlers: MemoCardHandlers;
 	private enableDailyNotes: boolean;
 	private sourcePath: string;
+	private categories: CategoryConfig[];
 
 	constructor(
 		container: HTMLElement,
 		memos: MemoEntry[] = [],
 		handlers: MemoCardHandlers = {},
 		enableDailyNotes = false,
-		sourcePath = ""
+		sourcePath = "",
+		categories: CategoryConfig[] = []
 	) {
 		this.container = container;
 		this.memos = memos;
 		this.handlers = handlers;
 		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
+		this.categories = categories;
 	}
 
 	//! メモリストを描画する。
@@ -41,7 +44,8 @@ export class MemoList {
 				memo,
 				this.handlers,
 				this.enableDailyNotes,
-				this.sourcePath
+				this.sourcePath,
+				this.categories
 			);
 			card.render();
 		}

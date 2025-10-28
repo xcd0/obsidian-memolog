@@ -173,7 +173,6 @@ export class CalendarView {
 
 	//! メモの日付カウントを更新する。
 	updateMemoCounts(memoTimestamps: string[]): void {
-		console.log(`[memolog DEBUG] CalendarView.updateMemoCounts: Received ${memoTimestamps.length} timestamps`);
 		this.memoDateCounts.clear();
 
 		for (const timestamp of memoTimestamps) {
@@ -182,8 +181,6 @@ export class CalendarView {
 			const count = this.memoDateCounts.get(dateKey) || 0;
 			this.memoDateCounts.set(dateKey, count + 1);
 		}
-
-		console.log(`[memolog DEBUG] CalendarView.updateMemoCounts: Date counts map:`, Array.from(this.memoDateCounts.entries()));
 
 		//! カレンダーを再描画（複数月対応）。
 		this.render();

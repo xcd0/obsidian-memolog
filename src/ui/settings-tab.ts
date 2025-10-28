@@ -450,7 +450,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		const headerRow = thead.createEl("tr");
 		headerRow.createEl("th", { text: "選択" });
 		headerRow.createEl("th", { text: "カテゴリ名" });
-		headerRow.createEl("th", { text: "ディレクトリ名" });
+		headerRow.createEl("th", { text: "カテゴリ表示名" });
 		headerRow.createEl("th", { text: "色" });
 
 		//! ボディ。
@@ -469,11 +469,11 @@ export class MemologSettingTab extends PluginSettingTab {
 			radio.name = "default-category";
 			radio.checked = category.directory === settings.defaultCategory;
 
-			//! カテゴリ名。
-			row.createEl("td", { text: category.name });
-
-			//! ディレクトリ名。
+			//! カテゴリ名（ディレクトリ名）。
 			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" });
+
+			//! カテゴリ表示名。
+			row.createEl("td", { text: category.name });
 
 			//! 色。
 			const colorCell = row.createEl("td");
@@ -510,27 +510,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		const categoryDiv = containerEl.createDiv({ cls: "memolog-category-setting" });
 
-		//! カテゴリ名。
-		new Setting(categoryDiv)
-			.setName("カテゴリ名")
-			.addText((text) =>
-				text
-					.setPlaceholder("カテゴリ名")
-					.setValue(category.name)
-					.onChange(async (value) => {
-						const updatedCategories = [...settings.categories];
-						updatedCategories[index] = { ...updatedCategories[index], name: value };
-						await this.plugin.settingsManager.updateGlobalSettings({
-							categories: updatedCategories,
-						});
-						this.refreshSidebar();
-					})
-			);
-
-		//! ディレクトリ名。
+		//! カテゴリ名（ディレクトリ名）。
 		const directorySetting = new Setting(categoryDiv)
-			.setName("ディレクトリ名 (必須)")
-			.setDesc("内部で使用されるディレクトリ名です。カテゴリ名はタブ表示のみに使用されます。");
+			.setName("カテゴリ名 (必須)")
+			.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 
 		directorySetting.addText((text) => {
 			text
@@ -547,21 +530,39 @@ export class MemologSettingTab extends PluginSettingTab {
 					//! ディレクトリ名が空の場合はエラーメッセージを表示。
 					if (!value.trim()) {
 						text.inputEl.addClass("memolog-input-error");
-						directorySetting.setDesc("⚠️ ディレクトリ名は必須です。カテゴリ名はタブ表示のみに使用されます。");
+						directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 					} else {
 						text.inputEl.removeClass("memolog-input-error");
-						directorySetting.setDesc("内部で使用されるディレクトリ名です。カテゴリ名はタブ表示のみに使用されます。");
+						directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 					}
 				});
 
 			//! 初期表示時のチェック。
 			if (!category.directory.trim()) {
 				text.inputEl.addClass("memolog-input-error");
-				directorySetting.setDesc("⚠️ ディレクトリ名は必須です。カテゴリ名はタブ表示のみに使用されます。");
+				directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 			}
 
 			return text;
 		});
+
+		//! カテゴリ表示名。
+		new Setting(categoryDiv)
+			.setName("カテゴリ表示名 (空欄可)")
+			.setDesc("タブ表示にのみ使用されます。空欄の場合はカテゴリ名が表示されます。")
+			.addText((text) =>
+				text
+					.setPlaceholder("表示名")
+					.setValue(category.name)
+					.onChange(async (value) => {
+						const updatedCategories = [...settings.categories];
+						updatedCategories[index] = { ...updatedCategories[index], name: value };
+						await this.plugin.settingsManager.updateGlobalSettings({
+							categories: updatedCategories,
+						});
+						this.refreshSidebar();
+					})
+			);
 
 		//! プリセットカラー選択。
 		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー");

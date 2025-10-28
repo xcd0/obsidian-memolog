@@ -237,4 +237,133 @@ describe("ErrorHandler", () => {
 			expect(handler1).toBe(handler2);
 		});
 	});
+
+	describe("Console Logging", () => {
+		test("should call console.info for INFO severity", () => {
+			const loggingHandler = new ErrorHandler({
+				showNotice: false,
+				logToConsole: true,
+				throwOnCritical: false,
+			});
+
+			const consoleInfoSpy = jest.spyOn(console, "info").mockImplementation();
+
+			loggingHandler.handle(new MemologError("Info message", ErrorSeverity.INFO));
+
+			expect(consoleInfoSpy).toHaveBeenCalled();
+			expect(consoleInfoSpy.mock.calls[0][0]).toContain("Info message");
+
+			consoleInfoSpy.mockRestore();
+		});
+
+		test("should call console.warn for WARNING severity", () => {
+			const loggingHandler = new ErrorHandler({
+				showNotice: false,
+				logToConsole: true,
+				throwOnCritical: false,
+			});
+
+			const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+
+			loggingHandler.handle(new ValidationError("Warning message"));
+
+			expect(consoleWarnSpy).toHaveBeenCalled();
+			expect(consoleWarnSpy.mock.calls[0][0]).toContain("Warning message");
+
+			consoleWarnSpy.mockRestore();
+		});
+
+		test("should call console.error for ERROR severity", () => {
+			const loggingHandler = new ErrorHandler({
+				showNotice: false,
+				logToConsole: true,
+				throwOnCritical: false,
+			});
+
+			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+			loggingHandler.handle(new FileIOError("Error message"));
+
+			expect(consoleErrorSpy).toHaveBeenCalled();
+			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Error message");
+
+			consoleErrorSpy.mockRestore();
+		});
+
+		test("should call console.error for CRITICAL severity", () => {
+			const loggingHandler = new ErrorHandler({
+				showNotice: false,
+				logToConsole: true,
+				throwOnCritical: false,
+			});
+
+			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+			loggingHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL));
+
+			expect(consoleErrorSpy).toHaveBeenCalled();
+			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Critical message");
+
+			consoleErrorSpy.mockRestore();
+		});
+	});
+
+	describe("Notice Display", () => {
+		const { Notice } = require("obsidian");
+
+		test("should not show notice for INFO severity", () => {
+			const noticeHandler = new ErrorHandler({
+				showNotice: true,
+				logToConsole: false,
+				throwOnCritical: false,
+			});
+
+			noticeHandler.handle(new MemologError("Info message", ErrorSeverity.INFO));
+
+			//! INFOレベルではNoticeが呼ばれない。
+			expect(Notice).not.toHaveBeenCalled();
+		});
+
+		test("should show notice for WARNING severity with correct icon", () => {
+			const noticeHandler = new ErrorHandler({
+				showNotice: true,
+				logToConsole: false,
+				throwOnCritical: false,
+			});
+
+			noticeHandler.handle(new ValidationError("Warning message"));
+
+			expect(Notice).toHaveBeenCalled();
+			expect(Notice.mock.calls[0][0]).toContain("⚠️");
+			expect(Notice.mock.calls[0][0]).toContain("Warning message");
+		});
+
+		test("should show notice for ERROR severity with correct icon", () => {
+			const noticeHandler = new ErrorHandler({
+				showNotice: true,
+				logToConsole: false,
+				throwOnCritical: false,
+			});
+
+			noticeHandler.handle(new FileIOError("Error message"));
+
+			expect(Notice).toHaveBeenCalled();
+			expect(Notice.mock.calls[0][0]).toContain("❌");
+			expect(Notice.mock.calls[0][0]).toContain("Error message");
+		});
+
+		test("should show notice for CRITICAL severity with correct icon", () => {
+			const noticeHandler = new ErrorHandler({
+				showNotice: true,
+				logToConsole: false,
+				throwOnCritical: false,
+			});
+
+			noticeHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL));
+
+			expect(Notice).toHaveBeenCalled();
+			expect(Notice.mock.calls[0][0]).toContain("🚨");
+			expect(Notice.mock.calls[0][0]).toContain("Critical message");
+		});
+	});
 });

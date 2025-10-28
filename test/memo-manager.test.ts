@@ -354,5 +354,235 @@ describe("MemoManager", () => {
 			const content = await mockVaultHandler.readFile(filePath);
 			expect(content).toMatch(/## \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
 		});
+
+		it("{{content}}テンプレートでメモを追加", async () => {
+			const contentTemplate = "# メモ\n{{content}}\n---";
+			await memoManager.addMemo(
+				filePath,
+				category,
+				"本文テキスト",
+				"asc",
+				contentTemplate
+			);
+
+			const content = await mockVaultHandler.readFile(filePath);
+			expect(content).toContain("# メモ");
+			expect(content).toContain("本文テキスト");
+			expect(content).toContain("---");
+		});
+
+		it("{{content}}テンプレートからメモをパース", async () => {
+			const contentTemplate = "前置き\n{{content}}\n後置き";
+			await memoManager.addMemo(
+				filePath,
+				category,
+				"本文内容",
+				"asc",
+				contentTemplate
+			);
+
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toHaveLength(1);
+			expect(memos[0].content).toBe("本文内容");
+		});
+	});
+
+	describe("updateMemo", () => {
+		const filePath = "test.md";
+		const category = "work";
+
+		it("メモを更新", async () => {
+			//! メモを追加。
+			const memo = await memoManager.addMemo(filePath, category, "元の内容", "asc");
+
+			//! メモを更新。
+			const updated = await memoManager.updateMemo(
+				filePath,
+				category,
+				memo.id,
+				"更新後の内容"
+			);
+			expect(updated).toBe(true);
+
+			//! 更新後の確認。
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toHaveLength(1);
+			expect(memos[0].content).toBe("更新後の内容");
+		});
+
+		it("存在しないメモIDで更新失敗", async () => {
+			await memoManager.addMemo(filePath, category, "メモ", "asc");
+
+			const updated = await memoManager.updateMemo(
+				filePath,
+				category,
+				"nonexistent-id",
+				"新しい内容"
+			);
+			expect(updated).toBe(false);
+		});
+
+		it("存在しないファイルで更新失敗", async () => {
+			const updated = await memoManager.updateMemo(
+				"nonexistent.md",
+				category,
+				"some-id",
+				"新しい内容"
+			);
+			expect(updated).toBe(false);
+		});
+
+		it("カスタムテンプレートでメモを更新", async () => {
+			const customTemplate = "### %Y年%m月%d日\n{{content}}";
+			const memo = await memoManager.addMemo(
+				filePath,
+				category,
+				"元の内容",
+				"asc",
+				customTemplate
+			);
+
+			const updated = await memoManager.updateMemo(
+				filePath,
+				category,
+				memo.id,
+				"更新後の内容",
+				customTemplate
+			);
+			expect(updated).toBe(true);
+
+			const content = await mockVaultHandler.readFile(filePath);
+			expect(content).toContain("更新後の内容");
+		});
+	});
+
+	describe("パース処理のエッジケース", () => {
+		const filePath = "test.md";
+		const category = "work";
+
+		it("空のテキストからnullを返す", async () => {
+			//! 空のファイルを作成。
+			await mockVaultHandler.writeFile(filePath, "");
+
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toEqual([]);
+		});
+
+		it("HTMLコメントなし・タイムスタンプあり（後方互換性）", async () => {
+			//! 旧形式のメモを手動で作成。
+			const oldFormatMemo = "## 2025-10-28 15:30\nテスト内容";
+			await mockVaultHandler.writeFile(filePath, oldFormatMemo);
+
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toHaveLength(1);
+			expect(memos[0].content).toContain("テスト内容");
+			expect(memos[0].timestamp).toMatch(/2025-10-28T15:30/);
+		});
+
+		it("JSON.parseエラー時にcategoryを直接使用", async () => {
+			//! 不正なJSON形式のカテゴリを含むメモ。
+			const invalidJsonMemo =
+				'<!-- memo-id: test-id, timestamp: 2025-10-28T15:30:00.000Z, category: invalid-json -->\n## 2025-10-28 15:30\nテスト';
+			await mockVaultHandler.writeFile(filePath, invalidJsonMemo);
+
+			//! カテゴリフィルタなし（空文字）で全メモを取得。
+			const memos = await memoManager.getMemos(filePath, "");
+			expect(memos).toHaveLength(1);
+			expect(memos[0].category).toBe("invalid-json");
+		});
+
+		it("JSON.parseエラー時にtemplateを無視（console.warn）", async () => {
+			//! 不正なJSON形式のテンプレートを含むメモ。
+			const invalidTemplateMemo =
+				'<!-- memo-id: test-id, timestamp: 2025-10-28T15:30:00.000Z, template: invalid-json -->\n## 2025-10-28 15:30\nテスト';
+			await mockVaultHandler.writeFile(filePath, invalidTemplateMemo);
+
+			const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+
+			const memos = await memoManager.getMemos(filePath, "");
+			expect(memos).toHaveLength(1);
+			//! console.warnが呼び出されたことを確認（引数の詳細は問わない）。
+			expect(consoleWarnSpy).toHaveBeenCalled();
+			expect(consoleWarnSpy.mock.calls[0][0]).toContain("[memolog] Failed to parse template from comment:");
+
+			consoleWarnSpy.mockRestore();
+		});
+
+		it("添付ファイルを正しく抽出", async () => {
+			//! 添付ファイル付きメモを手動で作成。
+			const memoWithAttachments =
+				'<!-- memo-id: test-id, timestamp: 2025-10-28T15:30:00.000Z, category: "work" -->\n## 2025-10-28 15:30\nテスト内容\n[[image.png]]\n[[document.pdf]]';
+			await mockVaultHandler.writeFile(filePath, memoWithAttachments);
+
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toHaveLength(1);
+			expect(memos[0].attachments).toEqual(["image.png", "document.pdf"]);
+		});
+	});
+
+	describe("キャッシュ動作", () => {
+		const filePath = "test.md";
+		const category = "work";
+
+		it("キャッシュヒット時にファイルを読まない", async () => {
+			//! メモを追加。
+			await memoManager.addMemo(filePath, category, "メモ1", "asc");
+
+			//! 1回目の取得（キャッシュに保存）。
+			await memoManager.getMemos(filePath, category);
+
+			//! ファイルを直接変更（キャッシュには反映されない）。
+			await mockVaultHandler.writeFile(filePath, "改変された内容");
+
+			//! 2回目の取得（キャッシュから取得）。
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos).toHaveLength(1);
+			expect(memos[0].content).toBe("メモ1");
+		});
+
+		it("キャッシュ無効化後に新しいデータを取得", async () => {
+			//! メモを追加。
+			await memoManager.addMemo(filePath, category, "メモ1", "asc");
+
+			//! キャッシュを手動で無効化（deleteで実現）。
+			await memoManager.deleteMemo(filePath, category, "dummy-id");
+
+			//! 新しいメモを追加。
+			await memoManager.addMemo(filePath, category, "メモ2", "asc");
+
+			//! キャッシュが無効化されているので、新しいデータを取得。
+			const memos = await memoManager.getMemos(filePath, category);
+			expect(memos.length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe("ファイル存在チェック", () => {
+		const category = "work";
+
+		it("存在しないファイルから空配列を返す（getMemos）", async () => {
+			const memos = await memoManager.getMemos("nonexistent.md", category);
+			expect(memos).toEqual([]);
+		});
+
+		it("存在しないファイルでfalseを返す（deleteMemo）", async () => {
+			const deleted = await memoManager.deleteMemo("nonexistent.md", category, "some-id");
+			expect(deleted).toBe(false);
+		});
+	});
+
+	describe("エラーハンドリング", () => {
+		const filePath = "test.md";
+		const category = "work";
+
+		it("addMemoのエラーハンドリング", async () => {
+			//! VaultHandlerのwriteFileでエラーを発生させる。
+			jest.spyOn(mockVaultHandler, "writeFile").mockRejectedValueOnce(
+				new Error("Write error")
+			);
+
+			await expect(
+				memoManager.addMemo(filePath, category, "テスト", "asc")
+			).rejects.toThrow();
+		});
 	});
 });

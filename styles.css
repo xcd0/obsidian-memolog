@@ -1025,6 +1025,39 @@
 	}
 }
 
+/* ファイルパス書式テンプレート選択ボタン */
+.memolog-path-format-templates {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.memolog-path-format-template-btn {
+	padding: 4px 8px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	font-family: var(--font-monospace);
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.memolog-path-format-template-btn:hover {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.memolog-path-format-template-btn:active {
+	transform: translateY(0);
+}
+
 /* 設定画面のバリデーションエラー */
 .memolog-input-error {
 	border-color: var(--text-error) !important;

@@ -263,7 +263,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 
 		//! ファイルパス書式設定。
-		new Setting(containerEl)
+		const pathFormatSetting = new Setting(containerEl)
 			.setName("ファイルパスの書式")
 			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分")
 			.addText((text) => {
@@ -295,6 +295,29 @@ export class MemologSettingTab extends PluginSettingTab {
 					}
 					void savePathFormat(value);
 				});
+
+				//! テンプレート選択ボタン。
+				const templateContainer = pathFormatSetting.controlEl.createDiv({
+					cls: "memolog-path-format-templates"
+				});
+
+				const templates = [
+					{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
+					{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
+					{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
+				];
+
+				for (const template of templates) {
+					const btn = templateContainer.createEl("button", {
+						cls: "memolog-path-format-template-btn",
+						text: template.label
+					});
+
+					btn.addEventListener("click", () => {
+						text.setValue(template.value);
+						void savePathFormat(template.value);
+					});
+				}
 
 				return text;
 			});

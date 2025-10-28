@@ -44,6 +44,9 @@ export class MemologSidebar extends ItemView {
 	//! ファイル変更監視用のイベントリファレンス。
 	private fileModifyRef: EventRef | null = null;
 
+	//! loadMemos()のロック（並行実行を防ぐ）。
+	private isLoadingMemos: boolean = false;
+
 	constructor(leaf: WorkspaceLeaf, plugin: MemologPlugin) {
 		super(leaf);
 		this._plugin = plugin;
@@ -273,6 +276,14 @@ export class MemologSidebar extends ItemView {
 
 	//! メモを読み込む。
 	private async loadMemos(): Promise<void> {
+		//! 既に読み込み中の場合はスキップ。
+		if (this.isLoadingMemos) {
+			console.log("[memolog DEBUG] loadMemos skipped: already loading");
+			return;
+		}
+
+		this.isLoadingMemos = true;
+
 		try {
 			console.log("[memolog DEBUG] loadMemos called, currentCategory:", this.currentCategory);
 			console.log("[memolog DEBUG] Current memos count before load:", this.memos.length);
@@ -386,6 +397,8 @@ export class MemologSidebar extends ItemView {
 			console.error("メモ読み込みエラー:", error);
 			new Notice("メモの読み込みに失敗しました");
 			this.memos = [];
+		} finally {
+			this.isLoadingMemos = false;
 		}
 	}
 

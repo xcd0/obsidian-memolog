@@ -215,11 +215,9 @@ export class MemoManager {
 		template?: string,
 		attachments?: string[]
 	): Promise<MemoEntry> {
-		console.log("[memolog DEBUG] addMemo called with:", { filePath, category, order });
 		const result = await this.errorHandler.wrap(
 			(async () => {
 				//! メモエントリを作成。
-				console.log("[memolog DEBUG] Creating memo entry...");
 				const memo: MemoEntry = {
 					id: uuidv7(),
 					category,
@@ -228,12 +226,9 @@ export class MemoManager {
 					attachments,
 					template,
 				};
-				console.log("[memolog DEBUG] Memo entry created:", { id: memo.id, content: memo.content });
 
 				//! メモをテキスト形式に変換。
-				console.log("[memolog DEBUG] Converting memo to text...");
 				const memoText = this.memoToText(memo, template);
-				console.log("[memolog DEBUG] Memo text:", memoText);
 
 				//! ファイルが存在しない場合は空として扱う。
 				const fileExists = this.vaultHandler.fileExists(filePath);
@@ -256,9 +251,7 @@ export class MemoManager {
 				}
 
 				//! ファイル全体を書き込む。
-				console.log("[memolog DEBUG] Writing file...");
 				await this.vaultHandler.writeFile(filePath, newContent);
-				console.log("[memolog DEBUG] File written successfully");
 
 				//! キャッシュを無効化（ファイル全体のキャッシュ）。
 				const cacheKey = `${filePath}::${category}`;

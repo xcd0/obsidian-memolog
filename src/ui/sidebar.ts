@@ -145,23 +145,27 @@ export class MemologSidebar extends ItemView {
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
 
-		//! 内部コンテナ（flexレイアウト）。
-		const innerContainer = categoryTabsArea.createDiv({ cls: "memolog-category-tabs-container" });
+		//! 1行目: ツールバー（ハンバーガー、検索バー、検索ボタン、設定、ソート）。
+		const topRow = categoryTabsArea.createDiv({ cls: "memolog-toolbar-row" });
 
 		//! ハンバーガーメニューボタン。
-		innerContainer.createDiv({ cls: "memolog-hamburger-btn" });
+		topRow.createDiv({ cls: "memolog-hamburger-btn" });
 
-		//! カテゴリタブコンテナ。
-		const tabsContainer = innerContainer.createDiv({ cls: "memolog-category-tabs-wrapper" });
+		//! 検索バー配置用の空白エリア（SearchBarコンポーネントがここに入る）。
+		topRow.createDiv({ cls: "memolog-search-bar-placeholder" });
 
 		//! 検索ボタン。
-		innerContainer.createDiv({ cls: "memolog-search-btn" });
+		topRow.createDiv({ cls: "memolog-search-btn" });
 
 		//! 設定ボタン。
-		innerContainer.createDiv({ cls: "memolog-settings-btn" });
+		topRow.createDiv({ cls: "memolog-settings-btn" });
 
 		//! ソート順ボタン。
-		innerContainer.createDiv({ cls: "memolog-sort-btn-wrapper" });
+		topRow.createDiv({ cls: "memolog-sort-btn-wrapper" });
+
+		//! 2行目: タブコンテナ。
+		const tabsRow = categoryTabsArea.createDiv({ cls: "memolog-tabs-row" });
+		const tabsContainer = tabsRow.createDiv({ cls: "memolog-category-tabs-wrapper" });
 
 		return tabsContainer;
 	}
@@ -226,24 +230,24 @@ export class MemologSidebar extends ItemView {
 		//! 設定を取得。
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 
-		//! カテゴリタブエリアの親要素を取得してボタンを配置。
-		const categoryTabsContainer = categoryTabsAreaEl.parentElement;
-		if (categoryTabsContainer) {
-			const hamburgerBtn = categoryTabsContainer.querySelector(
+		//! カテゴリタブエリアを取得してボタンを配置。
+		const categoryTabsArea = this.containerEl.querySelector(".memolog-category-tabs-area") as HTMLElement;
+		if (categoryTabsArea) {
+			const hamburgerBtn = categoryTabsArea.querySelector(
 				".memolog-hamburger-btn"
 			) as HTMLElement;
-			const searchBtn = categoryTabsContainer.querySelector(
+			const searchBtn = categoryTabsArea.querySelector(
 				".memolog-search-btn"
 			) as HTMLElement;
-			const settingsBtn = categoryTabsContainer.querySelector(
+			const settingsBtn = categoryTabsArea.querySelector(
 				".memolog-settings-btn"
 			) as HTMLElement;
-			const sortBtnWrapper = categoryTabsContainer.querySelector(
+			const sortBtnWrapper = categoryTabsArea.querySelector(
 				".memolog-sort-btn-wrapper"
 			) as HTMLElement;
 
 			//! ボタンバーを初期化（ハンバーガー、検索、設定、ソートボタン）。
-			this.buttonBar = new ButtonBar(categoryTabsContainer, {
+			this.buttonBar = new ButtonBar(categoryTabsArea, {
 				onSortOrderChange: (order) => this.handleSortOrderChange(order),
 				onCalendarClick: () => this.toggleCalendar(),
 				onSearchClick: () => this.toggleSearch(),

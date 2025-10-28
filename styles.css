@@ -13,6 +13,9 @@
 .memolog-category-tabs-area {
 	padding: 0.5rem;
 	border-bottom: 2px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
 }
 
 /* 検索エリア */
@@ -235,15 +238,30 @@
 	color: var(--interactive-accent);
 }
 
-.memolog-category-tabs-container {
+/* ツールバー行（1行目）: ハンバーガー、検索バー、検索ボタン、設定、ソート */
+.memolog-toolbar-row {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
 }
 
 .memolog-hamburger-btn,
+.memolog-search-btn,
+.memolog-settings-btn,
 .memolog-sort-btn-wrapper {
 	flex-shrink: 0;
+}
+
+/* 検索バー配置用のプレースホルダー（空白エリア） */
+.memolog-search-bar-placeholder {
+	flex: 1;
+	min-width: 0;
+}
+
+/* タブ行（2行目） */
+.memolog-tabs-row {
+	display: flex;
+	width: 100%;
 }
 
 .memolog-category-tabs-wrapper {

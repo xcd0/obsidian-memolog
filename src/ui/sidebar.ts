@@ -37,6 +37,7 @@ export class MemologSidebar extends ItemView {
 	private currentOrder: SortOrder = "asc";
 	private selectedDate: Date | null = null;
 	private calendarVisible: boolean = false;
+	private searchVisible: boolean = false;
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
@@ -131,7 +132,7 @@ export class MemologSidebar extends ItemView {
 		this.containerEl.empty();
 	}
 
-	//! カテゴリタブ領域を作成する（ハンバーガーメニュー、設定ボタン、ソートボタンも含む）。
+	//! カテゴリタブ領域を作成する（ハンバーガーメニュー、検索ボタン、設定ボタン、ソートボタンも含む）。
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
 
@@ -143,6 +144,9 @@ export class MemologSidebar extends ItemView {
 
 		//! カテゴリタブコンテナ。
 		const tabsContainer = innerContainer.createDiv({ cls: "memolog-category-tabs-wrapper" });
+
+		//! 検索ボタン。
+		innerContainer.createDiv({ cls: "memolog-search-btn" });
 
 		//! 設定ボタン。
 		innerContainer.createDiv({ cls: "memolog-settings-btn" });
@@ -211,6 +215,9 @@ export class MemologSidebar extends ItemView {
 			const hamburgerBtn = categoryTabsContainer.querySelector(
 				".memolog-hamburger-btn"
 			) as HTMLElement;
+			const searchBtn = categoryTabsContainer.querySelector(
+				".memolog-search-btn"
+			) as HTMLElement;
 			const settingsBtn = categoryTabsContainer.querySelector(
 				".memolog-settings-btn"
 			) as HTMLElement;
@@ -218,13 +225,14 @@ export class MemologSidebar extends ItemView {
 				".memolog-sort-btn-wrapper"
 			) as HTMLElement;
 
-			//! ボタンバーを初期化（ハンバーガー、設定、ソートボタン）。
+			//! ボタンバーを初期化（ハンバーガー、検索、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsContainer, {
 				onSortOrderChange: (order) => this.handleSortOrderChange(order),
 				onCalendarClick: () => this.toggleCalendar(),
+				onSearchClick: () => this.toggleSearch(),
 				onSettingsClick: () => this.openSettings(),
 			});
-			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, settingsBtn, sortBtnWrapper);
+			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, searchBtn, settingsBtn, sortBtnWrapper);
 		}
 
 		//! カテゴリタブを初期化。
@@ -915,6 +923,13 @@ export class MemologSidebar extends ItemView {
 		if (this.calendarAreaEl) {
 			this.calendarAreaEl.style.display = this.calendarVisible ? "block" : "none";
 		}
+	}
+
+	//! 検索バーの表示/非表示を切り替える。
+	private toggleSearch(): void {
+		this.searchVisible = !this.searchVisible;
+		//! TODO: 検索バーUIの実装。
+		console.log("[memolog DEBUG] Search toggle:", this.searchVisible);
 	}
 
 	//! 設定画面を開く。

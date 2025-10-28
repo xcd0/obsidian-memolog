@@ -312,58 +312,6 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! メモ間リンク設定。
-		containerEl.createEl("h4", { text: "メモ間リンク" });
-
-		new Setting(containerEl)
-			.setName("メモ間リンクを有効化")
-			.setDesc("[[memo-id]] 形式のリンクを使用可能にする")
-			.addToggle((toggle) =>
-				toggle.setValue(true).onChange((_value) => {
-					//! リンク機能の有効/無効を切り替え。
-					this.plugin.refreshSidebar();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("孤立メモを警告")
-			.setDesc("リンクがなく参照もされていないメモを警告する")
-			.addToggle((toggle) =>
-				toggle.setValue(false).onChange((_value) => {
-					//! 孤立メモ警告の有効/無効を切り替え。
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("リンク切れをチェック")
-			.setDesc("存在しないメモへのリンクを検出して警告する")
-			.addToggle((toggle) =>
-				toggle.setValue(true).onChange((_value) => {
-					//! リンク切れチェックの有効/無効を切り替え。
-				})
-			);
-
-		//! タグ管理設定。
-		containerEl.createEl("h4", { text: "タグ管理" });
-
-		new Setting(containerEl)
-			.setName("タグパネルを表示")
-			.setDesc("サイドバーにタグ一覧パネルを表示する")
-			.addToggle((toggle) =>
-				toggle.setValue(true).onChange((_value) => {
-					//! タグパネルの表示/非表示を切り替え。
-					this.plugin.refreshSidebar();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("タグの自動補完")
-			.setDesc("メモ作成時に既存のタグを候補として表示する")
-			.addToggle((toggle) =>
-				toggle.setValue(true).onChange((_value) => {
-					//! タグ自動補完の有効/無効を切り替え。
-				})
-			);
 	}
 
 	//! カテゴリ設定を追加する。

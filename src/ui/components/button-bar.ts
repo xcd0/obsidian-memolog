@@ -9,6 +9,9 @@ export interface ButtonBarHandlers {
 	//! カレンダーボタンクリック時のハンドラー。
 	onCalendarClick?: () => void;
 
+	//! 検索ボタンクリック時のハンドラー。
+	onSearchClick?: () => void;
+
 	//! 設定ボタンクリック時のハンドラー。
 	onSettingsClick?: () => void;
 
@@ -29,6 +32,7 @@ export class ButtonBar {
 	renderInline(
 		initialOrder: SortOrder = "asc",
 		hamburgerContainer: HTMLElement,
+		searchContainer: HTMLElement,
 		settingsContainer: HTMLElement,
 		sortContainer: HTMLElement
 	): void {
@@ -45,6 +49,20 @@ export class ButtonBar {
 		calendarBtn.addEventListener("click", () => {
 			if (this.handlers.onCalendarClick) {
 				this.handlers.onCalendarClick();
+			}
+		});
+
+		//! 検索ボタン。
+		searchContainer.empty();
+		const searchBtn = searchContainer.createEl("button", {
+			cls: "memolog-btn memolog-search-toggle-btn",
+			attr: { "aria-label": "検索を開く" },
+		});
+		const searchIcon = searchBtn.createDiv({ cls: "memolog-btn-icon" });
+		setIcon(searchIcon, "search");
+		searchBtn.addEventListener("click", () => {
+			if (this.handlers.onSearchClick) {
+				this.handlers.onSearchClick();
 			}
 		});
 

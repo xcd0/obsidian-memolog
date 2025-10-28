@@ -336,7 +336,10 @@ export class MemologSidebar extends ItemView {
 				this.memos = [];
 				const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
 
-				console.log(`[memolog DEBUG] loadMemos: category=all, processing ${settings.categories.length} categories`);
+				//! ファイルパス生成用の日付（selectedDateがあればその日付を使用）。
+				const targetDate = this.selectedDate || new Date();
+
+				console.log(`[memolog DEBUG] loadMemos: category=all, targetDate=${targetDate.toISOString()}, processing ${settings.categories.length} categories`);
 
 				for (const cat of settings.categories) {
 					const filePath = settings.pathFormat
@@ -344,13 +347,15 @@ export class MemologSidebar extends ItemView {
 								settings.rootDirectory,
 								cat.directory,
 								settings.pathFormat,
-								settings.useDirectoryCategory
+								settings.useDirectoryCategory,
+								targetDate
 							)
 						: PathGenerator.generateFilePath(
 								settings.rootDirectory,
 								cat.directory,
 								settings.saveUnit,
-								settings.useDirectoryCategory
+								settings.useDirectoryCategory,
+								targetDate
 							);
 
 					console.log(`[memolog DEBUG] loadMemos: checking category=${cat.directory}, filePath=${filePath}`);
@@ -386,20 +391,25 @@ export class MemologSidebar extends ItemView {
 				//! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
 				const categoryDirectory = this.currentCategory;
 
-				//! ファイルパスを生成。
+				//! ファイルパスを生成（selectedDateがあればその日付を使用）。
+				const targetDate = this.selectedDate || new Date();
 				const filePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
 							settings.rootDirectory,
 							categoryDirectory,
 							settings.pathFormat,
-							settings.useDirectoryCategory
+							settings.useDirectoryCategory,
+							targetDate
 						)
 					: PathGenerator.generateFilePath(
 							settings.rootDirectory,
 							categoryDirectory,
 							settings.saveUnit,
-							settings.useDirectoryCategory
+							settings.useDirectoryCategory,
+							targetDate
 						);
+
+				console.log(`[memolog DEBUG] loadMemos: category=${categoryDirectory}, targetDate=${targetDate.toISOString()}, filePath=${filePath}`);
 
 				//! ファイルが存在するか確認。
 				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);

@@ -7,6 +7,8 @@ import { InputForm } from "./components/input-form";
 import { ButtonBar } from "./components/button-bar";
 import { CategoryTabs } from "./components/category-tabs";
 import { CalendarView } from "./components/calendar-view";
+import { SearchBar } from "./components/search-bar";
+import { SearchEngine, SearchQuery } from "../core/search-engine";
 import { PathGenerator } from "../utils/path-generator";
 
 //! サイドバーのビュータイプ。
@@ -24,6 +26,7 @@ export class MemologSidebar extends ItemView {
 	private categoryTabs: CategoryTabs | null = null;
 	private calendarView: CalendarView | null = null;
 	private calendarAreaEl: HTMLElement | null = null;
+	private searchBar: SearchBar | null = null;
 	private memoList: MemoList | null = null;
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
@@ -31,6 +34,7 @@ export class MemologSidebar extends ItemView {
 	//! UI要素への参照。
 	private listAreaEl: HTMLElement | null = null;
 	private inputAreaEl: HTMLElement | null = null;
+	private searchAreaEl: HTMLElement | null = null;
 
 	//! 現在の状態。
 	private currentCategory: string = ""; //! ディレクトリ名を保存（"all"は特別扱い）。
@@ -38,6 +42,7 @@ export class MemologSidebar extends ItemView {
 	private selectedDate: Date | null = null;
 	private calendarVisible: boolean = false;
 	private searchVisible: boolean = false;
+	private currentSearchQuery: SearchQuery | null = null;
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
@@ -98,6 +103,10 @@ export class MemologSidebar extends ItemView {
 		//! カレンダー領域を作成。
 		const calendarArea = this.createCalendarArea(container);
 
+		//! 検索バー領域を作成。
+		const searchArea = this.createSearchArea(container);
+		this.searchAreaEl = searchArea;
+
 		//! メモ表示領域を作成。
 		const listArea = this.createMemoListArea(container);
 		this.listAreaEl = listArea;
@@ -107,7 +116,7 @@ export class MemologSidebar extends ItemView {
 		this.inputAreaEl = inputArea;
 
 		//! コンポーネントを初期化。
-		this.initializeComponents(categoryTabsArea, calendarArea, listArea, inputArea);
+		this.initializeComponents(categoryTabsArea, calendarArea, searchArea, listArea, inputArea);
 
 		//! 初期レイアウトを設定。
 		this.updateInputAreaPosition();
@@ -187,6 +196,13 @@ export class MemologSidebar extends ItemView {
 		return calendarArea;
 	}
 
+	//! 検索バー領域を作成する。
+	private createSearchArea(container: HTMLElement): HTMLElement {
+		const searchArea = container.createDiv({ cls: "memolog-search-area" });
+		searchArea.style.display = "none";
+		return searchArea;
+	}
+
 	//! メモ表示領域を作成する。
 	private createMemoListArea(container: HTMLElement): HTMLElement {
 		const listArea = container.createDiv({ cls: "memolog-list-area" });
@@ -203,6 +219,7 @@ export class MemologSidebar extends ItemView {
 	private initializeComponents(
 		categoryTabsAreaEl: HTMLElement,
 		calendarAreaEl: HTMLElement,
+		searchAreaEl: HTMLElement,
 		listAreaEl: HTMLElement,
 		inputAreaEl: HTMLElement
 	): void {
@@ -264,6 +281,19 @@ export class MemologSidebar extends ItemView {
 			onDateSelect: (date) => void this.handleDateSelect(date),
 		});
 		this.calendarView.render();
+
+		//! 検索バーを初期化。
+		this.searchBar = new SearchBar(searchAreaEl, {
+			onSearch: (query) => void this.handleSearch(query),
+			onClear: () => void this.handleSearchClear(),
+		});
+		this.searchBar.render();
+
+		//! カテゴリリストを検索バーに設定。
+		if (settings.categories.length > 0) {
+			const categoryNames = settings.categories.map((c) => c.directory);
+			this.searchBar.setCategories(categoryNames);
+		}
 
 		//! メモリストを初期化。
 		this.memoList = new MemoList(
@@ -380,8 +410,16 @@ export class MemologSidebar extends ItemView {
 
 			//! 日付でフィルタリング。
 			let displayMemos = this.memos;
+			console.log(`[memolog DEBUG] loadMemos: loaded ${this.memos.length} memos for category=${this.currentCategory}`);
 			if (this.selectedDate) {
+				console.log(`[memolog DEBUG] loadMemos: selectedDate = ${this.selectedDate.toISOString()}`);
 				displayMemos = this.filterMemosByDate(this.memos, this.selectedDate);
+			}
+
+			//! 検索クエリが存在する場合は検索フィルターを適用。
+			if (this.currentSearchQuery) {
+				const result = SearchEngine.search(displayMemos, this.currentSearchQuery);
+				displayMemos = result.matches;
 			}
 
 			//! メモリストを更新。
@@ -498,14 +536,24 @@ export class MemologSidebar extends ItemView {
 		const targetDate = new Date(date.getTime());
 		targetDate.setHours(0, 0, 0, 0);
 
+		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetDate.toISOString()}`);
+		console.log(`[memolog DEBUG] filterMemosByDate: filtering ${memos.length} memos`);
+
 		const nextDate = new Date(targetDate.getTime());
 		nextDate.setDate(nextDate.getDate() + 1);
 
-		return memos.filter((memo) => {
+		const filtered = memos.filter((memo) => {
 			const memoDate = new Date(memo.timestamp);
 			memoDate.setHours(0, 0, 0, 0);
-			return memoDate.getTime() === targetDate.getTime();
+			const matches = memoDate.getTime() === targetDate.getTime();
+			if (matches) {
+				console.log(`[memolog DEBUG] filterMemosByDate: matched memo - timestamp=${memo.timestamp}, normalized=${memoDate.toISOString()}`);
+			}
+			return matches;
 		});
+
+		console.log(`[memolog DEBUG] filterMemosByDate: result = ${filtered.length} memos`);
+		return filtered;
 	}
 
 	//! メモをソートする。
@@ -928,8 +976,40 @@ export class MemologSidebar extends ItemView {
 	//! 検索バーの表示/非表示を切り替える。
 	private toggleSearch(): void {
 		this.searchVisible = !this.searchVisible;
-		//! TODO: 検索バーUIの実装。
-		console.log("[memolog DEBUG] Search toggle:", this.searchVisible);
+		if (this.searchAreaEl) {
+			this.searchAreaEl.style.display = this.searchVisible ? "block" : "none";
+		}
+		//! 検索バーを表示した時にフォーカスを当てる。
+		if (this.searchVisible && this.searchBar) {
+			setTimeout(() => {
+				if (this.searchBar) {
+					this.searchBar.focus();
+				}
+			}, 100);
+		}
+	}
+
+	//! 検索処理。
+	private async handleSearch(query: SearchQuery): Promise<void> {
+		this.currentSearchQuery = query;
+
+		//! 検索を実行。
+		const result = SearchEngine.search(this.memos, query);
+
+		console.log(`[memolog DEBUG] Search result: ${result.matches.length} matches in ${result.duration.toFixed(2)}ms`);
+
+		//! 検索結果を表示。
+		if (this.memoList) {
+			this.memoList.updateMemos(result.matches);
+		}
+	}
+
+	//! 検索クリア処理。
+	private async handleSearchClear(): Promise<void> {
+		this.currentSearchQuery = null;
+
+		//! メモリストを再読み込み。
+		await this.loadMemos();
 	}
 
 	//! 設定画面を開く。

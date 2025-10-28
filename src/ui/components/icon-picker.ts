@@ -161,8 +161,10 @@ export class IconPicker {
 			}
 		});
 
-		//! 検索ボックスにフォーカス。
-		searchInput.focus();
+		//! 検索ボックスにフォーカス（DOMレンダリング完了後に実行）。
+		setTimeout(() => {
+			searchInput.focus();
+		}, 50);
 	}
 
 	//! ピッカーを閉じる。

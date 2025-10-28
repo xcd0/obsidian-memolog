@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-最終更新: 2025-10-23
+最終更新: 2025-10-28
 対象: Obsidian 1.6+（Desktop/Mobile）
 言語: TypeScript
 ライセンス: CC0 1.0 Universal (Public Domain)

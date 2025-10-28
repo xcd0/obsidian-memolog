@@ -408,6 +408,10 @@ export class MemologSidebar extends ItemView {
 		//! rootDirectory配下のファイルのみをフィルタリング。
 		const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
 
+		console.log("[memolog DEBUG] getAllMemoTimestamps: Total markdown files:", allFiles.length);
+		console.log("[memolog DEBUG] getAllMemoTimestamps: Filtered memolog files:", memologFiles.length);
+		console.log("[memolog DEBUG] getAllMemoTimestamps: File paths:", memologFiles.map(f => f.path));
+
 		for (const file of memologFiles) {
 			const filePath = file.path;
 
@@ -418,6 +422,7 @@ export class MemologSidebar extends ItemView {
 			const cached = this.memoCountCache.get(filePath);
 			if (cached && cached.mtime === currentMtime) {
 				//! キャッシュが有効な場合はキャッシュを使用。
+				console.log(`[memolog DEBUG] Using cache for ${filePath}: ${cached.timestamps.length} memos`);
 				timestamps.push(...cached.timestamps);
 				continue;
 			}
@@ -427,12 +432,16 @@ export class MemologSidebar extends ItemView {
 			const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 			const fileTimestamps: string[] = [];
 
+			console.log(`[memolog DEBUG] Reading ${filePath}: found ${memoTexts.length} memo texts`);
+
 			for (const text of memoTexts) {
 				const memo = this.memoManager["parseTextToMemo"](text, "");
 				if (memo) {
 					fileTimestamps.push(memo.timestamp);
 				}
 			}
+
+			console.log(`[memolog DEBUG] Parsed ${filePath}: ${fileTimestamps.length} valid memos`);
 
 			//! キャッシュを更新。
 			this.memoCountCache.set(filePath, {
@@ -442,6 +451,8 @@ export class MemologSidebar extends ItemView {
 
 			timestamps.push(...fileTimestamps);
 		}
+
+		console.log(`[memolog DEBUG] Total timestamps collected: ${timestamps.length}`);
 
 		return timestamps;
 	}

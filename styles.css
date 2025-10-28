@@ -1058,6 +1058,21 @@
 	transform: translateY(0);
 }
 
+/* 設定画面のアクションボタン */
+.memolog-settings-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 4rem;
+	margin-top: 2rem;
+	padding-top: 2rem;
+	border-top: 2px solid var(--background-modifier-border);
+}
+
+.memolog-settings-save-container,
+.memolog-settings-reset-container {
+	flex: 1;
+}
+
 /* 設定画面のバリデーションエラー */
 .memolog-input-error {
 	border-color: var(--text-error) !important;

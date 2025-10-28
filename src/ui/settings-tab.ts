@@ -1,7 +1,7 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { IconPicker } from "./components/icon-picker";
 import MemologPlugin from "../../main";
-import { CategoryConfig } from "../types";
+import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types";
 import { TemplateManager } from "../core/template-manager";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
 
@@ -55,6 +55,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		this.addBasicSettings(containerEl);
 		this.addCategorySettings(containerEl);
 		this.addAdvancedFeatures(containerEl);
+		this.addActionButtons(containerEl);
 	}
 
 	//! 基本設定を追加する。
@@ -812,6 +813,123 @@ export class MemologSettingTab extends PluginSettingTab {
 						this.refreshSidebar();
 					})
 			);
+	}
+
+	//! アクションボタン（設定保存、リセット）を追加する。
+	private addActionButtons(containerEl: HTMLElement): void {
+		//! ボタンコンテナ。
+		const buttonContainer = containerEl.createDiv({
+			cls: "memolog-settings-actions"
+		});
+
+		//! 左側: 設定保存ボタン。
+		const saveContainer = buttonContainer.createDiv({
+			cls: "memolog-settings-save-container"
+		});
+
+		new Setting(saveContainer)
+			.setName("設定を保存")
+			.setDesc("設定はリアルタイムで自動保存されています。このボタンは手動で保存を確認したい場合に使用できます。")
+			.addButton((button) =>
+				button
+					.setButtonText("設定を保存")
+					.setCta()
+					.onClick(async () => {
+						await this.plugin.settingsManager.saveGlobalSettings();
+						//! 成功通知。
+						new Notice("設定を保存しました");
+					})
+			);
+
+		//! 右側: 設定リセットボタン。
+		const resetContainer = buttonContainer.createDiv({
+			cls: "memolog-settings-reset-container"
+		});
+
+		new Setting(resetContainer)
+			.setName("設定をリセット")
+			.setDesc("全ての設定をデフォルト値に戻します。この操作は取り消せません。")
+			.addButton((button) =>
+				button
+					.setButtonText("設定をリセット")
+					.setWarning()
+					.onClick(async () => {
+						//! 確認ダイアログ。
+						const confirmed = await this.showResetConfirmDialog();
+						if (confirmed) {
+							//! デフォルト設定に戻す。
+							await this.plugin.settingsManager.updateGlobalSettings(
+								{ ...DEFAULT_GLOBAL_SETTINGS }
+							);
+							//! 画面を再描画。
+							this.display();
+							this.refreshSidebar();
+							//! 成功通知。
+							new Notice("設定をリセットしました");
+						}
+					})
+			);
+	}
+
+	//! 設定リセット確認ダイアログを表示する。
+	private async showResetConfirmDialog(): Promise<boolean> {
+		return new Promise((resolve) => {
+			//! モーダルダイアログを作成。
+			const modal = document.createElement("div");
+			modal.addClass("modal-container");
+			modal.addClass("mod-dim");
+
+			const modalBg = modal.createDiv({ cls: "modal-bg" });
+			const modalContent = modal.createDiv({ cls: "modal" });
+
+			//! タイトル。
+			modalContent.createEl("h3", {
+				text: "設定をリセットしますか？",
+				cls: "modal-title"
+			});
+
+			//! メッセージ。
+			modalContent.createEl("p", {
+				text: "全ての設定がデフォルト値に戻ります。この操作は取り消せません。",
+				cls: "modal-content"
+			});
+
+			//! ボタン群。
+			const buttonGroup = modalContent.createDiv({ cls: "modal-button-container" });
+
+			const cancelBtn = buttonGroup.createEl("button", {
+				text: "キャンセル",
+				cls: "mod-cta"
+			});
+
+			const confirmBtn = buttonGroup.createEl("button", {
+				text: "リセット",
+				cls: "mod-warning"
+			});
+
+			//! イベントリスナー。
+			const closeModal = () => {
+				modal.remove();
+			};
+
+			cancelBtn.addEventListener("click", () => {
+				closeModal();
+				resolve(false);
+			});
+
+			confirmBtn.addEventListener("click", () => {
+				closeModal();
+				resolve(true);
+			});
+
+			modalBg.addEventListener("click", () => {
+				closeModal();
+				resolve(false);
+			});
+
+			//! モーダルを表示。
+			document.body.appendChild(modal);
+		});
 	}
 
 	//! サイドバーをリフレッシュする。

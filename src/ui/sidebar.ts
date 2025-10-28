@@ -336,6 +336,8 @@ export class MemologSidebar extends ItemView {
 				this.memos = [];
 				const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
 
+				console.log(`[memolog DEBUG] loadMemos: category=all, processing ${settings.categories.length} categories`);
+
 				for (const cat of settings.categories) {
 					const filePath = settings.pathFormat
 						? PathGenerator.generateCustomPath(
@@ -351,18 +353,24 @@ export class MemologSidebar extends ItemView {
 								settings.useDirectoryCategory
 							);
 
+					console.log(`[memolog DEBUG] loadMemos: checking category=${cat.directory}, filePath=${filePath}`);
+
 					//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
 					if (processedFiles.has(filePath)) {
+						console.log(`[memolog DEBUG] loadMemos: skipping duplicate file=${filePath}`);
 						continue;
 					}
 					processedFiles.add(filePath);
 
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+					console.log(`[memolog DEBUG] loadMemos: file exists=${fileExists}`);
+
 					if (fileExists) {
 						//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
 						//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
 						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+						console.log(`[memolog DEBUG] loadMemos: found ${memoTexts.length} memos in ${filePath}`);
 						for (const text of memoTexts) {
 							const memo = this.memoManager["parseTextToMemo"](text, "");
 							if (memo) {
@@ -531,25 +539,26 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
-	//! 日付でメモをフィルタリングする（ローカルタイムゾーンの日付範囲で比較）。
+	//! 日付でメモをフィルタリングする（ローカルタイムゾーンの日付で比較）。
 	private filterMemosByDate(memos: MemoEntry[], date: Date): MemoEntry[] {
-		//! ターゲット日付の開始時刻と終了時刻を取得（ローカルタイムゾーン）。
+		//! ターゲット日付の年月日を取得。
 		const targetYear = date.getFullYear();
 		const targetMonth = date.getMonth();
 		const targetDay = date.getDate();
 
-		const startOfDay = new Date(targetYear, targetMonth, targetDay, 0, 0, 0, 0);
-		const endOfDay = new Date(targetYear, targetMonth, targetDay, 23, 59, 59, 999);
-
-		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetYear}-${targetMonth + 1}-${targetDay}`);
-		console.log(`[memolog DEBUG] filterMemosByDate: range = ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`);
 		console.log(`[memolog DEBUG] filterMemosByDate: filtering ${memos.length} memos`);
 
 		const filtered = memos.filter((memo) => {
-			const memoTime = new Date(memo.timestamp).getTime();
-			const matches = memoTime >= startOfDay.getTime() && memoTime <= endOfDay.getTime();
+			//! メモのタイムスタンプをローカル日付に変換。
+			const memoDate = new Date(memo.timestamp);
+			const memoYear = memoDate.getFullYear();
+			const memoMonth = memoDate.getMonth();
+			const memoDay = memoDate.getDate();
 
-			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, time=${memoTime}, matches=${matches}`);
+			const matches = targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay;
+
+			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, local date=${memoYear}-${String(memoMonth + 1).padStart(2, '0')}-${String(memoDay).padStart(2, '0')}, matches=${matches}`);
 			return matches;
 		});
 

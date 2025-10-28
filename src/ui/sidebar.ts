@@ -1073,13 +1073,93 @@ export class MemologSidebar extends ItemView {
 	private async handleSearch(query: SearchQuery): Promise<void> {
 		this.currentSearchQuery = query;
 
+		//! 日付範囲が指定されている場合は、その範囲のメモを読み込む。
+		let memosToSearch: MemoEntry[] = [];
+
+		if (query.startDate || query.endDate) {
+			//! 日付範囲からメモを読み込む。
+			memosToSearch = await this.loadMemosForDateRange(query.startDate, query.endDate);
+		} else {
+			//! 日付範囲が指定されていない場合は現在のメモを使用。
+			memosToSearch = this.memos;
+		}
+
 		//! 検索を実行。
-		const result = SearchEngine.search(this.memos, query);
+		const result = SearchEngine.search(memosToSearch, query);
 
 		//! 検索結果を表示。
 		if (this.memoList) {
 			this.memoList.updateMemos(result.matches);
 		}
+	}
+
+	//! 日付範囲のメモを読み込む。
+	private async loadMemosForDateRange(
+		startDateStr?: string,
+		endDateStr?: string
+	): Promise<MemoEntry[]> {
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const allMemos: MemoEntry[] = [];
+		const processedFiles = new Set<string>();
+
+		//! 開始日と終了日を決定。
+		const startDate = startDateStr ? new Date(startDateStr) : new Date(0);
+		const endDate = endDateStr
+			? new Date(endDateStr + "T23:59:59.999")
+			: new Date(Date.now() + 86400000);
+
+		//! 日付範囲内の各日付に対してファイルを読み込む。
+		const currentDate = new Date(startDate);
+		currentDate.setHours(0, 0, 0, 0);
+
+		while (currentDate <= endDate) {
+			//! 検索対象のカテゴリを決定。
+			const categoriesToSearch =
+				this.currentCategory === "all" ? settings.categories : [{ directory: this.currentCategory }];
+
+			for (const cat of categoriesToSearch) {
+				const filePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							cat.directory,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							currentDate
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							cat.directory,
+							settings.saveUnit,
+							settings.useDirectoryCategory,
+							currentDate
+						);
+
+				//! 既に処理済みのファイルはスキップ。
+				if (processedFiles.has(filePath)) {
+					continue;
+				}
+				processedFiles.add(filePath);
+
+				//! ファイルが存在する場合は読み込む。
+				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+
+				if (fileExists) {
+					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					for (const text of memoTexts) {
+						const memo = this.memoManager["parseTextToMemo"](text, "");
+						if (memo) {
+							allMemos.push(memo);
+						}
+					}
+				}
+			}
+
+			//! 次の日付へ。
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+
+		return allMemos;
 	}
 
 	//! 検索クリア処理。

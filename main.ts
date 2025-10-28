@@ -46,12 +46,8 @@ export default class MemologPlugin extends Plugin {
 
 	//! プラグインアンロード時の処理。
 	override onunload() {
-		console.log("memolog plugin unloading...");
-
 		//! ビューをデタッチ。
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_MEMOLOG);
-
-		console.log("memolog plugin unloaded.");
 	}
 
 	//! サイドバーをアクティブにする。

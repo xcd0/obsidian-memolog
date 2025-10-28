@@ -1,5 +1,5 @@
 import { MemoEntry, CategoryConfig } from "../../types";
-import { MarkdownRenderer, Component, setIcon } from "obsidian";
+import { MarkdownRenderer, Component, setIcon, App, TFile } from "obsidian";
 
 //! メモカードのイベントハンドラー。
 export interface MemoCardHandlers {
@@ -24,6 +24,7 @@ export interface MemoCardHandlers {
 
 //! メモカードコンポーネント。
 export class MemoCard {
+	private app: App;
 	private container: HTMLElement;
 	private memo: MemoEntry;
 	private handlers: MemoCardHandlers;
@@ -35,6 +36,7 @@ export class MemoCard {
 	private categories: CategoryConfig[];
 
 	constructor(
+		app: App,
 		container: HTMLElement,
 		memo: MemoEntry,
 		handlers: MemoCardHandlers = {},
@@ -42,6 +44,7 @@ export class MemoCard {
 		sourcePath = "",
 		categories: CategoryConfig[] = []
 	) {
+		this.app = app;
 		this.container = container;
 		this.memo = memo;
 		this.handlers = handlers;
@@ -273,7 +276,7 @@ export class MemoCard {
 
 				//! 画像クリックで新しいタブで開く。
 				img.addEventListener("click", () => {
-					window.open(attachment, "_blank");
+					void this.openAttachment(attachment);
 				});
 			} else {
 				//! 画像以外はリンクを表示。
@@ -284,9 +287,31 @@ export class MemoCard {
 				});
 				link.addEventListener("click", (e) => {
 					e.preventDefault();
-					window.open(attachment, "_blank");
+					void this.openAttachment(attachment);
 				});
 			}
+		}
+	}
+
+	//! 添付ファイルを開く（モバイル対応）。
+	private async openAttachment(attachment: string): Promise<void> {
+		//! 外部URLかどうかを判定。
+		if (attachment.startsWith("http://") || attachment.startsWith("https://")) {
+			//! 外部URLの場合はそのまま開く。
+			window.open(attachment, "_blank");
+			return;
+		}
+
+		//! Vault内のファイルかどうかを判定。
+		const file = this.app.vault.getAbstractFileByPath(attachment);
+		if (file instanceof TFile) {
+			//! Vault内のファイルの場合は新しいタブで開く（モバイル対応）。
+			const leaf = this.app.workspace.getLeaf("tab");
+			await leaf.openFile(file);
+		} else {
+			//! Vault内にないファイルパスの場合は、デスクトップのみwindow.openで開く。
+			//! モバイルでは適切に処理できない可能性があるが、フォールバックとして提供。
+			window.open(attachment, "_blank");
 		}
 	}
 

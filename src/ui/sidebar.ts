@@ -301,6 +301,7 @@ export class MemologSidebar extends ItemView {
 
 		//! メモリストを初期化。
 		this.memoList = new MemoList(
+			this.app,
 			listAreaEl,
 			this.memos,
 			{

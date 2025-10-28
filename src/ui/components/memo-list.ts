@@ -1,8 +1,10 @@
 import { MemoEntry, SortOrder, CategoryConfig } from "../../types";
 import { MemoCard, MemoCardHandlers } from "./memo-card";
+import { App } from "obsidian";
 
 //! メモリストコンポーネント。
 export class MemoList {
+	private app: App;
 	private container: HTMLElement;
 	private memos: MemoEntry[];
 	private handlers: MemoCardHandlers;
@@ -11,6 +13,7 @@ export class MemoList {
 	private categories: CategoryConfig[];
 
 	constructor(
+		app: App,
 		container: HTMLElement,
 		memos: MemoEntry[] = [],
 		handlers: MemoCardHandlers = {},
@@ -18,6 +21,7 @@ export class MemoList {
 		sourcePath = "",
 		categories: CategoryConfig[] = []
 	) {
+		this.app = app;
 		this.container = container;
 		this.memos = memos;
 		this.handlers = handlers;
@@ -40,6 +44,7 @@ export class MemoList {
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
 			const card = new MemoCard(
+				this.app,
 				this.container,
 				memo,
 				this.handlers,

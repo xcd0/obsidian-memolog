@@ -22,10 +22,28 @@ const PRESET_COLORS = [
 //! memolog設定タブ。
 export class MemologSettingTab extends PluginSettingTab {
 	plugin: MemologPlugin;
+	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	constructor(app: App, plugin: MemologPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	//! debounce関数 - 連続入力時に過度な保存を防ぐ。
+	private debounce(key: string, callback: () => void, delay: number = 500): void {
+		//! 既存のタイマーをクリア。
+		const existingTimer = this.debounceTimers.get(key);
+		if (existingTimer) {
+			clearTimeout(existingTimer);
+		}
+
+		//! 新しいタイマーをセット。
+		const timer = setTimeout(() => {
+			callback();
+			this.debounceTimers.delete(key);
+		}, delay);
+
+		this.debounceTimers.set(key, timer);
 	}
 
 	display(): void {
@@ -49,16 +67,25 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("ルートディレクトリ")
 			.setDesc("memologファイルを保存するルートディレクトリ")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("memolog")
-					.setValue(settings.rootDirectory)
-					.onChange(async (value) => {
+					.setValue(settings.rootDirectory);
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! debounce付きで保存。
+					this.debounce("root-directory", async () => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							rootDirectory: value,
 						});
-					})
-			);
+					});
+				});
+
+				return text;
+			});
 
 		//! 保存単位設定。
 		new Setting(containerEl)
@@ -226,31 +253,49 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("ファイルパスの書式")
 			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("%Y/%m/%d")
-					.setValue(settings.pathFormat)
-					.onChange(async (value) => {
+					.setValue(settings.pathFormat);
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! debounce付きで保存。
+					this.debounce("path-format", async () => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							pathFormat: value,
 						});
-					})
-			);
+					});
+				});
+
+				return text;
+			});
 
 		//! 添付ファイル保存先設定。
 		new Setting(containerEl)
 			.setName("添付ファイルの保存先")
 			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("./attachments")
-					.setValue(settings.attachmentPath)
-					.onChange(async (value) => {
+					.setValue(settings.attachmentPath);
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! debounce付きで保存。
+					this.debounce("attachment-path", async () => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							attachmentPath: value,
 						});
-					})
-			);
+					});
+				});
+
+				return text;
+			});
 	}
 
 	//! 高度な機能設定を追加する。
@@ -275,19 +320,28 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("検索履歴の最大サイズ")
 			.setDesc("保存する検索履歴の最大数（1-100）")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("50")
-					.setValue(String(settings.searchHistoryMaxSize))
-					.onChange(async (value) => {
+					.setValue(String(settings.searchHistoryMaxSize));
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! debounce付きで保存。
+					this.debounce("search-history-max-size", async () => {
 						const numValue = parseInt(value, 10);
 						if (!isNaN(numValue) && numValue >= 1 && numValue <= 100) {
 							await this.plugin.settingsManager.updateGlobalSettings({
 								searchHistoryMaxSize: numValue,
 							});
 						}
-					})
-			);
+					});
+				});
+
+				return text;
+			});
 
 	}
 
@@ -443,24 +497,33 @@ export class MemologSettingTab extends PluginSettingTab {
 		directorySetting.addText((text) => {
 			text
 				.setPlaceholder("directory-name")
-				.setValue(category.directory)
-				.onChange(async (value) => {
+				.setValue(category.directory);
+
+			//! リアルタイム保存 - input イベントを監視。
+			text.inputEl.addEventListener("input", () => {
+				const value = text.inputEl.value;
+
+				//! ディレクトリ名が空の場合はエラーメッセージを表示。
+				if (!value.trim()) {
+					text.inputEl.addClass("memolog-input-error");
+					directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
+				} else {
+					text.inputEl.removeClass("memolog-input-error");
+					directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
+				}
+
+				//! debounce付きで保存。
+				this.debounce(`category-directory-${index}`, async () => {
 					const updatedCategories = [...settings.categories];
 					updatedCategories[index] = { ...updatedCategories[index], directory: value };
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
 					});
 					this.refreshSidebar();
-
-					//! ディレクトリ名が空の場合はエラーメッセージを表示。
-					if (!value.trim()) {
-						text.inputEl.addClass("memolog-input-error");
-						directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
-					} else {
-						text.inputEl.removeClass("memolog-input-error");
-						directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
-					}
+					//! デフォルトカテゴリ選択の表を更新。
+					this.updateDefaultCategoryTable();
 				});
+			});
 
 			//! 初期表示時のチェック。
 			if (!category.directory.trim()) {
@@ -475,19 +538,30 @@ export class MemologSettingTab extends PluginSettingTab {
 		new Setting(categoryDiv)
 			.setName("カテゴリ表示名 (空欄可)")
 			.setDesc("タブ表示にのみ使用されます。空欄の場合はカテゴリ名が表示されます。")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setPlaceholder("表示名")
-					.setValue(category.name)
-					.onChange(async (value) => {
+					.setValue(category.name);
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! debounce付きで保存。
+					this.debounce(`category-name-${index}`, async () => {
 						const updatedCategories = [...settings.categories];
 						updatedCategories[index] = { ...updatedCategories[index], name: value };
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
 						});
 						this.refreshSidebar();
-					})
-			);
+						//! デフォルトカテゴリ選択の表を更新。
+						this.updateDefaultCategoryTable();
+					});
+				});
+
+				return text;
+			});
 
 		//! プリセットカラー選択。
 		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー");
@@ -529,13 +603,19 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.refreshSidebar();
 				})
 			)
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setValue(category.color)
-					.setPlaceholder("#3b82f6")
-					.onChange(async (value) => {
-						//! #で始まる6桁の16進数かチェック。
-						if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+					.setPlaceholder("#3b82f6");
+
+				//! リアルタイム保存 - input イベントを監視。
+				text.inputEl.addEventListener("input", () => {
+					const value = text.inputEl.value;
+
+					//! #で始まる6桁の16進数かチェック。
+					if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+						//! debounce付きで保存。
+						this.debounce(`category-color-${index}`, async () => {
 							const updatedCategories = [...settings.categories];
 							updatedCategories[index] = { ...updatedCategories[index], color: value };
 							await this.plugin.settingsManager.updateGlobalSettings({
@@ -543,9 +623,12 @@ export class MemologSettingTab extends PluginSettingTab {
 							});
 							this.display();
 							this.refreshSidebar();
-						}
-					})
-			);
+						});
+					}
+				});
+
+				return text;
+			});
 
 		//! アイコン選択（アイコンピッカーを使用）。
 		const iconSetting = new Setting(categoryDiv)
@@ -614,6 +697,70 @@ export class MemologSettingTab extends PluginSettingTab {
 			if (view instanceof MemologSidebar) {
 				view.refresh();
 			}
+		}
+	}
+
+	//! デフォルトカテゴリ選択の表を更新する。
+	private updateDefaultCategoryTable(): void {
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! 既存の表を探す。
+		const table = document.querySelector(".memolog-default-category-table") as HTMLTableElement;
+		if (!table) return;
+
+		//! tbody の内容を再生成。
+		const tbody = table.querySelector("tbody");
+		if (!tbody) return;
+
+		tbody.empty();
+
+		//! 各カテゴリの行を再作成。
+		for (const category of settings.categories) {
+			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" });
+
+			//! 選択されているカテゴリをハイライト。
+			if (category.directory === settings.defaultCategory) {
+				row.addClass("memolog-default-category-selected");
+			}
+
+			//! ラジオボタン。
+			const radioCell = row.createEl("td");
+			const radio = radioCell.createEl("input", { type: "radio" });
+			radio.name = "default-category";
+			radio.checked = category.directory === settings.defaultCategory;
+
+			//! カテゴリ名（ディレクトリ名）。
+			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" });
+
+			//! カテゴリ表示名。
+			row.createEl("td", { text: category.name });
+
+			//! 色。
+			const colorCell = row.createEl("td");
+			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" });
+			colorBox.style.backgroundColor = category.color;
+
+			//! 行クリックで選択。
+			row.addEventListener("click", async () => {
+				//! 全ての行から選択状態を解除。
+				tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
+					r.removeClass("memolog-default-category-selected");
+					const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
+					if (radioInput) radioInput.checked = false;
+				});
+
+				//! この行を選択。
+				row.addClass("memolog-default-category-selected");
+				radio.checked = true;
+
+				//! 設定を更新。
+				await this.plugin.settingsManager.updateGlobalSettings({
+					defaultCategory: category.directory,
+				});
+
+				//! サイドバーを再描画。
+				this.refreshSidebar();
+			});
 		}
 	}
 }

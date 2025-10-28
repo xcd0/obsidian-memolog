@@ -47,6 +47,9 @@ export class MemologSidebar extends ItemView {
 	//! loadMemos()のロック（並行実行を防ぐ）。
 	private isLoadingMemos: boolean = false;
 
+	//! カレンダー用メモカウントキャッシュ（ファイルパス → { 更新日時, タイムスタンプ配列 }）。
+	private memoCountCache: Map<string, { mtime: number; timestamps: string[] }> = new Map();
+
 	constructor(leaf: WorkspaceLeaf, plugin: MemologPlugin) {
 		super(leaf);
 		this._plugin = plugin;
@@ -120,6 +123,9 @@ export class MemologSidebar extends ItemView {
 	override async onClose(): Promise<void> {
 		//! ファイル変更イベントリスナーを解除。
 		this.unregisterFileWatcher();
+
+		//! キャッシュをクリア。
+		this.memoCountCache.clear();
 
 		//! クリーンアップ処理。
 		this.containerEl.empty();
@@ -391,44 +397,50 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
-	//! 全カテゴリのメモのタイムスタンプを取得する（カレンダー用）。
+	//! 全カテゴリのメモのタイムスタンプを取得する（カレンダー用、キャッシュ機構付き）。
 	private async getAllMemoTimestamps(): Promise<string[]> {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
-		const processedFiles = new Set<string>();
 		const timestamps: string[] = [];
 
-		for (const cat of settings.categories) {
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						cat.directory,
-						settings.pathFormat,
-						settings.useDirectoryCategory
-					)
-				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						cat.directory,
-						settings.saveUnit,
-						settings.useDirectoryCategory
-					);
+		//! Vault内の全てのMarkdownファイルを取得。
+		const allFiles = this.app.vault.getMarkdownFiles();
 
-			//! 既に処理済みのファイルはスキップ。
-			if (processedFiles.has(filePath)) {
+		//! rootDirectory配下のファイルのみをフィルタリング。
+		const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+
+		for (const file of memologFiles) {
+			const filePath = file.path;
+
+			//! ファイルの更新日時を取得。
+			const currentMtime = file.stat.mtime;
+
+			//! キャッシュをチェック。
+			const cached = this.memoCountCache.get(filePath);
+			if (cached && cached.mtime === currentMtime) {
+				//! キャッシュが有効な場合はキャッシュを使用。
+				timestamps.push(...cached.timestamps);
 				continue;
 			}
-			processedFiles.add(filePath);
 
-			const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
-			if (fileExists) {
-				const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				for (const text of memoTexts) {
-					const memo = this.memoManager["parseTextToMemo"](text, "");
-					if (memo) {
-						timestamps.push(memo.timestamp);
-					}
+			//! キャッシュが無効またはない場合はファイルを読み込む。
+			const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+			const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+			const fileTimestamps: string[] = [];
+
+			for (const text of memoTexts) {
+				const memo = this.memoManager["parseTextToMemo"](text, "");
+				if (memo) {
+					fileTimestamps.push(memo.timestamp);
 				}
 			}
+
+			//! キャッシュを更新。
+			this.memoCountCache.set(filePath, {
+				mtime: currentMtime,
+				timestamps: fileTimestamps,
+			});
+
+			timestamps.push(...fileTimestamps);
 		}
 
 		return timestamps;

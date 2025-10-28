@@ -1025,37 +1025,63 @@
 	}
 }
 
-/* ファイルパス書式テンプレート選択ボタン */
-.memolog-path-format-templates {
+/* ファイルパス書式ラジオボタン */
+.memolog-path-format-container {
 	display: flex;
-	gap: 0.5rem;
-	margin-top: 0.5rem;
-	flex-wrap: wrap;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 100%;
 }
 
-.memolog-path-format-template-btn {
-	padding: 4px 8px;
-	background-color: var(--background-primary);
+.memolog-path-format-radio-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.memolog-path-format-radio-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.memolog-path-format-radio-item input[type="radio"] {
+	margin: 0;
+	cursor: pointer;
+}
+
+.memolog-path-format-radio-label {
+	cursor: pointer;
+	font-family: var(--font-monospace);
+	font-size: 0.9rem;
 	color: var(--text-normal);
+}
+
+.memolog-path-format-radio-label:hover {
+	color: var(--text-accent);
+}
+
+.memolog-path-format-custom-input {
+	margin-left: 1.5rem;
+	margin-top: 0.25rem;
+}
+
+.memolog-path-format-custom-input-field {
+	width: 100%;
+	max-width: 400px;
+	padding: 0.5rem;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
-	cursor: pointer;
-	font-size: 0.85rem;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
 	font-family: var(--font-monospace);
-	transition: all 0.2s ease;
-	white-space: nowrap;
+	font-size: 0.9rem;
 }
 
-.memolog-path-format-template-btn:hover {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
+.memolog-path-format-custom-input-field:focus {
+	outline: none;
 	border-color: var(--interactive-accent);
-	transform: translateY(-1px);
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.memolog-path-format-template-btn:active {
-	transform: translateY(0);
+	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
 }
 
 /* 設定画面のアクションボタン */

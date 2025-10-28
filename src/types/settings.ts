@@ -98,7 +98,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	enableDailyNotes: false,
 	rootDirectory: "memolog",
 	memoTemplate: "{{content}}",
-	pathFormat: "%Y/%m/%d",
+	pathFormat: "%Y-%m-%d/memo.md",
 	attachmentPath: "./attachments",
 	searchHistoryMaxSize: 50,
 	showAllTab: true,

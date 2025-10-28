@@ -169,7 +169,7 @@ export class SearchEngine {
 	}
 
 	//! 日付範囲のプリセット。
-	static getDateRangePreset(preset: "today" | "week" | "month" | "year"): {
+	static getDateRangePreset(preset: "today" | "week" | "month" | "year" | "all"): {
 		startDate: string;
 		endDate: string;
 	} {
@@ -194,6 +194,10 @@ export class SearchEngine {
 			case "year":
 				startDate = new Date(today);
 				startDate.setFullYear(today.getFullYear() - 1);
+				break;
+			case "all":
+				//! 過去全て（1970年1月1日から）。
+				startDate = new Date(1970, 0, 1);
 				break;
 		}
 

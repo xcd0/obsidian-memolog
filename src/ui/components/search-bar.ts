@@ -125,6 +125,7 @@ export class SearchBar {
 			{ label: "過去7日", value: "week" },
 			{ label: "過去30日", value: "month" },
 			{ label: "過去1年", value: "year" },
+			{ label: "過去全て", value: "all" },
 		];
 
 		for (const preset of presets) {
@@ -134,7 +135,7 @@ export class SearchBar {
 			});
 
 			btn.addEventListener("click", () => {
-				this.applyDatePreset(preset.value as "today" | "week" | "month" | "year");
+				this.applyDatePreset(preset.value as "today" | "week" | "month" | "year" | "all");
 			});
 		}
 
@@ -204,7 +205,7 @@ export class SearchBar {
 	}
 
 	//! 日付プリセットを適用する。
-	private applyDatePreset(preset: "today" | "week" | "month" | "year"): void {
+	private applyDatePreset(preset: "today" | "week" | "month" | "year" | "all"): void {
 		const range = SearchEngine.getDateRangePreset(preset);
 
 		if (this.startDateInput) {

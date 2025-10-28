@@ -22,6 +22,219 @@
 	background-color: var(--background-secondary);
 }
 
+/* 検索バー */
+.memolog-search-bar {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+/* 検索入力グループ */
+.memolog-search-input-group {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.5rem 0.75rem;
+	transition: border-color 0.2s ease;
+}
+
+.memolog-search-input-group:focus-within {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+.memolog-search-icon {
+	width: 18px;
+	height: 18px;
+	color: var(--text-muted);
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.memolog-search-input {
+	flex: 1;
+	border: none;
+	background: transparent;
+	color: var(--text-normal);
+	font-size: 0.95rem;
+	outline: none;
+	padding: 0;
+}
+
+.memolog-search-input::placeholder {
+	color: var(--text-muted);
+}
+
+.memolog-search-clear {
+	width: 20px;
+	height: 20px;
+	color: var(--text-muted);
+	cursor: pointer;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+}
+
+.memolog-search-clear:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* 詳細検索トグルボタン */
+.memolog-search-toggle {
+	padding: 0.5rem 1rem;
+	background-color: var(--background-primary);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: all 0.2s ease;
+	align-self: flex-start;
+}
+
+.memolog-search-toggle:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
+/* 詳細検索オプション */
+.memolog-search-advanced {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+}
+
+/* 日付範囲入力 */
+.memolog-search-date-range {
+	display: grid;
+	grid-template-columns: auto 1fr auto 1fr;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.memolog-search-date-range label {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	font-weight: 500;
+}
+
+.memolog-search-date-input {
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	transition: border-color 0.2s ease;
+}
+
+.memolog-search-date-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+/* プリセットボタン */
+.memolog-search-presets {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+	gap: 0.5rem;
+}
+
+.memolog-search-preset-btn {
+	padding: 0.5rem 1rem;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.memolog-search-preset-btn:hover {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.memolog-search-preset-btn:active {
+	transform: translateY(0);
+}
+
+/* カテゴリフィルタ */
+.memolog-search-category {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.memolog-search-category label {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	font-weight: 500;
+}
+
+.memolog-search-category-select {
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: border-color 0.2s ease;
+}
+
+.memolog-search-category-select:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+/* 検索オプション */
+.memolog-search-options {
+	display: flex;
+	gap: 1rem;
+}
+
+.memolog-search-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.9rem;
+	color: var(--text-normal);
+	user-select: none;
+}
+
+.memolog-search-checkbox-label input[type="checkbox"] {
+	cursor: pointer;
+	width: 16px;
+	height: 16px;
+}
+
+.memolog-search-checkbox-label:hover {
+	color: var(--interactive-accent);
+}
+
 .memolog-category-tabs-container {
 	display: flex;
 	align-items: center;

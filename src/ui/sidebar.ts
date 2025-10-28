@@ -531,24 +531,25 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
-	//! 日付でメモをフィルタリングする。
+	//! 日付でメモをフィルタリングする（ローカルタイムゾーンの年月日で比較）。
 	private filterMemosByDate(memos: MemoEntry[], date: Date): MemoEntry[] {
-		const targetDate = new Date(date.getTime());
-		targetDate.setHours(0, 0, 0, 0);
+		//! ターゲット日付の年月日を取得。
+		const targetYear = date.getFullYear();
+		const targetMonth = date.getMonth();
+		const targetDay = date.getDate();
 
-		console.log(`[memolog DEBUG] filterMemosByDate: input date = ${date.toISOString()}`);
-		console.log(`[memolog DEBUG] filterMemosByDate: target date after setHours = ${targetDate.toISOString()}, getTime=${targetDate.getTime()}`);
+		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetYear}-${targetMonth + 1}-${targetDay}`);
 		console.log(`[memolog DEBUG] filterMemosByDate: filtering ${memos.length} memos`);
-
-		const nextDate = new Date(targetDate.getTime());
-		nextDate.setDate(nextDate.getDate() + 1);
 
 		const filtered = memos.filter((memo) => {
 			const memoDate = new Date(memo.timestamp);
-			const originalMemoDate = memoDate.toISOString();
-			memoDate.setHours(0, 0, 0, 0);
-			const matches = memoDate.getTime() === targetDate.getTime();
-			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, original=${originalMemoDate}, normalized=${memoDate.toISOString()}, getTime=${memoDate.getTime()}, matches=${matches}`);
+			const memoYear = memoDate.getFullYear();
+			const memoMonth = memoDate.getMonth();
+			const memoDay = memoDate.getDate();
+
+			const matches = targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay;
+
+			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, date=${memoYear}-${memoMonth + 1}-${memoDay}, matches=${matches}`);
 			return matches;
 		});
 

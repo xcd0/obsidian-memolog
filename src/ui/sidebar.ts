@@ -377,9 +377,9 @@ export class MemologSidebar extends ItemView {
 				this.memoList.scrollToLatest(this.currentOrder);
 			}
 
-			//! カレンダーのメモカウントを更新。
+			//! カレンダーのメモカウントを更新（全カテゴリのメモを集計）。
 			if (this.calendarView) {
-				const timestamps = this.memos.map((memo) => memo.timestamp);
+				const timestamps = await this.getAllMemoTimestamps();
 				this.calendarView.updateMemoCounts(timestamps);
 			}
 		} catch (error) {
@@ -389,6 +389,49 @@ export class MemologSidebar extends ItemView {
 		} finally {
 			this.isLoadingMemos = false;
 		}
+	}
+
+	//! 全カテゴリのメモのタイムスタンプを取得する（カレンダー用）。
+	private async getAllMemoTimestamps(): Promise<string[]> {
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const processedFiles = new Set<string>();
+		const timestamps: string[] = [];
+
+		for (const cat of settings.categories) {
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						cat.directory,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						cat.directory,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
+
+			//! 既に処理済みのファイルはスキップ。
+			if (processedFiles.has(filePath)) {
+				continue;
+			}
+			processedFiles.add(filePath);
+
+			const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+			if (fileExists) {
+				const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				for (const text of memoTexts) {
+					const memo = this.memoManager["parseTextToMemo"](text, "");
+					if (memo) {
+						timestamps.push(memo.timestamp);
+					}
+				}
+			}
+		}
+
+		return timestamps;
 	}
 
 	//! ファイル変更イベントリスナーを登録する。

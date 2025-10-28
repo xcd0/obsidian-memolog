@@ -536,7 +536,8 @@ export class MemologSidebar extends ItemView {
 		const targetDate = new Date(date.getTime());
 		targetDate.setHours(0, 0, 0, 0);
 
-		console.log(`[memolog DEBUG] filterMemosByDate: target date = ${targetDate.toISOString()}`);
+		console.log(`[memolog DEBUG] filterMemosByDate: input date = ${date.toISOString()}`);
+		console.log(`[memolog DEBUG] filterMemosByDate: target date after setHours = ${targetDate.toISOString()}, getTime=${targetDate.getTime()}`);
 		console.log(`[memolog DEBUG] filterMemosByDate: filtering ${memos.length} memos`);
 
 		const nextDate = new Date(targetDate.getTime());
@@ -544,11 +545,10 @@ export class MemologSidebar extends ItemView {
 
 		const filtered = memos.filter((memo) => {
 			const memoDate = new Date(memo.timestamp);
+			const originalMemoDate = memoDate.toISOString();
 			memoDate.setHours(0, 0, 0, 0);
 			const matches = memoDate.getTime() === targetDate.getTime();
-			if (matches) {
-				console.log(`[memolog DEBUG] filterMemosByDate: matched memo - timestamp=${memo.timestamp}, normalized=${memoDate.toISOString()}`);
-			}
+			console.log(`[memolog DEBUG] filterMemosByDate: memo timestamp=${memo.timestamp}, original=${originalMemoDate}, normalized=${memoDate.toISOString()}, getTime=${memoDate.getTime()}, matches=${matches}`);
 			return matches;
 		});
 

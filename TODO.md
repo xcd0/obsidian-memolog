@@ -653,11 +653,155 @@
 
 ---
 
+## Obsidian Community Plugins 提出準備チェックリスト
+
+### 必須ファイル (Before you begin)
+- [ ] README.md - プラグインの目的と使い方を記述
+- [ ] LICENSE - ライセンスファイル (MIT推奨)
+- [ ] manifest.json - プラグイン定義ファイル
+  - [ ] `id` - ユニーク、"obsidian"を含まない
+  - [ ] `name` - プラグイン名
+  - [ ] `author` - 作者名
+  - [ ] `description` - 短く簡潔な説明 (最大250文字、ピリオドで終わる)
+  - [ ] `version` - Semantic Versioning (x.y.z形式)
+  - [ ] `minAppVersion` - 最小互換Obsidianバージョン
+  - [ ] `isDesktopOnly` - Node.js/Electron API使用時はtrue
+
+### GitHub リリース準備 (Step 2)
+- [ ] GitHubリポジトリ作成・公開
+- [ ] manifest.jsonのバージョンを更新 (例: 1.0.0)
+- [ ] GitHubリリースを作成
+  - [ ] タグバージョンがmanifest.jsonと一致
+  - [ ] リリース名と説明を記入
+  - [ ] 以下のファイルをバイナリ添付:
+    - [ ] main.js
+    - [ ] manifest.json
+    - [ ] styles.css (使用している場合)
+
+### 提出準備 (Step 3)
+- [ ] community-plugins.jsonにエントリ追加
+  - [ ] `id` - manifest.jsonと一致、ユニーク
+  - [ ] `name` - manifest.jsonと一致
+  - [ ] `author` - manifest.jsonと一致
+  - [ ] `description` - manifest.jsonと一致
+  - [ ] `repo` - GitHubリポジトリパス (例: username/repo-name)
+- [ ] Pull Request作成
+  - [ ] タイトル: "Add plugin: [プラグイン名]"
+  - [ ] チェックボックスをすべて確認
+- [ ] bot検証通過を待つ (Ready for reviewラベル)
+
+### プラグインガイドライン - 一般
+
+#### 必須対応項目
+- [ ] グローバルappインスタンスを使用しない (this.app を使用)
+- [ ] 不要なconsole.logを削除 (デバッグメッセージは削除)
+- [ ] プレースホルダークラス名を変更 (MyPlugin, MyPluginSettings等)
+- [ ] サンプルコードをすべて削除
+
+#### 推奨対応項目
+- [ ] フォルダを使用してコードベースを整理
+
+### プラグインガイドライン - モバイル対応
+- [ ] Node.js/Electron APIを使用していないか確認
+  - [ ] fs, crypto, os等のNode.jsパッケージ不使用
+  - [ ] 使用している場合は`isDesktopOnly: true`を設定
+- [ ] 正規表現でlookbehindを使用している場合、iOS 16.4以下の対応確認
+- [ ] モバイルでの動作テスト完了
+
+#### Node.js API代替手段の使用確認
+- [ ] cryptoの代わりにSubtleCryptoを使用
+- [ ] クリップボードアクセスにnavigator.clipboard APIを使用
+
+### プラグインガイドライン - UIテキスト
+- [ ] 設定の最上位に「設定」見出しを追加していない
+- [ ] 設定の見出しに「設定」という単語を含めていない
+- [ ] UI要素で文頭大文字を使用 (タイトルケース不使用)
+- [ ] プラグインの説明はアクションステートメントで開始
+- [ ] 説明は250文字以内でピリオドで終わる
+- [ ] 絵文字や特殊文字を使用していない
+- [ ] 固有名詞・頭字語で正しい大文字表記を使用
+- [ ] setHeadingの代わりに`new Setting().setName().setHeading()`を使用
+
+### プラグインガイドライン - 安全性
+- [ ] innerHTML, outerHTML, insertAdjacentHTMLを使用していない
+- [ ] ユーザー入力からDOM要素を構築する際、createEl()等を使用
+- [ ] HTML要素のクリーンアップにel.empty()を使用
+
+### プラグインガイドライン - リソース管理
+- [ ] プラグインアンロード時にリソースをクリーンアップ
+  - [ ] イベントリスナーをregisterEvent()で登録
+  - [ ] コマンドをaddCommand()で登録
+- [ ] onunload()で葉(leaf)をデタッチしていない
+
+### プラグインガイドライン - コマンド
+- [ ] コマンドのデフォルトホットキーを設定していない
+- [ ] コマンドIDにプラグインIDを含めていない
+- [ ] 適切なコールバックタイプを使用
+  - [ ] callback - 無条件実行
+  - [ ] checkCallback - 条件付き実行
+  - [ ] editorCallback/editorCheckCallback - エディター必須時
+
+### プラグインガイドライン - ワークスペース
+- [ ] workspace.activeLeafに直接アクセスしていない
+- [ ] getActiveViewOfType()を使用してアクティブビューにアクセス
+- [ ] activeEditorを使用してエディターにアクセス
+- [ ] カスタムビューへの参照を管理していない
+- [ ] getActiveLeavesOfType()を使用してビューにアクセス
+
+### プラグインガイドライン - Vault
+- [ ] アクティブファイル編集時にVault.modify()ではなくEditor APIを使用
+- [ ] バックグラウンドファイル変更時にVault.process()を使用
+- [ ] フロントマター変更時にFileManager.processFrontMatter()を使用
+- [ ] Adapter APIよりVault APIを優先使用
+- [ ] パスでファイルを探す際に全ファイル反復処理していない
+  - [ ] Vault.getFileByPath()を使用
+  - [ ] Vault.getFolderByPath()を使用
+  - [ ] Vault.getAbstractFileByPath()を使用
+- [ ] ユーザー定義パスのクリーンアップにnormalizePath()を使用
+
+### プラグインガイドライン - エディタ
+- [ ] registerEditorExtension()後の変更時にupdateOptions()を使用
+
+### プラグインガイドライン - スタイリング
+- [ ] ハードコードされたスタイルを使用していない
+- [ ] CSSクラスを使用してスタイルを適用
+- [ ] Obsidian提供のCSS変数を使用 (例: --text-normal, --background-modifier-error)
+
+### プラグインガイドライン - TypeScript
+- [ ] varの代わりにconst/letを使用
+- [ ] Promiseの代わりにasync/awaitを使用
+
+### デバイス対応テスト
+- [ ] デスクトップ (Windows) 動作確認
+- [ ] デスクトップ (Mac) 動作確認
+- [ ] デスクトップ (Linux) 動作確認
+- [ ] モバイル (iOS) 動作確認
+- [ ] モバイル (Android) 動作確認
+
+### ドキュメント
+- [ ] README.mdに機能説明を記載
+- [ ] README.mdに使い方を記載
+- [ ] README.mdにスクリーンショットを追加
+- [ ] CHANGELOG.mdを作成
+- [ ] リリースノートを作成
+
+### 品質保証
+- [ ] 全テストがパス
+- [ ] ビルドエラーなし
+- [ ] ESLintエラーなし
+- [ ] パフォーマンステスト完了
+- [ ] メモリリーク確認
+
+---
+
 ## 参考資料
 
 ### Obsidian API
 - [Obsidian API Documentation](https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin)
 - [Sample Plugin](https://github.com/obsidianmd/obsidian-sample-plugin)
+- [Developer Policies](https://docs.obsidian.md/Developer+policies)
+- [Plugin Guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
+- [Submission Requirements](https://docs.obsidian.md/Plugins/Releasing/Submission+requirements)
 
 ### 技術スタック
 - TypeScript 4.9+

@@ -274,6 +274,9 @@ export class MemologSidebar extends ItemView {
 	//! メモを読み込む。
 	private async loadMemos(): Promise<void> {
 		try {
+			console.log("[memolog DEBUG] loadMemos called, currentCategory:", this.currentCategory);
+			console.log("[memolog DEBUG] Current memos count before load:", this.memos.length);
+
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 
@@ -297,22 +300,28 @@ export class MemologSidebar extends ItemView {
 								settings.useDirectoryCategory
 							);
 
+					console.log("[memolog DEBUG] Category:", cat.directory, "FilePath:", filePath);
+
 					//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
 					if (processedFiles.has(filePath)) {
+						console.log("[memolog DEBUG] Skipping duplicate file:", filePath);
 						continue;
 					}
 					processedFiles.add(filePath);
 
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+					console.log("[memolog DEBUG] File exists:", fileExists, "for", filePath);
 					if (fileExists) {
 						//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
 						//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
 						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+						console.log("[memolog DEBUG] Found", memoTexts.length, "memos in file", filePath);
 						for (const text of memoTexts) {
 							const memo = this.memoManager["parseTextToMemo"](text, "");
 							if (memo) {
 								this.memos.push(memo);
+								console.log("[memolog DEBUG] Added memo:", memo.id, "Total memos:", this.memos.length);
 							}
 						}
 					}
@@ -362,6 +371,7 @@ export class MemologSidebar extends ItemView {
 
 			//! メモリストを更新。
 			if (this.memoList) {
+				console.log("[memolog DEBUG] Calling updateMemos with", displayMemos.length, "memos");
 				this.memoList.updateMemos(displayMemos);
 				//! 最新メモが表示されるようにスクロール。
 				this.memoList.scrollToLatest(this.currentOrder);

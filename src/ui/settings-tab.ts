@@ -1,4 +1,5 @@
-import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
+import { IconPicker } from "./components/icon-picker";
 import MemologPlugin from "../../main";
 import { CategoryConfig } from "../types";
 import { TemplateManager } from "../core/template-manager";
@@ -16,30 +17,6 @@ const PRESET_COLORS = [
 	{ name: "青緑", value: "#14b8a6" },
 	{ name: "灰", value: "#6b7280" },
 	{ name: "茶", value: "#92400e" },
-];
-
-//! よく使うアイコン定義。
-const COMMON_ICONS = [
-	"folder",
-	"briefcase",
-	"gamepad-2",
-	"star",
-	"heart",
-	"book",
-	"coffee",
-	"home",
-	"user",
-	"users",
-	"calendar",
-	"clock",
-	"bookmark",
-	"tag",
-	"lightbulb",
-	"code",
-	"music",
-	"image",
-	"camera",
-	"palette",
 ];
 
 //! memolog設定タブ。
@@ -570,26 +547,19 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! アイコン選択。
+		//! アイコン選択（アイコンピッカーを使用）。
 		const iconSetting = new Setting(categoryDiv)
 			.setName("アイコン")
-			.setDesc(`選択中: ${category.icon}`);
+			.setDesc("カテゴリのアイコンを選択（1000種類以上から選択可能）");
 
-		//! 現在選択されているアイコンを表示。
-		const currentIconDiv = iconSetting.controlEl.createDiv({ cls: "memolog-current-icon" });
-		setIcon(currentIconDiv, category.icon);
+		//! アイコンピッカーを作成。
+		const iconPickerContainer = iconSetting.controlEl.createDiv({
+			cls: "memolog-icon-picker-container",
+		});
+		iconPickerContainer.style.position = "relative";
 
-		//! アイコンプリセットボタンを追加。
-		const iconContainer = iconSetting.controlEl.createDiv({ cls: "memolog-icon-preset-container" });
-
-		for (const iconName of COMMON_ICONS) {
-			const iconBtn = iconContainer.createDiv({ cls: "memolog-icon-preset-btn" });
-			if (category.icon === iconName) {
-				iconBtn.addClass("memolog-icon-preset-btn-selected");
-			}
-			setIcon(iconBtn, iconName);
-			iconBtn.setAttribute("aria-label", iconName);
-			iconBtn.addEventListener("click", () => {
+		const iconPicker = new IconPicker(iconPickerContainer, category.icon, {
+			onIconSelect: (iconName: string) => {
 				void (async () => {
 					const updatedCategories = [...settings.categories];
 					updatedCategories[index] = { ...updatedCategories[index], icon: iconName };
@@ -599,8 +569,10 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.display();
 					this.refreshSidebar();
 				})();
-			});
-		}
+			},
+		});
+
+		iconPicker.render();
 
 		//! アイコン表示トグル。
 		new Setting(categoryDiv)

@@ -1135,3 +1135,198 @@
 	justify-content: center;
 	color: var(--interactive-accent);
 }
+
+/* ============================================
+   アイコンピッカー
+   ============================================ */
+
+/* アイコンピッカーボタン */
+.memolog-icon-picker-button {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background-color: var(--background-primary);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.memolog-icon-picker-button:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.memolog-icon-preview {
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-normal);
+}
+
+.memolog-icon-label {
+	color: var(--text-muted);
+	font-size: 0.9em;
+}
+
+/* アイコンピッカードロップダウン */
+.memolog-icon-picker-dropdown {
+	position: absolute;
+	z-index: 1000;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	width: 400px;
+	max-height: 500px;
+	display: flex;
+	flex-direction: column;
+	margin-top: 0.5rem;
+}
+
+/* 検索ボックス */
+.memolog-icon-picker-search {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.75rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.memolog-icon-picker-search-icon {
+	width: 16px;
+	height: 16px;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.memolog-icon-picker-search-input {
+	flex: 1;
+	border: none;
+	background-color: transparent;
+	outline: none;
+	color: var(--text-normal);
+	font-size: 0.9em;
+}
+
+.memolog-icon-picker-search-input::placeholder {
+	color: var(--text-faint);
+}
+
+/* タブエリア */
+.memolog-icon-picker-tabs {
+	display: flex;
+	gap: 0.25rem;
+	padding: 0.5rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+	overflow-x: auto;
+	flex-wrap: wrap;
+}
+
+.memolog-icon-picker-tab {
+	padding: 0.4rem 0.8rem;
+	border-radius: 4px;
+	font-size: 0.85em;
+	color: var(--text-muted);
+	cursor: pointer;
+	white-space: nowrap;
+	transition: all 0.2s ease;
+	background-color: var(--background-secondary);
+}
+
+.memolog-icon-picker-tab:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.memolog-icon-picker-tab-active {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.memolog-icon-picker-tab-active:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+/* アイコングリッドコンテナ */
+.memolog-icon-picker-grid-container {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.5rem;
+}
+
+/* アイコングリッド */
+.memolog-icon-picker-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+	gap: 0.5rem;
+}
+
+/* アイコンアイテム */
+.memolog-icon-picker-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.75rem 0.5rem;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	background-color: var(--background-secondary);
+}
+
+.memolog-icon-picker-item:hover {
+	background-color: var(--background-modifier-hover);
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.memolog-icon-picker-item-selected {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.memolog-icon-picker-item-selected:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.memolog-icon-picker-item-icon {
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.memolog-icon-picker-item-selected .memolog-icon-picker-item-icon {
+	color: var(--text-on-accent);
+}
+
+.memolog-icon-picker-item-label {
+	font-size: 0.7em;
+	color: var(--text-muted);
+	text-align: center;
+	word-break: break-word;
+	line-height: 1.2;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.memolog-icon-picker-item-selected .memolog-icon-picker-item-label {
+	color: var(--text-on-accent);
+}
+
+/* 検索結果なし */
+.memolog-icon-picker-no-results {
+	padding: 2rem;
+	text-align: center;
+	color: var(--text-muted);
+	font-size: 0.9em;
+}

@@ -18,7 +18,8 @@
       "Bash(npm run lint:*)",
       "Bash(npm run test:coverage:*)",
       "Bash(git rm:*)",
-      "Bash(npm run test)"
+      "Bash(npm run test)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

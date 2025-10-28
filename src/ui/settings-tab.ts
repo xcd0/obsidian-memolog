@@ -819,33 +819,14 @@ export class MemologSettingTab extends PluginSettingTab {
 			);
 	}
 
-	//! アクションボタン（設定保存、リセット）を追加する。
+	//! アクションボタン（設定リセット、保存）を追加する。
 	private addActionButtons(containerEl: HTMLElement): void {
 		//! ボタンコンテナ。
 		const buttonContainer = containerEl.createDiv({
 			cls: "memolog-settings-actions"
 		});
 
-		//! 左側: 設定保存ボタン。
-		const saveContainer = buttonContainer.createDiv({
-			cls: "memolog-settings-save-container"
-		});
-
-		new Setting(saveContainer)
-			.setName("設定を保存")
-			.setDesc("設定はリアルタイムで自動保存されています。このボタンは手動で保存を確認したい場合に使用できます。")
-			.addButton((button) =>
-				button
-					.setButtonText("設定を保存")
-					.setCta()
-					.onClick(async () => {
-						await this.plugin.settingsManager.saveGlobalSettings();
-						//! 成功通知。
-						new Notice("設定を保存しました");
-					})
-			);
-
-		//! 右側: 設定リセットボタン。
+		//! 左側: 設定リセットボタン。
 		const resetContainer = buttonContainer.createDiv({
 			cls: "memolog-settings-reset-container"
 		});
@@ -871,6 +852,25 @@ export class MemologSettingTab extends PluginSettingTab {
 							//! 成功通知。
 							new Notice("設定をリセットしました");
 						}
+					})
+			);
+
+		//! 右側: 設定保存ボタン。
+		const saveContainer = buttonContainer.createDiv({
+			cls: "memolog-settings-save-container"
+		});
+
+		new Setting(saveContainer)
+			.setName("設定を保存")
+			.setDesc("設定はリアルタイムで自動保存されています。このボタンは手動で保存を確認したい場合に使用できます。")
+			.addButton((button) =>
+				button
+					.setButtonText("設定を保存")
+					.setCta()
+					.onClick(async () => {
+						await this.plugin.settingsManager.saveGlobalSettings();
+						//! 成功通知。
+						new Notice("設定を保存しました");
 					})
 			);
 	}

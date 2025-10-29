@@ -1523,7 +1523,8 @@ export class MemologSettingTab extends PluginSettingTab {
 				settings.pathFormat,
 				this.initialUseDirectoryCategory,
 				settings.useDirectoryCategory,
-				settings.categories
+				settings.categories,
+				settings.defaultCategory
 			);
 
 			notice.hide();

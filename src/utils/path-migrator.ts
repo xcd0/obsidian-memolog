@@ -50,7 +50,8 @@ export class PathMigrator {
 		newPathFormat: string,
 		oldUseDirectoryCategory: boolean,
 		newUseDirectoryCategory: boolean,
-		categories: CategoryConfig[]
+		categories: CategoryConfig[],
+		defaultCategory: string
 	): Promise<PathMapping[]> {
 		const mappings: PathMapping[] = [];
 
@@ -59,14 +60,15 @@ export class PathMigrator {
 		const targetFiles = allFiles.filter((file) => file.path.startsWith(rootDir + "/"));
 
 		for (const file of targetFiles) {
-			const mapping = this.analyzePath(
+			const mapping = await this.analyzePath(
 				file.path,
 				rootDir,
 				oldPathFormat,
 				newPathFormat,
 				oldUseDirectoryCategory,
 				newUseDirectoryCategory,
-				categories
+				categories,
+				defaultCategory
 			);
 
 			if (mapping) {
@@ -81,15 +83,16 @@ export class PathMigrator {
 	}
 
 	//! ファイルパスを解析して新しいパスを生成する。
-	private analyzePath(
+	private async analyzePath(
 		filePath: string,
 		rootDir: string,
 		oldPathFormat: string,
 		newPathFormat: string,
 		oldUseDirectoryCategory: boolean,
 		newUseDirectoryCategory: boolean,
-		categories: CategoryConfig[]
-	): PathMapping | null {
+		categories: CategoryConfig[],
+		defaultCategory: string
+	): Promise<PathMapping | null> {
 		//! rootDirを除いたパスを取得。
 		const relativePath = filePath.substring(rootDir.length + 1);
 
@@ -127,9 +130,14 @@ export class PathMigrator {
 			dateInfo = this.extractDateFromPath(relativePath);
 		}
 
-		//! カテゴリが特定できない場合は処理できない。
+		//! カテゴリが特定できない場合はファイル内容から読み取る。
 		if (!category) {
-			return null;
+			category = await this.extractCategoryFromFile(filePath);
+		}
+
+		//! それでも特定できない場合はデフォルトカテゴリを使用。
+		if (!category) {
+			category = defaultCategory;
 		}
 
 		//! 新しいパスを生成。
@@ -322,6 +330,23 @@ export class PathMigrator {
 		await this.app.vault.rename(file, newPath);
 	}
 
+	//! ファイル内容からカテゴリを抽出する（HTMLコメント形式）。
+	private async extractCategoryFromFile(filePath: string): Promise<string | null> {
+		try {
+			const content = await this.vaultHandler.readFile(filePath);
+
+			//! <!-- memolog: start category="work" --> の形式を検索。
+			const match = content.match(/<!--\s*memolog:\s*start\s+category="([^"]+)"\s*-->/);
+			if (match && match[1]) {
+				return match[1];
+			}
+
+			return null;
+		} catch (error) {
+			return null;
+		}
+	}
+
 	//! カテゴリを非同期で推定する（ファイル内容を読む必要がある）。
 	async detectCategoryFromContent(
 		filePath: string,
@@ -350,56 +375,18 @@ export class PathMigrator {
 		newPathFormat: string,
 		oldUseDirectoryCategory: boolean,
 		newUseDirectoryCategory: boolean,
-		categories: CategoryConfig[]
+		categories: CategoryConfig[],
+		defaultCategory: string
 	): Promise<PathMapping[]> {
-		const mappings: PathMapping[] = [];
-
-		//! rootDir配下の全.mdファイルを取得。
-		const allFiles = this.app.vault.getMarkdownFiles();
-		const targetFiles = allFiles.filter((file) => file.path.startsWith(rootDir + "/"));
-
-		for (const file of targetFiles) {
-			let mapping = this.analyzePath(
-				file.path,
-				rootDir,
-				oldPathFormat,
-				newPathFormat,
-				oldUseDirectoryCategory,
-				newUseDirectoryCategory,
-				categories
-			);
-
-			//! カテゴリが特定できない場合はファイル内容から推定。
-			if (!mapping) {
-				const category = await this.detectCategoryFromContent(file.path, categories);
-				if (category) {
-					const dateInfo = this.extractDateFromPath(file.path);
-					const newPath = PathGenerator.generateCustomPath(
-						rootDir,
-						category,
-						newPathFormat,
-						newUseDirectoryCategory,
-						dateInfo || new Date()
-					);
-
-					mapping = {
-						oldPath: file.path,
-						newPath,
-						category,
-						date: dateInfo || undefined,
-						hasConflict: false,
-					};
-				}
-			}
-
-			if (mapping) {
-				mappings.push(mapping);
-			}
-		}
-
-		//! 競合をチェック。
-		this.detectConflicts(mappings);
-
-		return mappings;
+		//! 基本的なplanMigrationを呼び出す（既にファイル内容からカテゴリを読み取る機能が含まれている）。
+		return await this.planMigration(
+			rootDir,
+			oldPathFormat,
+			newPathFormat,
+			oldUseDirectoryCategory,
+			newUseDirectoryCategory,
+			categories,
+			defaultCategory
+		);
 	}
 }

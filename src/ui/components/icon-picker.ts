@@ -72,6 +72,14 @@ export class IconPicker {
 			document.activeElement.blur();
 		}
 
+		//! 設定タブボタンを一時的にフォーカス不可にする。
+		const settingsTabButtons = document.querySelectorAll(".memolog-settings-tab-button");
+		const originalTabIndexes: Map<Element, string | null> = new Map();
+		settingsTabButtons.forEach((btn) => {
+			originalTabIndexes.set(btn, btn.getAttribute("tabindex"));
+			btn.setAttribute("tabindex", "-1");
+		});
+
 		//! オーバーレイ背景を作成（document.bodyに追加）。
 		const overlay = document.body.createDiv({ cls: "memolog-icon-picker-overlay" });
 
@@ -95,19 +103,29 @@ export class IconPicker {
 			}
 		});
 
-		//! グローバルなフォーカストラップ - ピッカー外の要素へのフォーカス移動を防ぐ。
+		//! 設定タブボタンへのフォーカスを防ぐフォーカストラップ。
 		const focusTrap = (e: FocusEvent) => {
 			const target = e.target as HTMLElement;
 			console.log("[memolog] Global focus event, target:", target);
 
-			//! フォーカスがピッカー内の要素でない場合は検索入力に戻す。
-			if (!this.pickerElement?.contains(target)) {
-				console.log("[memolog] Focus moved outside picker, preventing");
+			//! 設定タブボタンへのフォーカスを明示的にブロック。
+			if (target.classList.contains("memolog-settings-tab-button")) {
+				console.log("[memolog] Blocking focus on settings tab button");
 				e.preventDefault();
-				e.stopPropagation();
+				e.stopImmediatePropagation();
 				//! 検索入力にフォーカスを戻す。
 				const searchInput = this.pickerElement?.querySelector(".memolog-icon-picker-search-input") as HTMLInputElement;
 				if (searchInput) {
+					searchInput.focus();
+				}
+				return false;
+			}
+
+			//! フォーカスがピッカー内の要素でない場合は検索入力に戻す。
+			if (!this.pickerElement?.contains(target)) {
+				console.log("[memolog] Focus moved outside picker, redirecting to search input");
+				const searchInput = this.pickerElement?.querySelector(".memolog-icon-picker-search-input") as HTMLInputElement;
+				if (searchInput && target !== searchInput) {
 					setTimeout(() => {
 						searchInput.focus();
 					}, 0);
@@ -118,10 +136,18 @@ export class IconPicker {
 		//! フォーカストラップをcaptureフェーズで登録（より早い段階でキャッチ）。
 		document.addEventListener("focus", focusTrap, true);
 
-		//! ピッカーが閉じられた時にフォーカストラップを解除。
+		//! ピッカーが閉じられた時にフォーカストラップを解除し、tabindexを復元。
 		const originalClose = this.close.bind(this);
 		this.close = () => {
 			document.removeEventListener("focus", focusTrap, true);
+			//! 設定タブボタンの tabindex を元に戻す。
+			originalTabIndexes.forEach((originalValue, btn) => {
+				if (originalValue === null) {
+					btn.removeAttribute("tabindex");
+				} else {
+					btn.setAttribute("tabindex", originalValue);
+				}
+			});
 			originalClose();
 		};
 
@@ -145,8 +171,10 @@ export class IconPicker {
 			console.log("[memolog] Search input focused");
 		});
 
+		//! blur イベントログ。
 		searchInput.addEventListener("blur", (e) => {
-			console.log("[memolog] Search input blur, relatedTarget:", (e as FocusEvent).relatedTarget);
+			const relatedTarget = (e as FocusEvent).relatedTarget as HTMLElement;
+			console.log("[memolog] Search input blur, relatedTarget:", relatedTarget);
 		});
 
 		//! 検索ボックスのmousedownで確実にフォーカス。
@@ -292,63 +320,6 @@ export class IconPicker {
 			//! オーバーレイ自体がクリックされた場合のみ閉じる（ピッカー内部のクリックは除外）。
 			if (e.target === overlay) {
 				this.close();
-			}
-		});
-
-		//! 検索ボックスからフォーカスが外れたら戻す（無限ループ防止機構付き）。
-		let refocusTimer: NodeJS.Timeout | null = null;
-		let isRefocusing = false; //! 無限ループ防止フラグ。
-		const refocusSearchInput = () => {
-			//! 既にrefocus処理中の場合は何もしない（無限ループ防止）。
-			if (isRefocusing) {
-				console.log("[memolog] Refocus already in progress, skipping");
-				return;
-			}
-
-			if (refocusTimer) {
-				clearTimeout(refocusTimer);
-			}
-
-			refocusTimer = setTimeout(() => {
-				if (this.isOpen && document.activeElement !== searchInput) {
-					//! フォーカスが外部の要素（設定画面など）に移動している場合は戻さない。
-					const activeElement = document.activeElement as HTMLElement;
-					if (activeElement && !this.pickerElement?.contains(activeElement)) {
-						console.log("[memolog] Focus moved outside picker, not refocusing");
-						isRefocusing = false;
-						return;
-					}
-
-					console.log("[memolog] Refocusing search input, current active element:", document.activeElement);
-					isRefocusing = true;
-					searchInput.focus();
-					//! フォーカス処理完了後にフラグをリセット。
-					setTimeout(() => {
-						isRefocusing = false;
-					}, 100);
-				}
-			}, 10);
-		};
-
-		searchInput.addEventListener("blur", (e) => {
-			const relatedTarget = (e as FocusEvent).relatedTarget as HTMLElement;
-			console.log("[memolog] Search input blur event, relatedTarget:", relatedTarget);
-
-			//! フォーカスが外部の要素に移動した場合は何もしない。
-			if (relatedTarget && !this.pickerElement?.contains(relatedTarget)) {
-				console.log("[memolog] Focus moved outside picker, not calling refocusSearchInput");
-				return;
-			}
-
-			refocusSearchInput();
-		});
-
-		//! ピッカー内のクリック後もフォーカスを戻す。
-		this.pickerElement.addEventListener("click", (e) => {
-			const target = e.target as HTMLElement;
-			//! アイコンアイテムのクリックは除外（選択後に閉じるため）。
-			if (!target.closest(".memolog-icon-picker-item")) {
-				refocusSearchInput();
 			}
 		});
 

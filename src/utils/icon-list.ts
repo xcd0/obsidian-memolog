@@ -834,6 +834,11 @@ export function getAllIcons(): string[] {
 export function searchIcons(query: string, limit = 50): string[] {
 	const allIcons = getAllIcons();
 
+	//! デバッグログ。
+	console.log(`[memolog] Total icons available: ${allIcons.length}`);
+	console.log(`[memolog] Sample icons:`, allIcons.slice(0, 10));
+	console.log(`[memolog] "smartphone" in list:`, allIcons.filter(icon => icon.includes("phone")));
+
 	if (!query || query.trim() === "") {
 		return allIcons.slice(0, limit);
 	}
@@ -854,7 +859,12 @@ export function searchIcons(query: string, limit = 50): string[] {
 	);
 
 	//! 結果を結合して返す。
-	return [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit);
+	const results = [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit);
+
+	//! デバッグログ。
+	console.log(`[memolog] Search query: "${query}", results: ${results.length}`, results);
+
+	return results;
 }
 
 //! カテゴリからアイコンを取得。

@@ -68,7 +68,6 @@ export class IconPicker {
 
 		//! 現在フォーカスされている要素をblurする。
 		if (document.activeElement && document.activeElement instanceof HTMLElement) {
-			console.log("[memolog] Blurring currently focused element:", document.activeElement);
 			document.activeElement.blur();
 		}
 
@@ -98,7 +97,6 @@ export class IconPicker {
 			//! 検索ボックス以外のクリックでフォーカスが外れないようにする。
 			const target = e.target as HTMLElement;
 			if (!target.matches(".memolog-icon-picker-search-input")) {
-				console.log("[memolog] Picker mousedown (not search input), preventing default");
 				e.preventDefault();
 			}
 		});
@@ -106,11 +104,9 @@ export class IconPicker {
 		//! 設定タブボタンへのフォーカスを防ぐフォーカストラップ。
 		const focusTrap = (e: FocusEvent) => {
 			const target = e.target as HTMLElement;
-			console.log("[memolog] Global focus event, target:", target);
 
 			//! 設定タブボタンへのフォーカスを明示的にブロック。
 			if (target.classList.contains("memolog-settings-tab-button")) {
-				console.log("[memolog] Blocking focus on settings tab button");
 				e.preventDefault();
 				e.stopImmediatePropagation();
 				//! 検索入力にフォーカスを戻す。
@@ -123,7 +119,6 @@ export class IconPicker {
 
 			//! フォーカスがピッカー内の要素でない場合は検索入力に戻す。
 			if (!this.pickerElement?.contains(target)) {
-				console.log("[memolog] Focus moved outside picker, redirecting to search input");
 				const searchInput = this.pickerElement?.querySelector(".memolog-icon-picker-search-input") as HTMLInputElement;
 				if (searchInput && target !== searchInput) {
 					setTimeout(() => {
@@ -166,20 +161,8 @@ export class IconPicker {
 			attr: { tabindex: "0" },
 		});
 
-		//! デバッグログ。
-		searchInput.addEventListener("focus", () => {
-			console.log("[memolog] Search input focused");
-		});
-
-		//! blur イベントログ。
-		searchInput.addEventListener("blur", (e) => {
-			const relatedTarget = (e as FocusEvent).relatedTarget as HTMLElement;
-			console.log("[memolog] Search input blur, relatedTarget:", relatedTarget);
-		});
-
 		//! 検索ボックスのmousedownで確実にフォーカス。
 		searchInput.addEventListener("mousedown", (e) => {
-			console.log("[memolog] Search input mousedown");
 			e.stopPropagation();
 			//! 既にフォーカスされていない場合のみpreventDefault。
 			if (document.activeElement !== searchInput) {
@@ -190,7 +173,6 @@ export class IconPicker {
 
 		//! 検索ボックスクリック時にフォーカスを維持。
 		searchInput.addEventListener("click", (e) => {
-			console.log("[memolog] Search input click");
 			e.stopPropagation();
 			searchInput.focus();
 		});

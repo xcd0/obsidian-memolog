@@ -53,6 +53,9 @@ export interface GlobalSettings {
 	//! 添付ファイルの保存先（./相対パスまたは/ルート相対パス）。
 	attachmentPath: string;
 
+	//! 添付ファイル名の書式（%Y=年、%m=月、%d=日、%H=時、%M=分、%S=秒、%s=タイムスタンプ、%f=元ファイル名、%e=拡張子）。
+	attachmentNameFormat: string;
+
 	//! 検索履歴の最大サイズ。
 	searchHistoryMaxSize: number;
 
@@ -100,6 +103,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	memoTemplate: "# %Y-%m-%d %H:%M:%S\n{{content}}",
 	pathFormat: "%Y-%m-%d.md",
 	attachmentPath: "./attachments",
+	attachmentNameFormat: "pasted-%s-%f%e",
 	searchHistoryMaxSize: 50,
 	showAllTab: true,
 };

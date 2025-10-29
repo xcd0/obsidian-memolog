@@ -668,50 +668,36 @@ export class MemologSidebar extends ItemView {
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 			const category = this.currentCategory || settings.defaultCategory;
 
-			//! 添付ファイル保存先を決定。
-			let attachmentDir: string;
-			if (settings.attachmentPath.startsWith("./")) {
-				//! ./で始まる場合: 投稿ファイルのディレクトリからの相対パス。
-				//! 現在のメモが保存されるディレクトリを取得。
-				const memoFilePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							category,
-							settings.pathFormat,
-							settings.useDirectoryCategory
-						)
-					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							category,
-							settings.saveUnit,
-							settings.useDirectoryCategory
-						);
-				//! ファイルパスからディレクトリパスを取得。
-				const memoDir = memoFilePath.substring(0, memoFilePath.lastIndexOf("/"));
-				//! ./を除去して相対パスを結合。
-				const relativePath = settings.attachmentPath.substring(2);
-				attachmentDir = `${memoDir}/${relativePath}`;
-			} else if (settings.attachmentPath.startsWith("/")) {
-				//! /で始まる場合: ルートディレクトリからの相対パス。
-				//! /を除去してルートディレクトリと結合。
-				const relativePath = settings.attachmentPath.substring(1);
-				attachmentDir = `${settings.rootDirectory}/${relativePath}`;
-			} else {
-				//! それ以外: そのままルートディレクトリからの相対パスとして扱う。
-				attachmentDir = `${settings.rootDirectory}/${settings.attachmentPath}`;
-			}
+			//! 現在のメモが保存されるパスを取得（添付ファイルパスの計算に必要）。
+			const memoFilePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						category,
+						settings.pathFormat,
+						settings.useDirectoryCategory
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						category,
+						settings.saveUnit,
+						settings.useDirectoryCategory
+					);
+
+			//! PathGeneratorを使用して添付ファイルの完全なパスを生成。
+			const filePath = PathGenerator.generateAttachmentPath(
+				settings.rootDirectory,
+				memoFilePath,
+				settings.attachmentPath,
+				settings.attachmentNameFormat,
+				file.name
+			);
 
 			//! 添付ファイルディレクトリを作成。
-			const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir);
+			const attachmentDir = filePath.substring(0, filePath.lastIndexOf("/"));
+			const dirExists = this.memoManager.vaultHandler.folderExists(attachmentDir);
 			if (!dirExists) {
 				await this.memoManager.vaultHandler.createFolder(attachmentDir);
 			}
-
-			//! ファイル名を生成（タイムスタンプ + 拡張子）。
-			const timestamp = Date.now();
-			const extension = file.name.split(".").pop() || "png";
-			const fileName = `pasted-image-${timestamp}.${extension}`;
-			const filePath = `${attachmentDir}/${fileName}`;
 
 			//! ファイルを保存。
 			const arrayBuffer = await file.arrayBuffer();

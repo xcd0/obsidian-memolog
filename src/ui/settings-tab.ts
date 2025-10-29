@@ -478,6 +478,168 @@ export class MemologSettingTab extends PluginSettingTab {
 			});
 		}
 
+		//! 添付ファイル名書式設定。
+		const attachmentNameSetting = new Setting(containerEl)
+			.setName("添付ファイル名の書式")
+			.setDesc("添付ファイルの名前を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%S=秒、%s=タイムスタンプ、%f=元ファイル名、%e=拡張子");
+
+		//! プレビュー表示領域を説明側に追加。
+		const attachmentNamePreviewContainer = attachmentNameSetting.descEl.createDiv({
+			cls: "memolog-template-preview-container",
+			attr: {
+				style: "margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
+			}
+		});
+		attachmentNamePreviewContainer.createDiv({
+			text: "出力例:",
+			attr: {
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;"
+			}
+		});
+		const attachmentNamePreviewContent = attachmentNamePreviewContainer.createDiv({
+			cls: "memolog-template-preview-content",
+			attr: {
+				style: "white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;"
+			}
+		});
+
+		//! プレビュー更新関数。
+		const updateAttachmentNamePreview = (format: string) => {
+			try {
+				const now = new Date();
+				const examples = [
+					{ label: "クリップボード貼り付け", fileName: "image.png" },
+					{ label: "動画ファイル", fileName: "video.mp4" },
+					{ label: "PDFファイル", fileName: "document.pdf" },
+				];
+
+				const previews = examples.map(example => {
+					const generated = PathGenerator.generateAttachmentName(format, example.fileName, now);
+					return `${example.label}: ${generated}`;
+				});
+
+				attachmentNamePreviewContent.setText(previews.join("\n"));
+			} catch (error) {
+				attachmentNamePreviewContent.setText(`エラー: ${(error as Error).message}`);
+			}
+		};
+
+		const attachmentNameContainer = attachmentNameSetting.controlEl.createDiv({
+			cls: "memolog-path-format-container"
+		});
+
+		//! プリセットオプション。
+		const attachmentNamePresets = [
+			{ label: "pasted-%s-%f%e", value: "pasted-%s-%f%e" },
+			{ label: "%Y%m%d-%H%M%S-%f%e", value: "%Y%m%d-%H%M%S-%f%e" },
+			{ label: "%f-%s%e", value: "%f-%s%e" },
+		];
+
+		//! 現在の設定値がプリセットに含まれるか確認。
+		const isAttachmentNameCustom = !attachmentNamePresets.some(preset => preset.value === settings.attachmentNameFormat);
+
+		//! カスタム入力欄の初期値。
+		let attachmentNameCustomValue = isAttachmentNameCustom ? settings.attachmentNameFormat : "";
+
+		//! ラジオボタングループ。
+		const attachmentNameRadioGroup = attachmentNameContainer.createDiv({
+			cls: "memolog-path-format-radio-group"
+		});
+
+		//! カスタムラジオボタンと入力欄。
+		const attachmentNameCustomRadioItem = attachmentNameRadioGroup.createDiv({
+			cls: "memolog-path-format-radio-item"
+		});
+
+		const attachmentNameCustomRadio = attachmentNameCustomRadioItem.createEl("input", {
+			type: "radio",
+			attr: {
+				name: "attachment-name-format",
+				value: "custom",
+				id: "attachment-name-format-custom"
+			}
+		}) as HTMLInputElement;
+
+		if (isAttachmentNameCustom) {
+			attachmentNameCustomRadio.checked = true;
+		}
+
+		const attachmentNameCustomInput = attachmentNameCustomRadioItem.createEl("input", {
+			type: "text",
+			placeholder: "pasted-%s-%f%e",
+			value: attachmentNameCustomValue,
+			cls: "memolog-setting-text-input-inline"
+		}) as HTMLInputElement;
+
+		//! カスタムラジオボタンクリック時。
+		attachmentNameCustomRadio.addEventListener("change", async () => {
+			if (attachmentNameCustomRadio.checked) {
+				await this.plugin.settingsManager.updateGlobalSettings({
+					attachmentNameFormat: attachmentNameCustomInput.value,
+				});
+				updateAttachmentNamePreview(attachmentNameCustomInput.value);
+			}
+		});
+
+		//! カスタム入力欄の入力時。
+		attachmentNameCustomInput.addEventListener("input", () => {
+			attachmentNameCustomValue = attachmentNameCustomInput.value;
+			if (attachmentNameCustomRadio.checked) {
+				updateAttachmentNamePreview(attachmentNameCustomInput.value);
+				this.debounce("attachment-name-format-custom", async () => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						attachmentNameFormat: attachmentNameCustomInput.value,
+					});
+				});
+			}
+		});
+
+		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
+		attachmentNameCustomInput.addEventListener("focus", () => {
+			attachmentNameCustomRadio.checked = true;
+			attachmentNameCustomRadio.dispatchEvent(new Event("change"));
+		});
+
+		//! プリセットラジオボタン。
+		for (const preset of attachmentNamePresets) {
+			const radioItem = attachmentNameRadioGroup.createDiv({
+				cls: "memolog-path-format-radio-item"
+			});
+
+			const radio = radioItem.createEl("input", {
+				type: "radio",
+				attr: {
+					name: "attachment-name-format",
+					value: preset.value,
+					id: `attachment-name-format-${preset.value}`
+				}
+			}) as HTMLInputElement;
+
+			if (settings.attachmentNameFormat === preset.value) {
+				radio.checked = true;
+			}
+
+			radioItem.createEl("label", {
+				text: preset.label,
+				attr: {
+					for: `attachment-name-format-${preset.value}`
+				},
+				cls: "memolog-path-format-radio-label"
+			});
+
+			radio.addEventListener("change", async () => {
+				if (radio.checked) {
+					updateAttachmentNamePreview(preset.value);
+					await this.plugin.settingsManager.updateGlobalSettings({
+						attachmentNameFormat: preset.value,
+					});
+				}
+			});
+		}
+
+		//! 初期プレビューを表示。
+		updateAttachmentNamePreview(settings.attachmentNameFormat);
+
 		//! メモのテンプレート設定。
 		const templateSetting = new Setting(containerEl)
 			.setName("メモのテンプレート");

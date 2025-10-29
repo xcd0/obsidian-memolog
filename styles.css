@@ -1104,10 +1104,9 @@
 }
 
 .memolog-setting-textarea-input-inline {
-	width: 100%;
-	max-width: 500px;
+	flex: 1;
+	max-width: 400px;
 	padding: 0.5rem;
-	margin-top: 0.5rem;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
 	background-color: var(--background-primary);
@@ -1126,8 +1125,8 @@
 /* テンプレートカスタム入力欄用 */
 .memolog-path-format-radio-item-textarea {
 	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
+	align-items: flex-start;
+	gap: 0.5rem;
 }
 
 .memolog-template-custom-label-container {

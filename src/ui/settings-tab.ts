@@ -247,7 +247,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		const pathCustomInput = pathCustomRadioItem.createEl("input", {
 			type: "text",
-			placeholder: "%Y-%m-%d.md",
+			placeholder: "%Y-%m-%d/memo.md",
 			value: pathCustomValue,
 			cls: "memolog-setting-text-input-inline"
 		}) as HTMLInputElement;
@@ -525,9 +525,15 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! カスタム入力欄からフォーカスが外れた時、{{content}}が含まれているかチェック。
 		templateCustomInput.addEventListener("blur", () => {
 			let value = templateCustomInput.value.trim();
-			if (value && !value.includes("{{content}}")) {
-				//! {{content}}が含まれていない場合は末尾に追加。
-				value = value + "\n{{content}}";
+			if (!value.includes("{{content}}")) {
+				//! {{content}}が含まれていない場合は追加。
+				if (value) {
+					//! 値がある場合は改行を入れて追加。
+					value = value + "\n{{content}}";
+				} else {
+					//! 空の場合は改行なしで追加。
+					value = "{{content}}";
+				}
 				templateCustomInput.value = value;
 				templateCustomValue = value;
 				if (templateCustomRadio.checked) {

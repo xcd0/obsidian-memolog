@@ -1528,6 +1528,71 @@
 	border-radius: 6px;
 }
 
+/* 書式変換情報 */
+.migration-format-info {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.migration-format-info h3 {
+	margin-top: 0;
+	margin-bottom: 0.75rem;
+	font-size: 1rem;
+	color: var(--text-normal);
+}
+
+.format-conversion-table {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.format-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+}
+
+.format-label {
+	font-weight: 600;
+	color: var(--text-muted);
+	min-width: 70px;
+	font-size: 0.9em;
+}
+
+.format-value {
+	flex: 1;
+	padding: 0.4rem 0.6rem;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	font-size: 0.95em;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.old-format {
+	color: var(--text-muted);
+}
+
+.new-format {
+	color: var(--text-accent);
+	font-weight: 500;
+	border-color: var(--interactive-accent);
+}
+
+.format-arrow {
+	text-align: center;
+	color: var(--text-accent);
+	font-size: 1.2em;
+	font-weight: bold;
+	padding: 0.25rem 0;
+}
+
 .migration-stats {
 	margin-bottom: 1rem;
 	padding: 0.75rem;

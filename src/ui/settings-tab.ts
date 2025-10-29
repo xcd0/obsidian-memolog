@@ -1539,6 +1539,8 @@ export class MemologSettingTab extends PluginSettingTab {
 				this.app,
 				settings.rootDirectory,
 				mappings,
+				this.initialPathFormat,
+				settings.pathFormat,
 				async (createBackup: boolean) => {
 					const progressNotice = new Notice("ファイルを変換中...", 0);
 

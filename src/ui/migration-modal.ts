@@ -9,16 +9,22 @@ export class MigrationConfirmModal extends Modal {
 	private backupManager: BackupManager;
 	private onConfirm: (createBackup: boolean) => Promise<void>;
 	private isGitRepo: boolean;
+	private oldPathFormat: string;
+	private newPathFormat: string;
 
 	constructor(
 		app: App,
 		rootDir: string,
 		mappings: PathMapping[],
+		oldPathFormat: string,
+		newPathFormat: string,
 		onConfirm: (createBackup: boolean) => Promise<void>
 	) {
 		super(app);
 		this.rootDir = rootDir;
 		this.mappings = mappings;
+		this.oldPathFormat = oldPathFormat;
+		this.newPathFormat = newPathFormat;
 		this.onConfirm = onConfirm;
 		this.backupManager = new BackupManager(app);
 		this.isGitRepo = false;
@@ -40,6 +46,23 @@ export class MigrationConfirmModal extends Modal {
 		descDiv.createEl("p", {
 			text: "ファイルパス書式の変更により、既存のファイルを新しい構造に変換します。",
 		});
+
+		//! 書式変換の情報。
+		const formatDiv = contentEl.createDiv({ cls: "migration-format-info" });
+		formatDiv.createEl("h3", { text: "書式の変換" });
+
+		const formatTable = formatDiv.createEl("div", { cls: "format-conversion-table" });
+
+		const oldFormatRow = formatTable.createEl("div", { cls: "format-row" });
+		oldFormatRow.createEl("span", { text: "変換前:", cls: "format-label" });
+		oldFormatRow.createEl("code", { text: this.oldPathFormat, cls: "format-value old-format" });
+
+		const arrowRow = formatTable.createEl("div", { cls: "format-arrow" });
+		arrowRow.createEl("span", { text: "↓" });
+
+		const newFormatRow = formatTable.createEl("div", { cls: "format-row" });
+		newFormatRow.createEl("span", { text: "変換後:", cls: "format-label" });
+		newFormatRow.createEl("code", { text: this.newPathFormat, cls: "format-value new-format" });
 
 		//! 統計情報。
 		const statsDiv = contentEl.createDiv({ cls: "migration-stats" });

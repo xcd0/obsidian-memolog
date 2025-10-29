@@ -66,6 +66,12 @@ export class IconPicker {
 
 		this.isOpen = true;
 
+		//! 現在フォーカスされている要素をblurする。
+		if (document.activeElement && document.activeElement instanceof HTMLElement) {
+			console.log("[memolog] Blurring currently focused element:", document.activeElement);
+			document.activeElement.blur();
+		}
+
 		//! オーバーレイ背景を作成（document.bodyに追加）。
 		const overlay = document.body.createDiv({ cls: "memolog-icon-picker-overlay" });
 
@@ -89,6 +95,36 @@ export class IconPicker {
 			}
 		});
 
+		//! グローバルなフォーカストラップ - ピッカー外の要素へのフォーカス移動を防ぐ。
+		const focusTrap = (e: FocusEvent) => {
+			const target = e.target as HTMLElement;
+			console.log("[memolog] Global focus event, target:", target);
+
+			//! フォーカスがピッカー内の要素でない場合は検索入力に戻す。
+			if (!this.pickerElement?.contains(target)) {
+				console.log("[memolog] Focus moved outside picker, preventing");
+				e.preventDefault();
+				e.stopPropagation();
+				//! 検索入力にフォーカスを戻す。
+				const searchInput = this.pickerElement?.querySelector(".memolog-icon-picker-search-input") as HTMLInputElement;
+				if (searchInput) {
+					setTimeout(() => {
+						searchInput.focus();
+					}, 0);
+				}
+			}
+		};
+
+		//! フォーカストラップをcaptureフェーズで登録（より早い段階でキャッチ）。
+		document.addEventListener("focus", focusTrap, true);
+
+		//! ピッカーが閉じられた時にフォーカストラップを解除。
+		const originalClose = this.close.bind(this);
+		this.close = () => {
+			document.removeEventListener("focus", focusTrap, true);
+			originalClose();
+		};
+
 		//! 検索ボックス。
 		const searchContainer = this.pickerElement.createDiv({
 			cls: "memolog-icon-picker-search",
@@ -101,6 +137,7 @@ export class IconPicker {
 			type: "text",
 			placeholder: "アイコンを検索...",
 			cls: "memolog-icon-picker-search-input",
+			attr: { tabindex: "0" },
 		});
 
 		//! デバッグログ。
@@ -112,16 +149,22 @@ export class IconPicker {
 			console.log("[memolog] Search input blur, relatedTarget:", (e as FocusEvent).relatedTarget);
 		});
 
-		//! 検索ボックスのmousedownでデフォルト動作を許可。
+		//! 検索ボックスのmousedownで確実にフォーカス。
 		searchInput.addEventListener("mousedown", (e) => {
 			console.log("[memolog] Search input mousedown");
 			e.stopPropagation();
+			//! 既にフォーカスされていない場合のみpreventDefault。
+			if (document.activeElement !== searchInput) {
+				e.preventDefault();
+				searchInput.focus();
+			}
 		});
 
 		//! 検索ボックスクリック時にフォーカスを維持。
 		searchInput.addEventListener("click", (e) => {
 			console.log("[memolog] Search input click");
 			e.stopPropagation();
+			searchInput.focus();
 		});
 
 		//! 検索コンテナクリック時は検索ボックスにフォーカス。

@@ -344,6 +344,29 @@ export class MemologSettingTab extends PluginSettingTab {
 			btn.buttonEl.disabled = true;
 		});
 
+		//! リストアボタンを追加。
+		const restoreSetting = new Setting(containerEl)
+			.setName("バックアップから元に戻す")
+			.setDesc("過去のバックアップからファイルをリストアします。");
+
+		restoreSetting.addButton((btn) =>
+			btn
+				.setButtonText("元に戻す")
+				.onClick(async () => {
+					const settings = this.plugin.settingsManager.getGlobalSettings();
+					const modal = new RestoreBackupModal(
+						this.app,
+						settings.rootDirectory,
+						() => {
+							//! リストア後に画面を再描画。
+							this.display();
+							this.refreshSidebar();
+						}
+					);
+					modal.open();
+				})
+		);
+
 		//! 各pathFormat変更時に変換ボタンをチェック。
 		pathCustomRadio.addEventListener("change", async () => {
 			if (pathCustomRadio.checked) {
@@ -1357,32 +1380,6 @@ export class MemologSettingTab extends PluginSettingTab {
 							//! 成功通知。
 							new Notice("設定をリセットしました");
 						}
-					})
-			);
-
-		//! 中央: バックアップからリストアボタン。
-		const restoreContainer = buttonContainer.createDiv({
-			cls: "memolog-settings-restore-container"
-		});
-
-		new Setting(restoreContainer)
-			.setName("バックアップから元に戻す")
-			.setDesc("過去のバックアップからファイルをリストアします。")
-			.addButton((button) =>
-				button
-					.setButtonText("元に戻す")
-					.onClick(async () => {
-						const settings = this.plugin.settingsManager.getGlobalSettings();
-						const modal = new RestoreBackupModal(
-							this.app,
-							settings.rootDirectory,
-							() => {
-								//! リストア後に画面を再描画。
-								this.display();
-								this.refreshSidebar();
-							}
-						);
-						modal.open();
 					})
 			);
 

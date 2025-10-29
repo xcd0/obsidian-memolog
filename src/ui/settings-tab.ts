@@ -8,6 +8,7 @@ import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
 import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal";
 import { PathMigrator } from "../utils/path-migrator";
 import { MemologVaultHandler } from "../fs/vault-handler";
+import { MemoManager } from "../core/memo-manager";
 
 //! プリセットカラー定義。
 const PRESET_COLORS = [
@@ -1508,45 +1509,71 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 	}
 
+	//! メモマッピングを通常のPathMapping形式に変換（表示用）。
+	private convertMemoMappingsToPathMappings(
+		memoMappings: import("../utils/path-migrator").MemoSplitMapping[]
+	): import("../utils/path-migrator").PathMapping[] {
+		const mappings: import("../utils/path-migrator").PathMapping[] = [];
+
+		for (const memoMapping of memoMappings) {
+			for (const [newPath, memos] of memoMapping.newPathToMemos) {
+				mappings.push({
+					oldPath: memoMapping.oldPath,
+					newPath,
+					category: memos[0]?.category || "",
+					date: memos[0] ? new Date(memos[0].timestamp) : undefined,
+					hasConflict: memoMapping.hasConflict,
+				});
+			}
+		}
+
+		return mappings;
+	}
+
 	//! マイグレーションダイアログを表示。
 	private async showMigrationDialog() {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 		const vaultHandler = new MemologVaultHandler(this.app);
-		const migrator = new PathMigrator(this.app, vaultHandler);
+		const memoManager = new MemoManager(this.app);
+		const migrator = new PathMigrator(this.app, vaultHandler, memoManager);
 
 		//! マイグレーション計画を作成。
 		const notice = new Notice("変換計画を作成中...", 0);
 		try {
-			const mappings = await migrator.planMigrationAdvanced(
+			//! メモ分割マイグレーションを使用。
+			const memoMappings = await migrator.planMemoSplitMigration(
 				settings.rootDirectory,
-				this.initialPathFormat,
 				settings.pathFormat,
-				this.initialUseDirectoryCategory,
 				settings.useDirectoryCategory,
-				settings.categories,
 				settings.defaultCategory
 			);
 
 			notice.hide();
 
-			if (mappings.length === 0) {
+			if (memoMappings.length === 0) {
 				new Notice("変換対象のファイルがありません。");
 				return;
 			}
+
+			//! メモマッピングを通常のPathMapping形式に変換（モーダル表示用）。
+			const displayMappings = this.convertMemoMappingsToPathMappings(memoMappings);
 
 			//! 確認モーダルを表示。
 			const modal = new MigrationConfirmModal(
 				this.app,
 				settings.rootDirectory,
-				mappings,
+				displayMappings,
 				this.initialPathFormat,
 				settings.pathFormat,
 				async (createBackup: boolean) => {
 					const progressNotice = new Notice("ファイルを変換中...", 0);
 
 					try {
-						//! 変換実行。
-						const result = await migrator.executeMigration(mappings, true, createBackup);
+						//! メモ分割マイグレーションを実行。
+						const result = await migrator.executeMemoSplitMigration(
+							memoMappings,
+							createBackup
+						);
 
 						progressNotice.hide();
 

@@ -2,6 +2,9 @@ import { App, TFile } from "obsidian";
 import { PathGenerator } from "./path-generator";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CategoryConfig } from "../types/settings";
+import { MemoEntry } from "../types/memo";
+import { MemoManager } from "../core/memo-manager";
+import { TagManager } from "../core/tag-manager";
 
 //! ファイルパス変換のマッピング情報。
 export interface PathMapping {
@@ -13,6 +16,16 @@ export interface PathMapping {
 	category: string;
 	//! 日付情報。
 	date?: Date;
+	//! 競合があるか。
+	hasConflict: boolean;
+}
+
+//! メモ分割マイグレーションのマッピング情報。
+export interface MemoSplitMapping {
+	//! 元のファイルパス。
+	oldPath: string;
+	//! 新しいファイルパスとそのパスに含まれるメモのマップ。
+	newPathToMemos: Map<string, MemoEntry[]>;
 	//! 競合があるか。
 	hasConflict: boolean;
 }
@@ -37,10 +50,12 @@ export interface MigrationResult {
 export class PathMigrator {
 	private app: App;
 	private vaultHandler: MemologVaultHandler;
+	private memoManager: MemoManager;
 
-	constructor(app: App, vaultHandler: MemologVaultHandler) {
+	constructor(app: App, vaultHandler: MemologVaultHandler, memoManager: MemoManager) {
 		this.app = app;
 		this.vaultHandler = vaultHandler;
+		this.memoManager = memoManager;
 	}
 
 	//! 設定変更時のファイル移動を計画する。
@@ -388,5 +403,185 @@ export class PathMigrator {
 			categories,
 			defaultCategory
 		);
+	}
+
+	//! メモ分割マイグレーションの計画を作成する。
+	async planMemoSplitMigration(
+		rootDir: string,
+		newPathFormat: string,
+		newUseDirectoryCategory: boolean,
+		defaultCategory: string
+	): Promise<MemoSplitMapping[]> {
+		const mappings: MemoSplitMapping[] = [];
+
+		//! rootDir配下の全.mdファイルを取得。
+		const allFiles = this.app.vault.getMarkdownFiles();
+		const targetFiles = allFiles.filter((file) => file.path.startsWith(rootDir + "/"));
+
+		for (const file of targetFiles) {
+			const mapping = await this.analyzeMemoSplit(
+				file.path,
+				rootDir,
+				newPathFormat,
+				newUseDirectoryCategory,
+				defaultCategory
+			);
+
+			if (mapping) {
+				mappings.push(mapping);
+			}
+		}
+
+		return mappings;
+	}
+
+	//! ファイル内のメモを分析してカテゴリ別に分割する計画を立てる。
+	private async analyzeMemoSplit(
+		filePath: string,
+		rootDir: string,
+		newPathFormat: string,
+		newUseDirectoryCategory: boolean,
+		defaultCategory: string
+	): Promise<MemoSplitMapping | null> {
+		//! ファイルからすべてのメモを取得（カテゴリフィルタなし）。
+		const allMemos = await this.memoManager.getMemos(filePath, "");
+
+		if (allMemos.length === 0) {
+			return null;
+		}
+
+		//! カテゴリごとにグループ化。
+		const categoryGroups = new Map<string, MemoEntry[]>();
+		for (const memo of allMemos) {
+			const category = memo.category || defaultCategory;
+			if (!categoryGroups.has(category)) {
+				categoryGroups.set(category, []);
+			}
+			categoryGroups.get(category)!.push(memo);
+		}
+
+		//! 各カテゴリグループをタイムスタンプ順にソート。
+		for (const [_, memos] of categoryGroups) {
+			memos.sort((a, b) => {
+				return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+			});
+		}
+
+		//! 新しいファイルパスを生成。
+		const newPathToMemos = new Map<string, MemoEntry[]>();
+		for (const [category, memos] of categoryGroups) {
+			//! 最初のメモのタイムスタンプから日付情報を取得。
+			const firstMemoDate = new Date(memos[0].timestamp);
+
+			const newPath = PathGenerator.generateCustomPath(
+				rootDir,
+				category,
+				newPathFormat,
+				newUseDirectoryCategory,
+				firstMemoDate
+			);
+
+			newPathToMemos.set(newPath, memos);
+		}
+
+		return {
+			oldPath: filePath,
+			newPathToMemos,
+			hasConflict: false,
+		};
+	}
+
+	//! メモ分割マイグレーションを実行する。
+	async executeMemoSplitMigration(
+		mappings: MemoSplitMapping[],
+		createBackup = true
+	): Promise<MigrationResult> {
+		const result: MigrationResult = {
+			successCount: 0,
+			failureCount: 0,
+			skippedCount: 0,
+			errors: [],
+			warnings: [],
+			mappings: [],
+		};
+
+		for (const mapping of mappings) {
+			try {
+				//! バックアップ作成。
+				if (createBackup) {
+					const content = await this.vaultHandler.readFile(mapping.oldPath);
+					const backupPath = `${mapping.oldPath}.backup-${Date.now()}`;
+					await this.vaultHandler.createFile(backupPath, content);
+				}
+
+				//! 各カテゴリごとに新しいファイルを作成または追記。
+				for (const [newPath, memos] of mapping.newPathToMemos) {
+					//! 新しいパスのディレクトリを作成。
+					const newDir = newPath.substring(0, newPath.lastIndexOf("/"));
+					if (newDir && !this.vaultHandler.folderExists(newDir)) {
+						await this.vaultHandler.createFolder(newDir);
+					}
+
+					//! 既存ファイルがあれば読み込む。
+					let existingContent = "";
+					if (this.vaultHandler.fileExists(newPath)) {
+						existingContent = await this.vaultHandler.readFile(newPath);
+					}
+
+					//! メモをテキストに変換してタグペアで囲む。
+					const category = memos[0].category;
+					const startTag = TagManager.createStartTag(category);
+					const endTag = TagManager.createEndTag();
+
+					//! 既存のタグペアから該当カテゴリの部分を削除。
+					let newContent = existingContent;
+					const existingPair = TagManager.findTagPairByCategory(existingContent, category);
+					if (existingPair) {
+						//! 既存のタグペアを削除。
+						const lines = existingContent.split("\n");
+						const beforeLines = lines.slice(0, existingPair.startLine);
+						const afterLines = lines.slice(existingPair.endLine + 1);
+						newContent = [...beforeLines, ...afterLines].join("\n").trim();
+					}
+
+					//! 新しいメモを追加。
+					const memoTexts = memos.map((memo) => this.memoToText(memo)).join("\n\n");
+					const newSection = `${startTag}\n${memoTexts}\n${endTag}`;
+
+					//! ファイルに書き込み。
+					if (newContent) {
+						newContent = `${newContent}\n\n${newSection}`;
+					} else {
+						newContent = newSection;
+					}
+
+					await this.vaultHandler.writeFile(newPath, newContent);
+				}
+
+				//! 元のファイルを削除。
+				const oldFile = this.app.vault.getAbstractFileByPath(mapping.oldPath);
+				if (oldFile instanceof TFile) {
+					await this.app.vault.delete(oldFile);
+				}
+
+				result.successCount++;
+			} catch (error) {
+				result.failureCount++;
+				result.errors.push(
+					`移動失敗: ${mapping.oldPath}: ${error instanceof Error ? error.message : "Unknown error"}`
+				);
+			}
+		}
+
+		return result;
+	}
+
+	//! メモエントリをテキストに変換する（簡易版）。
+	private memoToText(memo: MemoEntry): string {
+		const metadata = `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}, category: ${JSON.stringify(memo.category)}${memo.template ? `, template: ${JSON.stringify(memo.template)}` : ""} -->`;
+		const content = memo.content;
+		const attachments = memo.attachments && memo.attachments.length > 0 ? "\n" + memo.attachments.map((a) => `![[${a}]]`).join("\n") : "";
+
+		return `${metadata}\n${content}${attachments}`;
 	}
 }

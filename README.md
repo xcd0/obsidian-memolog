@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-Obsidian上でメモを素早く記録・整理・回顧するプラグイン (v0.0.8 - プロトタイプ版)
+メモを素早く記録・整理・回顧する (v0.0.8 - プロトタイプ版)
 
 ## 概要
 

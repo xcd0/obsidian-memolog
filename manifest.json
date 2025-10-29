@@ -3,7 +3,7 @@
 	"name": "memolog",
 	"version": "0.0.9",
 	"minAppVersion": "1.6.0",
-	"description": "Obsidian上でメモを素早く記録・整理・回顧するプラグイン",
+	"description": "メモを素早く記録・整理・回顧する",
 	"author": "xcd0",
 	"authorUrl": "https://github.com/xcd0",
 	"isDesktopOnly": false

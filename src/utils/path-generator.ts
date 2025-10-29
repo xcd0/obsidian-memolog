@@ -72,8 +72,8 @@ export class PathGenerator {
 		const minute = date.getMinutes().toString().padStart(2, "0");
 		const second = date.getSeconds().toString().padStart(2, "0");
 
-		//! カテゴリディレクトリのパス。
-		const categoryPath = useDirectoryCategory ? `${rootDir}/${category}` : rootDir;
+		//! %Cが含まれているかチェック。
+		const hasCategoryPlaceholder = pathFormat.includes("%C");
 
 		//! 変数置換。
 		let path = pathFormat
@@ -82,13 +82,20 @@ export class PathGenerator {
 			.replace(/%d/g, day)
 			.replace(/%H/g, hour)
 			.replace(/%M/g, minute)
-			.replace(/%S/g, second);
+			.replace(/%S/g, second)
+			.replace(/%C/g, category);
 
 		//! .md拡張子を確認。
 		if (!path.endsWith(".md")) {
 			path += ".md";
 		}
 
-		return `${categoryPath}/${path}`;
+		//! %Cが含まれる場合はrootDirのみ、含まれない場合は従来の動作。
+		if (hasCategoryPlaceholder) {
+			return `${rootDir}/${path}`;
+		} else {
+			const categoryPath = useDirectoryCategory ? `${rootDir}/${category}` : rootDir;
+			return `${categoryPath}/${path}`;
+		}
 	}
 }

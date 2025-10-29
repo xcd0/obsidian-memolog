@@ -166,7 +166,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! ファイルパス書式設定。
 		const pathFormatSetting = new Setting(containerEl)
 			.setName("ファイルパスの書式")
-			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分");
+			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%C=カテゴリ名");
 
 		//! プレビュー表示領域を説明側に追加。
 		const pathPreviewContainer = pathFormatSetting.descEl.createDiv({
@@ -214,6 +214,8 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
 			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
+			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
+			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

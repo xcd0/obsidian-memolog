@@ -239,6 +239,151 @@ describe("PathGenerator", () => {
 				expect(result).toBe("memolog/2025-10.md");
 			});
 		});
+
+		describe("%C（カテゴリ名）プレースホルダー", () => {
+			it("%C/%Y-%m-%d/memo.md形式: memolog/work/2025-10-23/memo.md", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%C/%Y-%m-%d/memo.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/work/2025-10-23/memo.md");
+			});
+
+			it("%Y-%m-%d/%C.md形式: memolog/2025-10-23/work.md", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y-%m-%d/%C.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/2025-10-23/work.md");
+			});
+
+			it("%C/%Y-%m-%d/memo.md形式（useDirectoryCategory=false）でも同じ", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%C/%Y-%m-%d/memo.md",
+					false,
+					testDate
+				);
+				expect(result).toBe("memolog/work/2025-10-23/memo.md");
+			});
+
+			it("%Y-%m-%d/memo.md（%Cなし、useDirectoryCategory=true）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y-%m-%d/memo.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/work/2025-10-23/memo.md");
+			});
+
+			it("%Y-%m-%d/memo.md（%Cなし、useDirectoryCategory=false）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y-%m-%d/memo.md",
+					false,
+					testDate
+				);
+				expect(result).toBe("memolog/2025-10-23/memo.md");
+			});
+
+			it("%Y-%m-%d.md（%Cなし、useDirectoryCategory=true）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y-%m-%d.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/work/2025-10-23.md");
+			});
+
+			it("%Y-%m-%d.md（%Cなし、useDirectoryCategory=false）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y-%m-%d.md",
+					false,
+					testDate
+				);
+				expect(result).toBe("memolog/2025-10-23.md");
+			});
+
+			it("%Y%m%d.md（%Cなし、useDirectoryCategory=true）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y%m%d.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/work/20251023.md");
+			});
+
+			it("%Y%m%d.md（%Cなし、useDirectoryCategory=false）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y%m%d.md",
+					false,
+					testDate
+				);
+				expect(result).toBe("memolog/20251023.md");
+			});
+
+			it("%Y/%m/%d.md（%Cなし、useDirectoryCategory=true）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y/%m/%d.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/work/2025/10/23.md");
+			});
+
+			it("%Y/%m/%d.md（%Cなし、useDirectoryCategory=false）", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					category,
+					"%Y/%m/%d.md",
+					false,
+					testDate
+				);
+				expect(result).toBe("memolog/2025/10/23.md");
+			});
+
+			it("複数カテゴリのテスト: hobby", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					"hobby",
+					"%C/%Y-%m-%d/memo.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/hobby/2025-10-23/memo.md");
+			});
+
+			it("複数カテゴリのテスト: personal", () => {
+				const result = PathGenerator.generateCustomPath(
+					rootDir,
+					"personal",
+					"%Y-%m-%d/%C.md",
+					true,
+					testDate
+				);
+				expect(result).toBe("memolog/2025-10-23/personal.md");
+			});
+		});
 	});
 
 	describe("週番号計算", () => {

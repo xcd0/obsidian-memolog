@@ -247,7 +247,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		const pathCustomInput = pathCustomRadioItem.createEl("input", {
 			type: "text",
-			placeholder: "%Y/%m/%d",
+			placeholder: "%Y-%m-%d.md",
 			value: pathCustomValue,
 			cls: "memolog-setting-text-input-inline"
 		}) as HTMLInputElement;
@@ -487,11 +487,11 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 
 		const templateCustomInput = templateCustomRadioItem.createEl("textarea", {
-			placeholder: "{{content}}",
+			placeholder: "# %Y-%m-%d %H:%M:%S\n{{content}}",
 			value: templateCustomValue,
 			cls: "memolog-setting-textarea-input-inline"
 		}) as HTMLTextAreaElement;
-		templateCustomInput.rows = 3;
+		templateCustomInput.rows = 4;
 
 		//! カスタムラジオボタンクリック時。
 		templateCustomRadio.addEventListener("change", async () => {

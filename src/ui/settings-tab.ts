@@ -3,6 +3,7 @@ import { IconPicker } from "./components/icon-picker";
 import MemologPlugin from "../../main";
 import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types";
 import { TemplateManager } from "../core/template-manager";
+import { PathGenerator } from "../utils/path-generator";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
 
 //! プリセットカラー定義。
@@ -162,32 +163,320 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 			);
 
-		//! メモのテンプレート設定。
-		const templateSetting = new Setting(containerEl)
-			.setName("メモのテンプレート")
-			.addTextArea((text) => {
-				text
-					.setPlaceholder("{{content}}")
-					.setValue(settings.memoTemplate)
-					.onChange(async (value) => {
-						await this.plugin.settingsManager.updateGlobalSettings({
-							memoTemplate: value,
-						});
-						//! プレビューを更新。
-						updatePreview(value);
-					});
-				//! textareaのサイズを大きくする。
-				text.inputEl.rows = 5;
-				text.inputEl.cols = 50;
+		//! ファイルパス書式設定。
+		const pathFormatSetting = new Setting(containerEl)
+			.setName("ファイルパスの書式")
+			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分");
+
+		const pathFormatContainer = pathFormatSetting.controlEl.createDiv({
+			cls: "memolog-path-format-container"
+		});
+
+		//! プリセットオプション。
+		const pathPresets = [
+			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
+			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
+			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
+			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
+		];
+
+		//! カスタム入力欄（一番上に配置）。
+		const pathCustomInput = pathFormatContainer.createEl("input", {
+			type: "text",
+			placeholder: "%Y/%m/%d",
+			value: settings.pathFormat,
+			cls: "memolog-setting-text-input"
+		}) as HTMLInputElement;
+
+		//! プレビュー表示領域を追加。
+		const pathPreviewContainer = pathFormatContainer.createDiv({
+			cls: "memolog-template-preview-container",
+			attr: {
+				style: "margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
+			}
+		});
+		pathPreviewContainer.createDiv({
+			text: "出力例:",
+			attr: {
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;"
+			}
+		});
+		const pathPreviewContent = pathPreviewContainer.createDiv({
+			cls: "memolog-template-preview-content",
+			attr: {
+				style: "white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;"
+			}
+		});
+
+		//! パスプレビュー更新関数。
+		const updatePathPreview = (format: string) => {
+			try {
+				const preview = PathGenerator.generateCustomPath(
+					"memolog",
+					settings.categories[0]?.directory || "default",
+					format,
+					settings.useDirectoryCategory,
+					new Date()
+				);
+				pathPreviewContent.setText(preview);
+			} catch (error) {
+				pathPreviewContent.setText(`エラー: ${(error as Error).message}`);
+			}
+		};
+
+		//! 初期プレビューを表示。
+		updatePathPreview(settings.pathFormat);
+
+		//! カスタム入力欄のリアルタイム保存。
+		pathCustomInput.addEventListener("input", () => {
+			const value = pathCustomInput.value;
+			updatePathPreview(value);
+			this.debounce("path-format-custom", async () => {
+				await this.plugin.settingsManager.updateGlobalSettings({
+					pathFormat: value,
+				});
+			});
+		});
+
+		//! フォーカスが外れた時も即座に保存。
+		pathCustomInput.addEventListener("blur", () => {
+			const value = pathCustomInput.value;
+			const existingTimer = this.debounceTimers.get("path-format-custom");
+			if (existingTimer) {
+				clearTimeout(existingTimer);
+				this.debounceTimers.delete("path-format-custom");
+			}
+			void this.plugin.settingsManager.updateGlobalSettings({
+				pathFormat: value,
+			});
+		});
+
+		//! ラジオボタングループ。
+		const pathRadioGroup = pathFormatContainer.createDiv({
+			cls: "memolog-path-format-radio-group"
+		});
+
+		//! プリセットラジオボタン。
+		for (const preset of pathPresets) {
+			const radioItem = pathRadioGroup.createDiv({
+				cls: "memolog-path-format-radio-item"
 			});
 
-		//! 説明文と表を追加。
+			const radio = radioItem.createEl("input", {
+				type: "radio",
+				attr: {
+					name: "path-format",
+					value: preset.value,
+					id: `path-format-${preset.value}`
+				}
+			}) as HTMLInputElement;
+
+			if (settings.pathFormat === preset.value) {
+				radio.checked = true;
+			}
+
+			radioItem.createEl("label", {
+				text: preset.label,
+				attr: {
+					for: `path-format-${preset.value}`
+				},
+				cls: "memolog-path-format-radio-label"
+			});
+
+			radio.addEventListener("change", async () => {
+				if (radio.checked) {
+					pathCustomInput.value = preset.value;
+					updatePathPreview(preset.value);
+					await this.plugin.settingsManager.updateGlobalSettings({
+						pathFormat: preset.value,
+					});
+				}
+			});
+		}
+
+		//! 添付ファイル保存先設定。
+		const attachmentPathSetting = new Setting(containerEl)
+			.setName("添付ファイルの保存先")
+			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。");
+
+		const attachmentPathContainer = attachmentPathSetting.controlEl.createDiv({
+			cls: "memolog-path-format-container"
+		});
+
+		//! プリセットオプション。
+		const attachmentPresets = [
+			{ label: "./attachments", value: "./attachments" },
+			{ label: "/attachments", value: "/attachments" },
+		];
+
+		//! カスタム入力欄（一番上に配置）。
+		const attachmentCustomInput = attachmentPathContainer.createEl("input", {
+			type: "text",
+			placeholder: "./attachments",
+			value: settings.attachmentPath,
+			cls: "memolog-setting-text-input"
+		}) as HTMLInputElement;
+
+		//! カスタム入力欄のリアルタイム保存。
+		attachmentCustomInput.addEventListener("input", () => {
+			const value = attachmentCustomInput.value;
+			this.debounce("attachment-path-custom", async () => {
+				await this.plugin.settingsManager.updateGlobalSettings({
+					attachmentPath: value,
+				});
+			});
+		});
+
+		//! フォーカスが外れた時も即座に保存。
+		attachmentCustomInput.addEventListener("blur", () => {
+			const value = attachmentCustomInput.value;
+			const existingTimer = this.debounceTimers.get("attachment-path-custom");
+			if (existingTimer) {
+				clearTimeout(existingTimer);
+				this.debounceTimers.delete("attachment-path-custom");
+			}
+			void this.plugin.settingsManager.updateGlobalSettings({
+				attachmentPath: value,
+			});
+		});
+
+		//! ラジオボタングループ。
+		const attachmentRadioGroup = attachmentPathContainer.createDiv({
+			cls: "memolog-path-format-radio-group"
+		});
+
+		//! プリセットラジオボタン。
+		for (const preset of attachmentPresets) {
+			const radioItem = attachmentRadioGroup.createDiv({
+				cls: "memolog-path-format-radio-item"
+			});
+
+			const radio = radioItem.createEl("input", {
+				type: "radio",
+				attr: {
+					name: "attachment-path",
+					value: preset.value,
+					id: `attachment-path-${preset.value}`
+				}
+			}) as HTMLInputElement;
+
+			if (settings.attachmentPath === preset.value) {
+				radio.checked = true;
+			}
+
+			radioItem.createEl("label", {
+				text: preset.label,
+				attr: {
+					for: `attachment-path-${preset.value}`
+				},
+				cls: "memolog-path-format-radio-label"
+			});
+
+			radio.addEventListener("change", async () => {
+				if (radio.checked) {
+					attachmentCustomInput.value = preset.value;
+					await this.plugin.settingsManager.updateGlobalSettings({
+						attachmentPath: preset.value,
+					});
+				}
+			});
+		}
+
+		//! メモのテンプレート設定。
+		const templateSetting = new Setting(containerEl)
+			.setName("メモのテンプレート");
+
+		//! 説明文を追加。
 		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" });
 		templateSetting.descEl.createDiv({
 			text: "※この書式はファイルに保存される形式です。カード形式の表示では{{content}}の内容のみが表示されます。",
 			attr: { style: "margin-top: 4px; color: var(--text-muted); font-size: 0.9em;" }
 		});
-		templateSetting.descEl.createEl("br");
+
+		const templateContainer = templateSetting.controlEl.createDiv({
+			cls: "memolog-path-format-container"
+		});
+
+		//! プリセットオプション。
+		const templatePresets = [
+			{ label: "{{content}}", value: "{{content}}" },
+			{ label: "# %Y-%m-%d %H:%M:%S\\n{{content}}", value: "# %Y-%m-%d %H:%M:%S\n{{content}}" },
+		];
+
+		//! カスタム入力欄（一番上に配置）。
+		const templateCustomInput = templateContainer.createEl("textarea", {
+			placeholder: "{{content}}",
+			value: settings.memoTemplate,
+			cls: "memolog-setting-textarea-input"
+		}) as HTMLTextAreaElement;
+		templateCustomInput.rows = 5;
+
+		//! カスタム入力欄のリアルタイム保存。
+		templateCustomInput.addEventListener("input", () => {
+			const value = templateCustomInput.value;
+			updatePreview(value);
+			this.debounce("template-custom", async () => {
+				await this.plugin.settingsManager.updateGlobalSettings({
+					memoTemplate: value,
+				});
+			});
+		});
+
+		//! フォーカスが外れた時も即座に保存。
+		templateCustomInput.addEventListener("blur", () => {
+			const value = templateCustomInput.value;
+			const existingTimer = this.debounceTimers.get("template-custom");
+			if (existingTimer) {
+				clearTimeout(existingTimer);
+				this.debounceTimers.delete("template-custom");
+			}
+			void this.plugin.settingsManager.updateGlobalSettings({
+				memoTemplate: value,
+			});
+		});
+
+		//! ラジオボタングループ。
+		const templateRadioGroup = templateContainer.createDiv({
+			cls: "memolog-path-format-radio-group"
+		});
+
+		//! プリセットラジオボタン。
+		for (const preset of templatePresets) {
+			const radioItem = templateRadioGroup.createDiv({
+				cls: "memolog-path-format-radio-item"
+			});
+
+			const radio = radioItem.createEl("input", {
+				type: "radio",
+				attr: {
+					name: "memo-template",
+					value: preset.value,
+					id: `memo-template-${preset.value}`
+				}
+			}) as HTMLInputElement;
+
+			if (settings.memoTemplate === preset.value) {
+				radio.checked = true;
+			}
+
+			radioItem.createEl("label", {
+				text: preset.label,
+				attr: {
+					for: `memo-template-${preset.value}`
+				},
+				cls: "memolog-path-format-radio-label"
+			});
+
+			radio.addEventListener("change", async () => {
+				if (radio.checked) {
+					templateCustomInput.value = preset.value;
+					updatePreview(preset.value);
+					await this.plugin.settingsManager.updateGlobalSettings({
+						memoTemplate: preset.value,
+					});
+				}
+			});
+		}
 
 		//! プレビュー表示領域を追加。
 		const previewContainer = templateSetting.descEl.createDiv({
@@ -262,179 +551,6 @@ export class MemologSettingTab extends PluginSettingTab {
 			row.createEl("td", { text: format.desc, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px;" } });
 			row.createEl("td", { text: format.example, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" } });
 		}
-
-		//! ファイルパス書式設定。
-		const pathFormatSetting = new Setting(containerEl)
-			.setName("ファイルパスの書式")
-			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分");
-
-		const pathFormatContainer = pathFormatSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container"
-		});
-
-		//! プリセットオプション。
-		const presets = [
-			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
-			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
-			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
-			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
-		];
-
-		//! 現在の設定値がプリセットに含まれるか確認。
-		const isCustom = !presets.some(preset => preset.value === settings.pathFormat);
-		let selectedValue = isCustom ? "custom" : settings.pathFormat;
-
-		//! ラジオボタングループ。
-		const radioGroup = pathFormatContainer.createDiv({
-			cls: "memolog-path-format-radio-group"
-		});
-
-		//! プリセットラジオボタン。
-		for (const preset of presets) {
-			const radioItem = radioGroup.createDiv({
-				cls: "memolog-path-format-radio-item"
-			});
-
-			const radio = radioItem.createEl("input", {
-				type: "radio",
-				attr: {
-					name: "path-format",
-					value: preset.value,
-					id: `path-format-${preset.value}`
-				}
-			}) as HTMLInputElement;
-
-			if (selectedValue === preset.value) {
-				radio.checked = true;
-			}
-
-			radioItem.createEl("label", {
-				text: preset.label,
-				attr: {
-					for: `path-format-${preset.value}`
-				},
-				cls: "memolog-path-format-radio-label"
-			});
-
-			radio.addEventListener("change", async () => {
-				if (radio.checked) {
-					selectedValue = preset.value;
-					customInputContainer.style.display = "none";
-					await this.plugin.settingsManager.updateGlobalSettings({
-						pathFormat: preset.value,
-					});
-				}
-			});
-		}
-
-		//! カスタムラジオボタン。
-		const customRadioItem = radioGroup.createDiv({
-			cls: "memolog-path-format-radio-item"
-		});
-
-		const customRadio = customRadioItem.createEl("input", {
-			type: "radio",
-			attr: {
-				name: "path-format",
-				value: "custom",
-				id: "path-format-custom"
-			}
-		}) as HTMLInputElement;
-
-		if (isCustom) {
-			customRadio.checked = true;
-		}
-
-		customRadioItem.createEl("label", {
-			text: "カスタム",
-			attr: {
-				for: "path-format-custom"
-			},
-			cls: "memolog-path-format-radio-label"
-		});
-
-		//! カスタム入力欄（カスタムが選択されている場合のみ表示）。
-		const customInputContainer = pathFormatContainer.createDiv({
-			cls: "memolog-path-format-custom-input",
-			attr: {
-				style: isCustom ? "" : "display: none;"
-			}
-		});
-
-		const customInput = customInputContainer.createEl("input", {
-			type: "text",
-			placeholder: "%Y/%m/%d",
-			value: isCustom ? settings.pathFormat : "",
-			cls: "memolog-path-format-custom-input-field"
-		}) as HTMLInputElement;
-
-		customRadio.addEventListener("change", () => {
-			if (customRadio.checked) {
-				selectedValue = "custom";
-				customInputContainer.style.display = "block";
-				customInput.focus();
-			}
-		});
-
-		//! カスタム入力欄のリアルタイム保存。
-		customInput.addEventListener("input", () => {
-			const value = customInput.value;
-			this.debounce("path-format-custom", async () => {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					pathFormat: value,
-				});
-			});
-		});
-
-		//! フォーカスが外れた時も即座に保存。
-		customInput.addEventListener("blur", () => {
-			const value = customInput.value;
-			const existingTimer = this.debounceTimers.get("path-format-custom");
-			if (existingTimer) {
-				clearTimeout(existingTimer);
-				this.debounceTimers.delete("path-format-custom");
-			}
-			void this.plugin.settingsManager.updateGlobalSettings({
-				pathFormat: value,
-			});
-		});
-
-		//! 添付ファイル保存先設定。
-		new Setting(containerEl)
-			.setName("添付ファイルの保存先")
-			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。")
-			.addText((text) => {
-				text
-					.setPlaceholder("./attachments")
-					.setValue(settings.attachmentPath);
-
-				const saveAttachmentPath = async (value: string) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						attachmentPath: value,
-					});
-				};
-
-				//! リアルタイム保存 - input イベントを監視。
-				text.inputEl.addEventListener("input", () => {
-					const value = text.inputEl.value;
-					this.debounce("attachment-path", async () => {
-						await saveAttachmentPath(value);
-					});
-				});
-
-				//! フォーカスが外れた時も即座に保存。
-				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value;
-					const existingTimer = this.debounceTimers.get("attachment-path");
-					if (existingTimer) {
-						clearTimeout(existingTimer);
-						this.debounceTimers.delete("attachment-path");
-					}
-					void saveAttachmentPath(value);
-				});
-
-				return text;
-			});
 	}
 
 	//! 高度な機能設定を追加する。

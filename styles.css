@@ -1084,6 +1084,47 @@
 	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
 }
 
+/* 設定画面のカスタム入力欄 */
+.memolog-setting-text-input {
+	width: 100%;
+	max-width: 600px;
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: 0.9rem;
+}
+
+.memolog-setting-text-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+.memolog-setting-textarea-input {
+	width: 100%;
+	max-width: 600px;
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: 0.9rem;
+	resize: vertical;
+	min-height: 100px;
+}
+
+.memolog-setting-textarea-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
 /* 設定画面のアクションボタン */
 .memolog-settings-actions {
 	display: flex;

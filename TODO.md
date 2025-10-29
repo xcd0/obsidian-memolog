@@ -266,7 +266,7 @@
 ### 1.2 設定ファイル管理 (src/core/settings.ts)
 - [ ] SettingsManager クラス作成
 - [ ] デフォルト設定定義
-- [ ] global-setting.json読み込み機能
+- [ ] memolog-setting.json読み込み機能
 - [ ] setting.json (ローカル) 読み込み機能
 - [ ] 設定マージロジック実装
 - [ ] 設定保存機能

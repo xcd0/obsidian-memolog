@@ -8,7 +8,10 @@ export class SettingsManager {
 	private localSettingsCache: Map<string, LocalSettings>;
 
 	//! グローバル設定ファイルのパス。
-	private static readonly GLOBAL_SETTINGS_PATH = "memolog/global-setting.json";
+	private static readonly GLOBAL_SETTINGS_PATH = "memolog/memolog-setting.json";
+
+	//! 旧グローバル設定ファイルのパス（マイグレーション用）。
+	private static readonly OLD_GLOBAL_SETTINGS_PATH = "memolog/global-setting.json";
 
 	//! ローカル設定ファイル名。
 	private static readonly LOCAL_SETTINGS_FILENAME = "setting.json";
@@ -34,17 +37,37 @@ export class SettingsManager {
 	//! グローバル設定を読み込む。
 	async loadGlobalSettings(): Promise<void> {
 		try {
+			//! 新しい設定ファイルを確認。
 			const file = this.app.vault.getAbstractFileByPath(
 				SettingsManager.GLOBAL_SETTINGS_PATH
 			);
 
 			if (file instanceof TFile) {
+				//! 新しいファイルが存在する場合は読み込む。
 				const content = await this.app.vault.read(file);
 				const parsed = JSON.parse(content) as Partial<GlobalSettings>;
 				this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
 			} else {
-				//! ファイルが存在しない場合はデフォルト設定で初期化。
-				await this.saveGlobalSettings();
+				//! 新しいファイルが存在しない場合、古いファイルからマイグレーション。
+				const oldFile = this.app.vault.getAbstractFileByPath(
+					SettingsManager.OLD_GLOBAL_SETTINGS_PATH
+				);
+
+				if (oldFile instanceof TFile) {
+					//! 古いファイルが存在する場合、内容を読み込んで新しいファイルに保存。
+					console.log("Migrating settings from global-setting.json to memolog-setting.json");
+					const content = await this.app.vault.read(oldFile);
+					const parsed = JSON.parse(content) as Partial<GlobalSettings>;
+					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					//! 新しいファイルに保存。
+					await this.saveGlobalSettings();
+					//! 古いファイルを削除。
+					await this.app.vault.delete(oldFile);
+					console.log("Settings migration completed");
+				} else {
+					//! どちらのファイルも存在しない場合はデフォルト設定で初期化。
+					await this.saveGlobalSettings();
+				}
 			}
 		} catch (error) {
 			console.error("Failed to load global settings:", error);

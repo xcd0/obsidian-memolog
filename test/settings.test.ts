@@ -8,6 +8,7 @@ const mockCreate = jest.fn();
 const mockModify = jest.fn();
 const mockGetAbstractFileByPath = jest.fn();
 const mockCreateFolder = jest.fn();
+const mockDelete = jest.fn();
 
 //! TFileのモック作成ヘルパー。
 const createMockTFile = (path: string): TFile => {
@@ -31,6 +32,7 @@ const mockApp = {
 		modify: mockModify,
 		getAbstractFileByPath: mockGetAbstractFileByPath,
 		createFolder: mockCreateFolder,
+		delete: mockDelete,
 	},
 } as unknown as App;
 
@@ -60,7 +62,7 @@ describe("SettingsManager", () => {
 		it("グローバル設定を部分的に更新できる", async () => {
 			//! 設定ファイルが存在する場合のモック。
 			const mockDir = createMockTFolder("memolog");
-			const mockFile = createMockTFile("memolog/global-setting.json");
+			const mockFile = createMockTFile("memolog/memolog-setting.json");
 			mockGetAbstractFileByPath
 				.mockReturnValueOnce(mockDir) //! ディレクトリチェック。
 				.mockReturnValueOnce(mockFile); //! ファイルチェック。
@@ -88,12 +90,12 @@ describe("SettingsManager", () => {
 			mockGetAbstractFileByPath
 				.mockReturnValueOnce(mockDir) //! ディレクトリチェック。
 				.mockReturnValueOnce(null); //! ファイルチェック。
-			mockCreate.mockResolvedValue(createMockTFile("memolog/global-setting.json"));
+			mockCreate.mockResolvedValue(createMockTFile("memolog/memolog-setting.json"));
 
 			await settingsManager.updateGlobalSettings({ searchHistoryMaxSize: 100 });
 
 			expect(mockCreate).toHaveBeenCalledWith(
-				"memolog/global-setting.json",
+				"memolog/memolog-setting.json",
 				expect.stringContaining('"searchHistoryMaxSize": 100')
 			);
 		});
@@ -101,7 +103,7 @@ describe("SettingsManager", () => {
 
 	describe("loadGlobalSettings", () => {
 		it("設定ファイルが存在する場合は読み込む", async () => {
-			const mockFile = createMockTFile("memolog/global-setting.json");
+			const mockFile = createMockTFile("memolog/memolog-setting.json");
 			const savedSettings: Partial<GlobalSettings> = {
 				defaultCategory: "hobby",
 				searchHistoryMaxSize: 100,
@@ -119,11 +121,12 @@ describe("SettingsManager", () => {
 
 		it("設定ファイルが存在しない場合はデフォルト設定で初期化する", async () => {
 			mockGetAbstractFileByPath
-				.mockReturnValueOnce(null) //! ファイルチェック。
-				.mockReturnValueOnce(null) //! ディレクトリチェック。
+				.mockReturnValueOnce(null) //! 新しいファイルチェック。
+				.mockReturnValueOnce(null) //! 古いファイルチェック（マイグレーション）。
+				.mockReturnValueOnce(null) //! ディレクトリチェック（saveGlobalSettings内）。
 				.mockReturnValueOnce(null); //! ファイルチェック（saveGlobalSettings内）。
 			mockCreateFolder.mockResolvedValue(undefined);
-			mockCreate.mockResolvedValue(createMockTFile("memolog/global-setting.json"));
+			mockCreate.mockResolvedValue(createMockTFile("memolog/memolog-setting.json"));
 
 			await settingsManager.loadGlobalSettings();
 
@@ -132,8 +135,43 @@ describe("SettingsManager", () => {
 			expect(mockCreate).toHaveBeenCalled();
 		});
 
+		it("古いファイルから新しいファイルにマイグレーションする", async () => {
+			const oldFile = createMockTFile("memolog/global-setting.json");
+			const oldSettings = {
+				...DEFAULT_GLOBAL_SETTINGS,
+				defaultCategory: "personal",
+			};
+
+			mockGetAbstractFileByPath
+				.mockReturnValueOnce(null) //! 新しいファイルチェック（存在しない）。
+				.mockReturnValueOnce(oldFile) //! 古いファイルチェック（存在する）。
+				.mockReturnValueOnce(null) //! ディレクトリチェック（saveGlobalSettings内）。
+				.mockReturnValueOnce(null); //! ファイルチェック（saveGlobalSettings内）。
+
+			mockRead.mockResolvedValue(JSON.stringify(oldSettings));
+			mockCreateFolder.mockResolvedValue(undefined);
+			mockCreate.mockResolvedValue(createMockTFile("memolog/memolog-setting.json"));
+			mockDelete.mockResolvedValue(undefined);
+
+			//! マイグレーションログをモック。
+			const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+
+			await settingsManager.loadGlobalSettings();
+
+			const settings = settingsManager.getGlobalSettings();
+			expect(settings.defaultCategory).toBe("personal");
+			expect(mockCreate).toHaveBeenCalled();
+			expect(mockDelete).toHaveBeenCalledWith(oldFile);
+			expect(consoleLogSpy).toHaveBeenCalledWith(
+				"Migrating settings from global-setting.json to memolog-setting.json"
+			);
+			expect(consoleLogSpy).toHaveBeenCalledWith("Settings migration completed");
+
+			consoleLogSpy.mockRestore();
+		});
+
 		it("読み込みエラー時はデフォルト設定を使用する", async () => {
-			const mockFile = createMockTFile("memolog/global-setting.json");
+			const mockFile = createMockTFile("memolog/memolog-setting.json");
 			mockGetAbstractFileByPath.mockReturnValue(mockFile);
 			mockRead.mockRejectedValue(new Error("Read error"));
 
@@ -156,7 +194,7 @@ describe("SettingsManager", () => {
 	describe("saveGlobalSettings", () => {
 		it("設定ファイルが存在する場合は更新する", async () => {
 			const mockDir = createMockTFolder("memolog");
-			const mockFile = createMockTFile("memolog/global-setting.json");
+			const mockFile = createMockTFile("memolog/memolog-setting.json");
 			mockGetAbstractFileByPath
 				.mockReturnValueOnce(mockDir) //! ディレクトリチェック。
 				.mockReturnValueOnce(mockFile); //! ファイルチェック。
@@ -175,12 +213,12 @@ describe("SettingsManager", () => {
 			mockGetAbstractFileByPath
 				.mockReturnValueOnce(mockDir) //! ディレクトリチェック。
 				.mockReturnValueOnce(null); //! ファイルチェック。
-			mockCreate.mockResolvedValue(createMockTFile("memolog/global-setting.json"));
+			mockCreate.mockResolvedValue(createMockTFile("memolog/memolog-setting.json"));
 
 			await settingsManager.saveGlobalSettings();
 
 			expect(mockCreate).toHaveBeenCalledWith(
-				"memolog/global-setting.json",
+				"memolog/memolog-setting.json",
 				expect.stringContaining(DEFAULT_GLOBAL_SETTINGS.defaultCategory)
 			);
 		});
@@ -190,7 +228,7 @@ describe("SettingsManager", () => {
 				.mockReturnValueOnce(null) //! ディレクトリチェック。
 				.mockReturnValueOnce(null); //! ファイルチェック。
 			mockCreateFolder.mockResolvedValue(undefined);
-			mockCreate.mockResolvedValue(createMockTFile("memolog/global-setting.json"));
+			mockCreate.mockResolvedValue(createMockTFile("memolog/memolog-setting.json"));
 
 			await settingsManager.saveGlobalSettings();
 
@@ -200,7 +238,7 @@ describe("SettingsManager", () => {
 
 		it("保存エラー時は例外をスローする", async () => {
 			const mockDir = createMockTFolder("memolog");
-			const mockFile = createMockTFile("memolog/global-setting.json");
+			const mockFile = createMockTFile("memolog/memolog-setting.json");
 			mockGetAbstractFileByPath
 				.mockReturnValueOnce(mockDir)
 				.mockReturnValueOnce(mockFile);

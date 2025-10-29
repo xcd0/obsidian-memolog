@@ -10,8 +10,6 @@ export default class MemologPlugin extends Plugin {
 
 	//! プラグイン読み込み時の処理。
 	override async onload() {
-		console.log("memolog plugin loading...");
-
 		//! 設定マネージャーを初期化。
 		this.settingsManager = new SettingsManager(this.app);
 		await this.settingsManager.loadGlobalSettings();
@@ -40,8 +38,6 @@ export default class MemologPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() => {
 			void this.activateView();
 		});
-
-		console.log("memolog plugin loaded.");
 	}
 
 	//! プラグインアンロード時の処理。

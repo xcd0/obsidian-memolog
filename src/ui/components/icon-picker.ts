@@ -69,8 +69,24 @@ export class IconPicker {
 		//! オーバーレイ背景を作成（document.bodyに追加）。
 		const overlay = document.body.createDiv({ cls: "memolog-icon-picker-overlay" });
 
+		//! オーバーレイがフォーカスを奪わないようにする。
+		overlay.addEventListener("mousedown", (e) => {
+			if (e.target !== overlay) {
+				e.preventDefault();
+			}
+		});
+
 		//! ピッカー要素を作成（オーバーレイ内に配置）。
 		this.pickerElement = overlay.createDiv({ cls: "memolog-icon-picker-dropdown" });
+
+		//! ピッカー要素内のクリックでフォーカスが外れないようにする。
+		this.pickerElement.addEventListener("mousedown", (e) => {
+			//! 検索ボックス以外のクリックでフォーカスが外れないようにする。
+			const target = e.target as HTMLElement;
+			if (!target.matches(".memolog-icon-picker-search-input")) {
+				e.preventDefault();
+			}
+		});
 
 		//! 検索ボックス。
 		const searchContainer = this.pickerElement.createDiv({
@@ -86,14 +102,26 @@ export class IconPicker {
 			cls: "memolog-icon-picker-search-input",
 		});
 
+		//! 検索ボックスのmousedownでデフォルト動作を許可。
+		searchInput.addEventListener("mousedown", (e) => {
+			e.stopPropagation();
+		});
+
 		//! 検索ボックスクリック時にフォーカスを維持。
 		searchInput.addEventListener("click", (e) => {
 			e.stopPropagation();
-			searchInput.focus();
 		});
 
-		//! 検索コンテナクリック時もフォーカスを設定。
+		//! 検索コンテナクリック時は検索ボックスにフォーカス。
 		searchContainer.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (e.target !== searchInput) {
+				searchInput.focus();
+			}
+		});
+
+		//! 検索アイコンクリック時も検索ボックスにフォーカス。
+		searchIcon.addEventListener("click", (e) => {
 			e.stopPropagation();
 			searchInput.focus();
 		});
@@ -122,7 +150,14 @@ export class IconPicker {
 			});
 			tab.setText(categoryName);
 
-			tab.addEventListener("click", () => {
+			//! タブクリックでもフォーカスを維持。
+			tab.addEventListener("mousedown", (e) => {
+				e.preventDefault();
+			});
+
+			tab.addEventListener("click", (e) => {
+				e.stopPropagation();
+
 				//! 既存のアクティブタブを非アクティブ化。
 				if (activeTab) {
 					activeTab.removeClass("memolog-icon-picker-tab-active");
@@ -150,7 +185,15 @@ export class IconPicker {
 		//! 「全て」タブを追加。
 		const allTab = tabsContainer.createDiv({ cls: "memolog-icon-picker-tab" });
 		allTab.setText("全て");
-		allTab.addEventListener("click", () => {
+
+		//! タブクリックでもフォーカスを維持。
+		allTab.addEventListener("mousedown", (e) => {
+			e.preventDefault();
+		});
+
+		allTab.addEventListener("click", (e) => {
+			e.stopPropagation();
+
 			//! 既存のアクティブタブを非アクティブ化。
 			if (activeTab) {
 				activeTab.removeClass("memolog-icon-picker-tab-active");

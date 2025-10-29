@@ -29,7 +29,7 @@ export interface ButtonBarHandlers {
 export class ButtonBar {
 	private handlers: ButtonBarHandlers;
 	private currentOrder: SortOrder = "asc";
-	private currentDateRange: DateRangeFilter = "all";
+	private currentDateRange: DateRangeFilter = "today";
 	private dateRangeButtons: Map<DateRangeFilter, HTMLElement> = new Map();
 
 	constructor(_container: HTMLElement, handlers: ButtonBarHandlers = {}) {
@@ -66,7 +66,6 @@ export class ButtonBar {
 		this.dateRangeButtons.clear();
 
 		const dateRangeFilters: Array<{ filter: DateRangeFilter; label: string }> = [
-			{ filter: "all", label: "全期間" },
 			{ filter: "week", label: "一週間" },
 			{ filter: "today", label: "今日" },
 		];
@@ -80,7 +79,7 @@ export class ButtonBar {
 			//! ボタンのラベルを設定。
 			btn.setText(label);
 
-			//! デフォルトで「全期間」をアクティブに。
+			//! デフォルトで「今日」をアクティブに。
 			if (filter === this.currentDateRange) {
 				btn.addClass("memolog-date-range-btn-active");
 			}

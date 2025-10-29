@@ -1796,3 +1796,63 @@
 	font-size: 0.85em;
 	color: var(--text-error);
 }
+
+/* ===== 設定画面タブUI ===== */
+
+/* タブコンテナ */
+.memolog-settings-tab-container {
+	margin-top: 1rem;
+}
+
+/* タブヘッダー */
+.memolog-settings-tab-header {
+	display: flex;
+	gap: 0.25rem;
+	border-bottom: 2px solid var(--background-modifier-border);
+	margin-bottom: 1.5rem;
+}
+
+/* タブボタン */
+.memolog-settings-tab-button {
+	padding: 0.5rem 1rem;
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 0.95em;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	position: relative;
+	bottom: -2px;
+}
+
+.memolog-settings-tab-button:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.memolog-settings-tab-button-active {
+	color: var(--interactive-accent);
+	border-bottom-color: var(--interactive-accent);
+}
+
+/* タブコンテンツ */
+.memolog-settings-tab-content {
+	margin-bottom: 1rem;
+}
+
+.memolog-settings-tab-pane {
+	animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-5px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

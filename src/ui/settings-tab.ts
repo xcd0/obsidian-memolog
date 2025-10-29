@@ -67,15 +67,81 @@ export class MemologSettingTab extends PluginSettingTab {
 		this.initialPathFormat = settings.pathFormat;
 		this.initialUseDirectoryCategory = settings.useDirectoryCategory;
 
-		this.addBasicSettings(containerEl);
-		this.addCategorySettings(containerEl);
+		//! タブUIを作成。
+		this.createTabUI(containerEl);
+	}
+
+	//! タブUIを作成する。
+	private createTabUI(containerEl: HTMLElement): void {
+		//! タブコンテナ。
+		const tabContainer = containerEl.createDiv({ cls: "memolog-settings-tab-container" });
+
+		//! タブヘッダー（タブボタン）。
+		const tabHeader = tabContainer.createDiv({ cls: "memolog-settings-tab-header" });
+
+		//! タブコンテンツエリア。
+		const tabContent = tabContainer.createDiv({ cls: "memolog-settings-tab-content" });
+
+		//! タブ定義。
+		const tabs = [
+			{ id: "basic", label: "基本", render: (el: HTMLElement) => this.addBasicSettings(el) },
+			{ id: "category", label: "カテゴリ", render: (el: HTMLElement) => this.addCategorySettings(el) },
+			{ id: "advanced", label: "高度な機能", render: (el: HTMLElement) => this.addAdvancedFeaturesWithActions(el) },
+		];
+
+		//! タブボタンを作成。
+		const tabButtons: HTMLElement[] = [];
+		const tabContents: HTMLElement[] = [];
+
+		for (const tab of tabs) {
+			//! タブボタン。
+			const tabBtn = tabHeader.createEl("button", {
+				cls: "memolog-settings-tab-button",
+				text: tab.label,
+				attr: { "data-tab": tab.id },
+			});
+			tabButtons.push(tabBtn);
+
+			//! タブコンテンツ。
+			const tabPane = tabContent.createDiv({
+				cls: "memolog-settings-tab-pane",
+				attr: { "data-tab": tab.id },
+			});
+			tabPane.style.display = "none";
+			tabContents.push(tabPane);
+
+			//! タブボタンクリックイベント。
+			tabBtn.addEventListener("click", () => {
+				//! 全てのタブを非アクティブ化。
+				tabButtons.forEach((btn) => btn.removeClass("memolog-settings-tab-button-active"));
+				tabContents.forEach((pane) => (pane.style.display = "none"));
+
+				//! クリックされたタブをアクティブ化。
+				tabBtn.addClass("memolog-settings-tab-button-active");
+				tabPane.style.display = "block";
+			});
+		}
+
+		//! 最初のタブをアクティブ化。
+		if (tabButtons.length > 0) {
+			tabButtons[0].addClass("memolog-settings-tab-button-active");
+			tabContents[0].style.display = "block";
+		}
+
+		//! 各タブのコンテンツをレンダリング。
+		tabs.forEach((tab, index) => {
+			tab.render(tabContents[index]);
+		});
+	}
+
+	//! 高度な機能とアクションボタンを追加する。
+	private addAdvancedFeaturesWithActions(containerEl: HTMLElement): void {
 		this.addAdvancedFeatures(containerEl);
 		this.addActionButtons(containerEl);
 	}
 
 	//! 基本設定を追加する。
 	private addBasicSettings(containerEl: HTMLElement): void {
-		containerEl.createEl("h3", { text: "基本設定" });
 
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 
@@ -903,8 +969,6 @@ export class MemologSettingTab extends PluginSettingTab {
 
 	//! 高度な機能設定を追加する。
 	private addAdvancedFeatures(containerEl: HTMLElement): void {
-		containerEl.createEl("h3", { text: "高度な機能" });
-
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 
 		//! 検索履歴設定。
@@ -963,8 +1027,6 @@ export class MemologSettingTab extends PluginSettingTab {
 
 	//! カテゴリ設定を追加する。
 	private addCategorySettings(containerEl: HTMLElement): void {
-		containerEl.createEl("h3", { text: "カテゴリ管理" });
-
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 
 		//! カテゴリ一覧を表示。

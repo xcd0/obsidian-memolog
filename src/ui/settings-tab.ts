@@ -1055,19 +1055,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 		);
 
-		//! 全カテゴリタブ表示設定。
-		new Setting(containerEl)
-			.setName("Allタブを表示")
-			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showAllTab).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						showAllTab: value,
-					});
-					this.refreshSidebar();
-				})
-			);
-
 		//! デフォルトカテゴリ設定。
 		const defaultCategorySetting = new Setting(containerEl)
 			.setName("デフォルトカテゴリ")
@@ -1159,6 +1146,19 @@ export class MemologSettingTab extends PluginSettingTab {
 				this.refreshSidebar();
 			});
 		}
+
+		//! 全カテゴリタブ表示設定。
+		new Setting(containerEl)
+			.setName("Allタブを表示")
+			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showAllTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showAllTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
 	}
 
 	//! カテゴリアイテムを追加する。
@@ -1400,8 +1400,46 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 			);
 
-		//! 削除ボタン。
+		//! 順序変更と削除ボタン。
 		new Setting(categoryDiv)
+			.addButton((button) =>
+				button
+					.setButtonText("↑")
+					.setTooltip("上に移動")
+					.setDisabled(index === 0)
+					.onClick(async () => {
+						const updatedCategories = [...settings.categories];
+						//! 配列の要素を入れ替え。
+						[updatedCategories[index - 1], updatedCategories[index]] = [
+							updatedCategories[index],
+							updatedCategories[index - 1],
+						];
+						await this.plugin.settingsManager.updateGlobalSettings({
+							categories: updatedCategories,
+						});
+						this.display();
+						this.refreshSidebar();
+					})
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("↓")
+					.setTooltip("下に移動")
+					.setDisabled(index === settings.categories.length - 1)
+					.onClick(async () => {
+						const updatedCategories = [...settings.categories];
+						//! 配列の要素を入れ替え。
+						[updatedCategories[index], updatedCategories[index + 1]] = [
+							updatedCategories[index + 1],
+							updatedCategories[index],
+						];
+						await this.plugin.settingsManager.updateGlobalSettings({
+							categories: updatedCategories,
+						});
+						this.display();
+						this.refreshSidebar();
+					})
+			)
 			.addButton((button) =>
 				button
 					.setButtonText("削除")

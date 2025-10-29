@@ -6,6 +6,7 @@ import {
 	COMMON_ICONS,
 	searchIcons,
 	getIconsByCategory,
+	getAllIcons,
 } from "../../utils/icon-list";
 
 //! アイコンピッカーのハンドラー。
@@ -134,6 +135,24 @@ export class IconPicker {
 			renderTab(category.name, index === 0);
 		});
 
+		//! 「全て」タブを追加。
+		const allTab = tabsContainer.createDiv({ cls: "memolog-icon-picker-tab" });
+		allTab.setText("全て");
+		allTab.addEventListener("click", () => {
+			//! 既存のアクティブタブを非アクティブ化。
+			if (activeTab) {
+				activeTab.removeClass("memolog-icon-picker-tab-active");
+			}
+
+			//! 新しいタブをアクティブ化。
+			allTab.addClass("memolog-icon-picker-tab-active");
+			activeTab = allTab;
+
+			//! 全アイコンを表示（最大500件）。
+			const allIcons = getAllIcons().slice(0, 500);
+			this.renderIconGrid(gridContainer, allIcons);
+		});
+
 		//! 検索入力イベント。
 		searchInput.addEventListener("input", (e) => {
 			const query = (e.target as HTMLInputElement).value;
@@ -142,8 +161,8 @@ export class IconPicker {
 				//! 検索クエリが空の場合は「よく使う」を表示。
 				this.renderIconGrid(gridContainer, COMMON_ICONS);
 			} else {
-				//! 検索結果を表示。
-				const results = searchIcons(query, 100);
+				//! 検索結果を表示（最大500件）。
+				const results = searchIcons(query, 500);
 				this.renderIconGrid(gridContainer, results);
 			}
 

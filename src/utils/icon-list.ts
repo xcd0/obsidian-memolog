@@ -6,6 +6,54 @@ export interface IconCategory {
 	icons: string[];
 }
 
+//! Obsidianから動的に取得した全アイコンリスト（キャッシュ）。
+let cachedAllIcons: string[] | null = null;
+
+//! Obsidianのlucideアイコンを動的に取得する。
+function getAllIconsFromObsidian(): string[] {
+	//! 既にキャッシュがある場合は返す。
+	if (cachedAllIcons) {
+		return cachedAllIcons;
+	}
+
+	try {
+		//! Obsidianのグローバルオブジェクトからlucideアイコンを取得。
+		const lucide = (window as any).lucide;
+		if (lucide && typeof lucide === "object") {
+			//! lucideオブジェクトのキーを取得（アイコン名のリスト）。
+			const iconNames = Object.keys(lucide)
+				.filter((key) => {
+					//! アイコン関数のみをフィルタリング（大文字で始まるもの）。
+					//! lucideではアイコンはPascalCaseで定義されているが、
+					//! setIconではkebab-caseを使用するため変換が必要。
+					return /^[A-Z]/.test(key) && typeof lucide[key] === "function";
+				})
+				.map((key) => {
+					//! PascalCaseからkebab-caseに変換。
+					//! 例: AlertCircle -> alert-circle
+					return key
+						.replace(/([A-Z])/g, "-$1")
+						.toLowerCase()
+						.replace(/^-/, "");
+				})
+				.sort();
+
+			if (iconNames.length > 0) {
+				cachedAllIcons = iconNames;
+				console.log(`[memolog] Lucide icons loaded: ${iconNames.length} icons`);
+				return iconNames;
+			}
+		}
+	} catch (error) {
+		console.warn("[memolog] Failed to load lucide icons dynamically:", error);
+	}
+
+	//! 動的取得に失敗した場合は、静的リストにフォールバック。
+	console.warn("[memolog] Using fallback icon list");
+	cachedAllIcons = Array.from(new Set(ICON_CATEGORIES.flatMap((cat) => cat.icons))).sort();
+	return cachedAllIcons;
+}
+
 //! よく使うアイコン。
 export const COMMON_ICONS = [
 	"file-text",
@@ -777,29 +825,31 @@ export const ICON_CATEGORIES: IconCategory[] = [
 	},
 ];
 
-//! 全アイコンリスト（重複なし）。
-export const ALL_ICONS: string[] = Array.from(
-	new Set(ICON_CATEGORIES.flatMap((cat) => cat.icons))
-).sort();
+//! 全アイコンリストを取得する（動的取得）。
+export function getAllIcons(): string[] {
+	return getAllIconsFromObsidian();
+}
 
 //! アイコン検索関数。
 export function searchIcons(query: string, limit = 50): string[] {
+	const allIcons = getAllIcons();
+
 	if (!query || query.trim() === "") {
-		return ALL_ICONS.slice(0, limit);
+		return allIcons.slice(0, limit);
 	}
 
 	const normalizedQuery = query.toLowerCase().trim();
 
 	//! 完全一致を優先。
-	const exactMatches = ALL_ICONS.filter((icon) => icon === normalizedQuery);
+	const exactMatches = allIcons.filter((icon) => icon === normalizedQuery);
 
 	//! 前方一致。
-	const prefixMatches = ALL_ICONS.filter(
+	const prefixMatches = allIcons.filter(
 		(icon) => icon.startsWith(normalizedQuery) && icon !== normalizedQuery
 	);
 
 	//! 部分一致。
-	const partialMatches = ALL_ICONS.filter(
+	const partialMatches = allIcons.filter(
 		(icon) => icon.includes(normalizedQuery) && !icon.startsWith(normalizedQuery)
 	);
 

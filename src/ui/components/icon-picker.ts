@@ -84,6 +84,7 @@ export class IconPicker {
 			//! 検索ボックス以外のクリックでフォーカスが外れないようにする。
 			const target = e.target as HTMLElement;
 			if (!target.matches(".memolog-icon-picker-search-input")) {
+				console.log("[memolog] Picker mousedown (not search input), preventing default");
 				e.preventDefault();
 			}
 		});
@@ -102,13 +103,24 @@ export class IconPicker {
 			cls: "memolog-icon-picker-search-input",
 		});
 
+		//! デバッグログ。
+		searchInput.addEventListener("focus", () => {
+			console.log("[memolog] Search input focused");
+		});
+
+		searchInput.addEventListener("blur", (e) => {
+			console.log("[memolog] Search input blur, relatedTarget:", (e as FocusEvent).relatedTarget);
+		});
+
 		//! 検索ボックスのmousedownでデフォルト動作を許可。
 		searchInput.addEventListener("mousedown", (e) => {
+			console.log("[memolog] Search input mousedown");
 			e.stopPropagation();
 		});
 
 		//! 検索ボックスクリック時にフォーカスを維持。
 		searchInput.addEventListener("click", (e) => {
+			console.log("[memolog] Search input click");
 			e.stopPropagation();
 		});
 
@@ -134,6 +146,11 @@ export class IconPicker {
 		//! アイコングリッドコンテナ。
 		const gridContainer = this.pickerElement.createDiv({
 			cls: "memolog-icon-picker-grid-container",
+		});
+
+		//! グリッドコンテナのクリックでもフォーカスを維持。
+		gridContainer.addEventListener("mousedown", (e) => {
+			e.preventDefault();
 		});
 
 		//! 「よく使う」タブを初期表示。
@@ -232,6 +249,34 @@ export class IconPicker {
 			//! オーバーレイ自体がクリックされた場合のみ閉じる（ピッカー内部のクリックは除外）。
 			if (e.target === overlay) {
 				this.close();
+			}
+		});
+
+		//! 検索ボックスからフォーカスが外れたら戻す。
+		let refocusTimer: NodeJS.Timeout | null = null;
+		const refocusSearchInput = () => {
+			if (refocusTimer) {
+				clearTimeout(refocusTimer);
+			}
+			refocusTimer = setTimeout(() => {
+				if (this.isOpen && document.activeElement !== searchInput) {
+					console.log("[memolog] Refocusing search input, current active element:", document.activeElement);
+					searchInput.focus();
+				}
+			}, 10);
+		};
+
+		searchInput.addEventListener("blur", () => {
+			console.log("[memolog] Search input blur event, calling refocusSearchInput");
+			refocusSearchInput();
+		});
+
+		//! ピッカー内のクリック後もフォーカスを戻す。
+		this.pickerElement.addEventListener("click", (e) => {
+			const target = e.target as HTMLElement;
+			//! アイコンアイテムのクリックは除外（選択後に閉じるため）。
+			if (!target.closest(".memolog-icon-picker-item")) {
+				refocusSearchInput();
 			}
 		});
 

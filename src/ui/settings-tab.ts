@@ -245,14 +245,6 @@ export class MemologSettingTab extends PluginSettingTab {
 			pathCustomRadio.checked = true;
 		}
 
-		pathCustomRadioItem.createEl("label", {
-			text: "カスタム: ",
-			attr: {
-				for: "path-format-custom"
-			},
-			cls: "memolog-path-format-radio-label"
-		});
-
 		const pathCustomInput = pathCustomRadioItem.createEl("input", {
 			type: "text",
 			placeholder: "%Y/%m/%d",
@@ -373,14 +365,6 @@ export class MemologSettingTab extends PluginSettingTab {
 			attachmentCustomRadio.checked = true;
 		}
 
-		attachmentCustomRadioItem.createEl("label", {
-			text: "カスタム: ",
-			attr: {
-				for: "attachment-path-custom"
-			},
-			cls: "memolog-path-format-radio-label"
-		});
-
 		const attachmentCustomInput = attachmentCustomRadioItem.createEl("input", {
 			type: "text",
 			placeholder: "./attachments",
@@ -500,18 +484,6 @@ export class MemologSettingTab extends PluginSettingTab {
 		if (isTemplateCustom) {
 			templateCustomRadio.checked = true;
 		}
-
-		const templateLabelContainer = templateCustomRadioItem.createDiv({
-			cls: "memolog-template-custom-label-container"
-		});
-
-		templateLabelContainer.createEl("label", {
-			text: "カスタム:",
-			attr: {
-				for: "memo-template-custom"
-			},
-			cls: "memolog-path-format-radio-label"
-		});
 
 		const templateCustomInput = templateCustomRadioItem.createEl("textarea", {
 			placeholder: "{{content}}",

@@ -252,22 +252,51 @@ export class IconPicker {
 			}
 		});
 
-		//! 検索ボックスからフォーカスが外れたら戻す。
+		//! 検索ボックスからフォーカスが外れたら戻す（無限ループ防止機構付き）。
 		let refocusTimer: NodeJS.Timeout | null = null;
+		let isRefocusing = false; //! 無限ループ防止フラグ。
 		const refocusSearchInput = () => {
+			//! 既にrefocus処理中の場合は何もしない（無限ループ防止）。
+			if (isRefocusing) {
+				console.log("[memolog] Refocus already in progress, skipping");
+				return;
+			}
+
 			if (refocusTimer) {
 				clearTimeout(refocusTimer);
 			}
+
 			refocusTimer = setTimeout(() => {
 				if (this.isOpen && document.activeElement !== searchInput) {
+					//! フォーカスが外部の要素（設定画面など）に移動している場合は戻さない。
+					const activeElement = document.activeElement as HTMLElement;
+					if (activeElement && !this.pickerElement?.contains(activeElement)) {
+						console.log("[memolog] Focus moved outside picker, not refocusing");
+						isRefocusing = false;
+						return;
+					}
+
 					console.log("[memolog] Refocusing search input, current active element:", document.activeElement);
+					isRefocusing = true;
 					searchInput.focus();
+					//! フォーカス処理完了後にフラグをリセット。
+					setTimeout(() => {
+						isRefocusing = false;
+					}, 100);
 				}
 			}, 10);
 		};
 
-		searchInput.addEventListener("blur", () => {
-			console.log("[memolog] Search input blur event, calling refocusSearchInput");
+		searchInput.addEventListener("blur", (e) => {
+			const relatedTarget = (e as FocusEvent).relatedTarget as HTMLElement;
+			console.log("[memolog] Search input blur event, relatedTarget:", relatedTarget);
+
+			//! フォーカスが外部の要素に移動した場合は何もしない。
+			if (relatedTarget && !this.pickerElement?.contains(relatedTarget)) {
+				console.log("[memolog] Focus moved outside picker, not calling refocusSearchInput");
+				return;
+			}
+
 			refocusSearchInput();
 		});
 

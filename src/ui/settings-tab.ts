@@ -6,6 +6,7 @@ import { TemplateManager } from "../core/template-manager";
 import { PathGenerator } from "../utils/path-generator";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
 import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal";
+import { RestoreBackupModal } from "./restore-modal";
 import { PathMigrator } from "../utils/path-migrator";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { MemoManager } from "../core/memo-manager";
@@ -322,6 +323,8 @@ export class MemologSettingTab extends PluginSettingTab {
 						pathFormat: preset.value,
 					});
 					checkMigrationNeeded();
+					//! サイドバー(カード表示)を再描画。
+					this.refreshSidebar();
 				}
 			});
 		}
@@ -349,6 +352,8 @@ export class MemologSettingTab extends PluginSettingTab {
 				});
 				updatePathPreview(pathCustomInput.value);
 				checkMigrationNeeded();
+				//! サイドバー(カード表示)を再描画。
+				this.refreshSidebar();
 			}
 		});
 
@@ -361,6 +366,8 @@ export class MemologSettingTab extends PluginSettingTab {
 						pathFormat: pathCustomInput.value,
 					});
 					checkMigrationNeeded();
+					//! サイドバー(カード表示)を再描画。
+					this.refreshSidebar();
 				});
 			}
 		});
@@ -1353,6 +1360,32 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
+		//! 中央: バックアップからリストアボタン。
+		const restoreContainer = buttonContainer.createDiv({
+			cls: "memolog-settings-restore-container"
+		});
+
+		new Setting(restoreContainer)
+			.setName("バックアップから元に戻す")
+			.setDesc("過去のバックアップからファイルをリストアします。")
+			.addButton((button) =>
+				button
+					.setButtonText("元に戻す")
+					.onClick(async () => {
+						const settings = this.plugin.settingsManager.getGlobalSettings();
+						const modal = new RestoreBackupModal(
+							this.app,
+							settings.rootDirectory,
+							() => {
+								//! リストア後に画面を再描画。
+								this.display();
+								this.refreshSidebar();
+							}
+						);
+						modal.open();
+					})
+			);
+
 		//! 右側: 設定保存ボタン。
 		const saveContainer = buttonContainer.createDiv({
 			cls: "memolog-settings-save-container"
@@ -1565,6 +1598,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				displayMappings,
 				this.initialPathFormat,
 				settings.pathFormat,
+				this.plugin.settingsManager,
 				async (createBackup: boolean) => {
 					const progressNotice = new Notice("ファイルを変換中...", 0);
 

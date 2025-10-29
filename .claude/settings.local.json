@@ -19,7 +19,9 @@
       "Bash(npm run test:coverage:*)",
       "Bash(git rm:*)",
       "Bash(npm run test)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(gh run list:*)",
+      "Bash(git remote get-url:*)"
     ],
     "deny": [],
     "ask": []

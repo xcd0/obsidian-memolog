@@ -1,16 +1,19 @@
 import { App, Modal, Notice, Setting } from "obsidian";
 import { PathMapping, MigrationResult } from "../utils/path-migrator";
-import { BackupManager } from "../utils/backup-manager";
+import { BackupManager, BackupMetadata } from "../utils/backup-manager";
+import { SettingsManager } from "../core/settings";
 
 //! マイグレーション確認モーダル。
 export class MigrationConfirmModal extends Modal {
 	private mappings: PathMapping[];
 	private rootDir: string;
 	private backupManager: BackupManager;
+	private settingsManager: SettingsManager;
 	private onConfirm: (createBackup: boolean) => Promise<void>;
 	private isGitRepo: boolean;
 	private oldPathFormat: string;
 	private newPathFormat: string;
+	private addToGitignore: boolean = false;
 
 	constructor(
 		app: App,
@@ -18,6 +21,7 @@ export class MigrationConfirmModal extends Modal {
 		mappings: PathMapping[],
 		oldPathFormat: string,
 		newPathFormat: string,
+		settingsManager: SettingsManager,
 		onConfirm: (createBackup: boolean) => Promise<void>
 	) {
 		super(app);
@@ -25,6 +29,7 @@ export class MigrationConfirmModal extends Modal {
 		this.mappings = mappings;
 		this.oldPathFormat = oldPathFormat;
 		this.newPathFormat = newPathFormat;
+		this.settingsManager = settingsManager;
 		this.onConfirm = onConfirm;
 		this.backupManager = new BackupManager(app);
 		this.isGitRepo = false;
@@ -155,6 +160,18 @@ export class MigrationConfirmModal extends Modal {
 			text: `バックアップ対象: ${this.rootDir}ディレクトリ全体`,
 		});
 
+		//! .gitignoreチェックボックス（Gitリポジトリの場合のみ）。
+		if (this.isGitRepo) {
+			new Setting(backupDiv)
+				.setName("backup-memolog-*.zipを.gitignoreに追加")
+				.setDesc("バックアップファイルをGit管理から除外します")
+				.addToggle((toggle) =>
+					toggle.setValue(this.addToGitignore).onChange((value) => {
+						this.addToGitignore = value;
+					})
+				);
+		}
+
 		//! ボタン群。
 		const buttonDiv = contentEl.createDiv({ cls: "migration-buttons" });
 
@@ -195,13 +212,43 @@ export class MigrationConfirmModal extends Modal {
 		const notice = new Notice("バックアップを作成中...", 0);
 
 		try {
+			//! 設定ファイルに古いpathFormatを一時的に書き込む。
+			await this.settingsManager.updateGlobalSettings({
+				pathFormat: this.oldPathFormat,
+			});
+
 			//! バックアップ作成。
 			const result = await this.backupManager.createZipBackup(this.rootDir);
+
+			//! 設定ファイルを新しいpathFormatに戻す。
+			await this.settingsManager.updateGlobalSettings({
+				pathFormat: this.newPathFormat,
+			});
 
 			if (!result.success) {
 				notice.hide();
 				new Notice(`❌ バックアップ失敗: ${result.error}`);
 				return;
+			}
+
+			//! バックアップメタデータを保存。
+			const metadata: BackupMetadata = {
+				timestamp: new Date().toISOString(),
+				oldPathFormat: this.oldPathFormat,
+				newPathFormat: this.newPathFormat,
+				backupPath: result.backupPath,
+				targetDirectory: this.rootDir,
+			};
+			await this.backupManager.saveMetadata(metadata);
+
+			//! .gitignoreに追加（チェックされている場合）。
+			if (this.addToGitignore) {
+				const gitignoreSuccess = await this.backupManager.addToGitignore(
+					"backup-memolog-*.zip"
+				);
+				if (gitignoreSuccess) {
+					console.log(".gitignoreにbackup-memolog-*.zipを追加しました");
+				}
 			}
 
 			notice.hide();

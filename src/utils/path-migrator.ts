@@ -4,7 +4,6 @@ import { MemologVaultHandler } from "../fs/vault-handler";
 import { CategoryConfig } from "../types/settings";
 import { MemoEntry } from "../types/memo";
 import { MemoManager } from "../core/memo-manager";
-import { TagManager } from "../core/tag-manager";
 
 //! ファイルパス変換のマッピング情報。
 export interface PathMapping {
@@ -528,31 +527,15 @@ export class PathMigrator {
 						existingContent = await this.vaultHandler.readFile(newPath);
 					}
 
-					//! メモをテキストに変換してタグペアで囲む。
-					const category = memos[0].category;
-					const startTag = TagManager.createStartTag(category);
-					const endTag = TagManager.createEndTag();
-
-					//! 既存のタグペアから該当カテゴリの部分を削除。
-					let newContent = existingContent;
-					const existingPair = TagManager.findTagPairByCategory(existingContent, category);
-					if (existingPair) {
-						//! 既存のタグペアを削除。
-						const lines = existingContent.split("\n");
-						const beforeLines = lines.slice(0, existingPair.startLine);
-						const afterLines = lines.slice(existingPair.endLine + 1);
-						newContent = [...beforeLines, ...afterLines].join("\n").trim();
-					}
-
-					//! 新しいメモを追加。
+					//! メモをテキストに変換（v0.0.8では各メモにcategory情報が含まれるため、タグペアは不要）。
 					const memoTexts = memos.map((memo) => this.memoToText(memo)).join("\n\n");
-					const newSection = `${startTag}\n${memoTexts}\n${endTag}`;
 
 					//! ファイルに書き込み。
-					if (newContent) {
-						newContent = `${newContent}\n\n${newSection}`;
+					let newContent: string;
+					if (existingContent.trim()) {
+						newContent = `${existingContent.trim()}\n\n${memoTexts}`;
 					} else {
-						newContent = newSection;
+						newContent = memoTexts;
 					}
 
 					await this.vaultHandler.writeFile(newPath, newContent);

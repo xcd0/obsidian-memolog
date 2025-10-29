@@ -15,6 +15,30 @@ export interface BackupResult {
 	error?: string;
 }
 
+//! バックアップメタデータ。
+export interface BackupMetadata {
+	//! バックアップ作成日時。
+	timestamp: string;
+	//! 変換前の書式。
+	oldPathFormat: string;
+	//! 変換後の書式。
+	newPathFormat: string;
+	//! バックアップファイルのパス。
+	backupPath: string;
+	//! 対象ディレクトリ。
+	targetDirectory: string;
+}
+
+//! リストア結果。
+export interface RestoreResult {
+	//! 成功したか。
+	success: boolean;
+	//! リストアしたファイル数。
+	fileCount: number;
+	//! エラーメッセージ。
+	error?: string;
+}
+
 //! バックアップ管理クラス。
 export class BackupManager {
 	private app: App;
@@ -168,5 +192,176 @@ export class BackupManager {
 		});
 
 		return files;
+	}
+
+	//! バックアップメタデータを保存。
+	async saveMetadata(metadata: BackupMetadata): Promise<void> {
+		const metadataPath = metadata.backupPath.replace(/\.zip$/, ".json");
+		const jsonContent = JSON.stringify(metadata, null, 2);
+		await this.app.vault.create(metadataPath, jsonContent);
+	}
+
+	//! バックアップメタデータを読み込み。
+	async loadMetadata(zipPath: string): Promise<BackupMetadata | null> {
+		const metadataPath = zipPath.replace(/\.zip$/, ".json");
+		const file = this.app.vault.getAbstractFileByPath(metadataPath);
+
+		if (!(file instanceof TFile)) {
+			return null;
+		}
+
+		try {
+			const content = await this.app.vault.read(file);
+			return JSON.parse(content) as BackupMetadata;
+		} catch (error) {
+			console.error("Failed to load metadata:", error);
+			return null;
+		}
+	}
+
+	//! メタデータ付きバックアップ一覧を取得。
+	async listBackupsWithMetadata(
+		pattern = "backup-memolog-"
+	): Promise<Array<{ file: TFile; metadata: BackupMetadata | null }>> {
+		const backups = await this.listBackups(pattern);
+		const results: Array<{ file: TFile; metadata: BackupMetadata | null }> = [];
+
+		for (const backup of backups) {
+			const metadata = await this.loadMetadata(backup.path);
+			results.push({ file: backup, metadata });
+		}
+
+		//! 日付でソート（新しい順）。
+		results.sort((a, b) => b.file.stat.mtime - a.file.stat.mtime);
+
+		return results;
+	}
+
+	//! ZIPバックアップからリストア。
+	async restoreFromZip(
+		zipPath: string,
+		targetDirectory: string,
+		settingsFileName = "memolog-setting.json"
+	): Promise<RestoreResult> {
+		const result: RestoreResult = {
+			success: false,
+			fileCount: 0,
+		};
+
+		try {
+			//! バックアップファイルを読み込み。
+			const zipFile = this.app.vault.getAbstractFileByPath(zipPath);
+
+			if (!(zipFile instanceof TFile)) {
+				throw new Error(`Backup file not found: ${zipPath}`);
+			}
+
+			const zipData = await this.app.vault.readBinary(zipFile);
+			const zip = await JSZip.loadAsync(zipData);
+
+			//! 対象ディレクトリ配下を削除（設定ファイル以外）。
+			const targetFolder = this.app.vault.getAbstractFileByPath(targetDirectory);
+
+			if (targetFolder instanceof TFolder) {
+				await this.deleteDirectoryContents(targetFolder, settingsFileName);
+			}
+
+			//! ZIPの内容をリストア。
+			let fileCount = 0;
+			const promises: Promise<void>[] = [];
+
+			zip.forEach((relativePath, zipEntry) => {
+				if (!zipEntry.dir) {
+					const fullPath = `${targetDirectory}/${relativePath}`;
+					const promise = zipEntry.async("uint8array").then(async (content) => {
+						//! ディレクトリを作成。
+						const dirPath = fullPath.substring(0, fullPath.lastIndexOf("/"));
+						if (dirPath) {
+							await this.ensureDirectory(dirPath);
+						}
+
+						//! ファイルを作成。
+						await this.app.vault.createBinary(fullPath, content.buffer as ArrayBuffer);
+						fileCount++;
+					});
+
+					promises.push(promise);
+				}
+			});
+
+			await Promise.all(promises);
+
+			result.success = true;
+			result.fileCount = fileCount;
+
+			return result;
+		} catch (error) {
+			result.success = false;
+			result.error = error instanceof Error ? error.message : "Unknown error";
+			return result;
+		}
+	}
+
+	//! ディレクトリの内容を削除（特定ファイルを除く）。
+	private async deleteDirectoryContents(folder: TFolder, excludeFile: string): Promise<void> {
+		for (const child of folder.children) {
+			if (child instanceof TFile) {
+				if (child.name !== excludeFile) {
+					await this.app.vault.delete(child);
+				}
+			} else if (child instanceof TFolder) {
+				//! サブフォルダは再帰的に削除。
+				await this.app.vault.delete(child, true);
+			}
+		}
+	}
+
+	//! ディレクトリを確保（存在しなければ作成）。
+	private async ensureDirectory(dirPath: string): Promise<void> {
+		const parts = dirPath.split("/");
+		let currentPath = "";
+
+		for (const part of parts) {
+			currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+			const existing = this.app.vault.getAbstractFileByPath(currentPath);
+
+			if (!existing) {
+				await this.app.vault.createFolder(currentPath);
+			}
+		}
+	}
+
+	//! .gitignoreにパターンを追加。
+	async addToGitignore(pattern: string): Promise<boolean> {
+		try {
+			const gitignorePath = ".gitignore";
+			let content = "";
+
+			//! 既存の.gitignoreを読み込み。
+			const gitignoreFile = this.app.vault.getAbstractFileByPath(gitignorePath);
+
+			if (gitignoreFile instanceof TFile) {
+				content = await this.app.vault.read(gitignoreFile);
+
+				//! 既にパターンが存在する場合はスキップ。
+				if (content.includes(pattern)) {
+					return true;
+				}
+
+				//! 末尾に追加。
+				content = content.trim() + `\n${pattern}\n`;
+				await this.app.vault.modify(gitignoreFile, content);
+			} else {
+				//! .gitignoreが存在しない場合は新規作成。
+				content = `${pattern}\n`;
+				await this.app.vault.create(gitignorePath, content);
+			}
+
+			return true;
+		} catch (error) {
+			console.error("Failed to update .gitignore:", error);
+			return false;
+		}
 	}
 }

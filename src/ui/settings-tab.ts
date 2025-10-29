@@ -1032,6 +1032,17 @@ export class MemologSettingTab extends PluginSettingTab {
 
 	}
 
+	//! カテゴリタブのコンテンツを再描画する（ちらつき防止）。
+	private refreshCategoryTab(): void {
+		//! カテゴリタブのコンテンツエリアを取得。
+		const categoryPane = document.querySelector('[data-tab="category"].memolog-settings-tab-pane') as HTMLElement;
+		if (!categoryPane) return;
+
+		//! 内容をクリアして再構築。
+		categoryPane.empty();
+		this.addCategorySettings(categoryPane);
+	}
+
 	//! カテゴリ設定を追加する。
 	private addCategorySettings(containerEl: HTMLElement): void {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
@@ -1305,7 +1316,8 @@ export class MemologSettingTab extends PluginSettingTab {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
 					});
-					this.display();
+					this.refreshCategoryTab();
+					this.updateDefaultCategoryTable();
 					this.refreshSidebar();
 				})();
 			});
@@ -1321,7 +1333,8 @@ export class MemologSettingTab extends PluginSettingTab {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
 					});
-					this.display();
+					this.refreshCategoryTab();
+					this.updateDefaultCategoryTable();
 					this.refreshSidebar();
 				})
 			)
@@ -1338,7 +1351,8 @@ export class MemologSettingTab extends PluginSettingTab {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
 						});
-						this.display();
+						this.refreshCategoryTab();
+						this.updateDefaultCategoryTable();
 						this.refreshSidebar();
 					}
 				};
@@ -1384,7 +1398,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
 					});
-					this.display();
+					this.refreshCategoryTab();
 					this.refreshSidebar();
 				})();
 			},

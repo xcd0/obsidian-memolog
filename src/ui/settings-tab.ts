@@ -10,6 +10,7 @@ import { RestoreBackupModal } from "./restore-modal";
 import { PathMigrator } from "../utils/path-migrator";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { MemoManager } from "../core/memo-manager";
+import { BackupManager } from "../utils/backup-manager";
 
 //! プリセットカラー定義。
 const PRESET_COLORS = [
@@ -347,12 +348,18 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! リストアボタンを追加。
 		const restoreSetting = new Setting(containerEl)
 			.setName("バックアップから元に戻す")
-			.setDesc("過去のバックアップからファイルをリストアします。");
+			.setDesc("既存ファイルの変換処理時に作成されたバックアップからファイルを元の状態に戻します。");
 
-		restoreSetting.addButton((btn) =>
-			btn
-				.setButtonText("元に戻す")
-				.onClick(async () => {
+		restoreSetting.addButton(async (btn) => {
+			//! バックアップの存在を確認。
+			const backupManager = new BackupManager(this.app);
+			const backups = await backupManager.listBackupsWithMetadata("backup-memolog-");
+
+			//! バックアップがない場合はボタンを無効化。
+			if (backups.length === 0) {
+				btn.setButtonText("元に戻す").setDisabled(true);
+			} else {
+				btn.setButtonText("元に戻す").onClick(async () => {
 					const settings = this.plugin.settingsManager.getGlobalSettings();
 					const modal = new RestoreBackupModal(
 						this.app,
@@ -364,8 +371,9 @@ export class MemologSettingTab extends PluginSettingTab {
 						}
 					);
 					modal.open();
-				})
-		);
+				});
+			}
+		});
 
 		//! 各pathFormat変更時に変換ボタンをチェック。
 		pathCustomRadio.addEventListener("change", async () => {

@@ -5,6 +5,9 @@ import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types";
 import { TemplateManager } from "../core/template-manager";
 import { PathGenerator } from "../utils/path-generator";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
+import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal";
+import { PathMigrator } from "../utils/path-migrator";
+import { MemologVaultHandler } from "../fs/vault-handler";
 
 //! プリセットカラー定義。
 const PRESET_COLORS = [
@@ -24,6 +27,9 @@ const PRESET_COLORS = [
 export class MemologSettingTab extends PluginSettingTab {
 	plugin: MemologPlugin;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+	private initialPathFormat: string = "";
+	private initialUseDirectoryCategory: boolean = false;
+	private migrationButton: HTMLButtonElement | null = null;
 
 	constructor(app: App, plugin: MemologPlugin) {
 		super(app, plugin);
@@ -52,6 +58,11 @@ export class MemologSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl("h2", { text: "memolog 設定" });
+
+		//! 初期値を保存（変更検出用）。
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		this.initialPathFormat = settings.pathFormat;
+		this.initialUseDirectoryCategory = settings.useDirectoryCategory;
 
 		this.addBasicSettings(containerEl);
 		this.addCategorySettings(containerEl);
@@ -254,34 +265,27 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-setting-text-input-inline"
 		}) as HTMLInputElement;
 
-		//! カスタムラジオボタンクリック時。
-		pathCustomRadio.addEventListener("change", async () => {
-			if (pathCustomRadio.checked) {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					pathFormat: pathCustomInput.value,
-				});
-				updatePathPreview(pathCustomInput.value);
-			}
-		});
-
-		//! カスタム入力欄の入力時（カスタムラジオボタンが選択されている場合のみ保存）。
-		pathCustomInput.addEventListener("input", () => {
-			pathCustomValue = pathCustomInput.value;
-			if (pathCustomRadio.checked) {
-				updatePathPreview(pathCustomInput.value);
-				this.debounce("path-format-custom", async () => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						pathFormat: pathCustomInput.value,
-					});
-				});
-			}
-		});
-
 		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		pathCustomInput.addEventListener("focus", () => {
 			pathCustomRadio.checked = true;
 			pathCustomRadio.dispatchEvent(new Event("change"));
 		});
+
+		//! 初期プレビューを表示。
+		updatePathPreview(settings.pathFormat);
+
+		//! 変換ボタンのチェック関数。
+		const checkMigrationNeeded = () => {
+			const currentSettings = this.plugin.settingsManager.getGlobalSettings();
+			const hasChanged =
+				currentSettings.pathFormat !== this.initialPathFormat ||
+				currentSettings.useDirectoryCategory !== this.initialUseDirectoryCategory;
+
+			if (this.migrationButton) {
+				this.migrationButton.disabled = !hasChanged;
+				this.migrationButton.toggleClass("mod-cta", hasChanged);
+			}
+		};
 
 		//! プリセットラジオボタン。
 		for (const preset of pathPresets) {
@@ -316,12 +320,49 @@ export class MemologSettingTab extends PluginSettingTab {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						pathFormat: preset.value,
 					});
+					checkMigrationNeeded();
 				}
 			});
 		}
 
-		//! 初期プレビューを表示。
-		updatePathPreview(settings.pathFormat);
+		//! 変換ボタンを追加。
+		const migrationSetting = new Setting(containerEl)
+			.setName("既存ファイルの変換")
+			.setDesc(
+				"ファイルパス書式を変更した場合、このボタンで既存のファイルを新しい構造に変換できます。"
+			);
+
+		migrationSetting.addButton((btn) => {
+			this.migrationButton = btn.buttonEl;
+			btn.setButtonText("ファイルを変換").onClick(async () => {
+				await this.showMigrationDialog();
+			});
+			btn.buttonEl.disabled = true;
+		});
+
+		//! 各pathFormat変更時に変換ボタンをチェック。
+		pathCustomRadio.addEventListener("change", async () => {
+			if (pathCustomRadio.checked) {
+				await this.plugin.settingsManager.updateGlobalSettings({
+					pathFormat: pathCustomInput.value,
+				});
+				updatePathPreview(pathCustomInput.value);
+				checkMigrationNeeded();
+			}
+		});
+
+		pathCustomInput.addEventListener("input", () => {
+			pathCustomValue = pathCustomInput.value;
+			if (pathCustomRadio.checked) {
+				updatePathPreview(pathCustomInput.value);
+				this.debounce("path-format-custom", async () => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						pathFormat: pathCustomInput.value,
+					});
+					checkMigrationNeeded();
+				});
+			}
+		});
 
 		//! 添付ファイル保存先設定。
 		const attachmentPathSetting = new Setting(containerEl)
@@ -1302,6 +1343,78 @@ export class MemologSettingTab extends PluginSettingTab {
 				//! サイドバーを再描画。
 				this.refreshSidebar();
 			});
+		}
+	}
+
+	//! マイグレーションダイアログを表示。
+	private async showMigrationDialog() {
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const vaultHandler = new MemologVaultHandler(this.app);
+		const migrator = new PathMigrator(this.app, vaultHandler);
+
+		//! マイグレーション計画を作成。
+		const notice = new Notice("変換計画を作成中...", 0);
+		try {
+			const mappings = await migrator.planMigrationAdvanced(
+				settings.rootDirectory,
+				this.initialPathFormat,
+				settings.pathFormat,
+				this.initialUseDirectoryCategory,
+				settings.useDirectoryCategory,
+				settings.categories
+			);
+
+			notice.hide();
+
+			if (mappings.length === 0) {
+				new Notice("変換対象のファイルがありません。");
+				return;
+			}
+
+			//! 確認モーダルを表示。
+			const modal = new MigrationConfirmModal(
+				this.app,
+				settings.rootDirectory,
+				mappings,
+				async (createBackup: boolean) => {
+					const progressNotice = new Notice("ファイルを変換中...", 0);
+
+					try {
+						//! 変換実行。
+						const result = await migrator.executeMigration(mappings, true, createBackup);
+
+						progressNotice.hide();
+
+						//! 結果を表示。
+						const resultModal = new MigrationResultModal(this.app, result);
+						resultModal.open();
+
+						//! 成功した場合は初期値を更新。
+						if (result.successCount > 0) {
+							this.initialPathFormat = settings.pathFormat;
+							this.initialUseDirectoryCategory = settings.useDirectoryCategory;
+
+							//! 変換ボタンを無効化。
+							if (this.migrationButton) {
+								this.migrationButton.disabled = true;
+								this.migrationButton.removeClass("mod-cta");
+							}
+						}
+					} catch (error) {
+						progressNotice.hide();
+						new Notice(
+							`❌ 変換エラー: ${error instanceof Error ? error.message : "Unknown error"}`
+						);
+					}
+				}
+			);
+
+			modal.open();
+		} catch (error) {
+			notice.hide();
+			new Notice(
+				`❌ 計画作成エラー: ${error instanceof Error ? error.message : "Unknown error"}`
+			);
 		}
 	}
 }

@@ -1512,3 +1512,222 @@
 	color: var(--text-muted);
 	font-size: 0.9em;
 }
+
+/* マイグレーションモーダル */
+.memolog-migration-modal .modal-content,
+.memolog-migration-result-modal .modal-content {
+	max-width: 700px;
+	max-height: 80vh;
+	overflow-y: auto;
+}
+
+.migration-description {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.migration-stats {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.migration-stats p {
+	margin: 0.25rem 0;
+}
+
+.stat-success {
+	color: var(--text-success);
+	font-weight: 600;
+}
+
+.stat-warning {
+	color: var(--text-warning);
+	font-weight: 600;
+}
+
+.stat-failure {
+	color: var(--text-error);
+	font-weight: 600;
+}
+
+.stat-skipped {
+	color: var(--text-muted);
+	font-weight: 600;
+}
+
+.migration-examples {
+	margin-bottom: 1rem;
+}
+
+.migration-examples h3 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+	font-size: 1rem;
+}
+
+.migration-examples ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.migration-examples li {
+	margin-bottom: 0.75rem;
+	padding: 0.5rem;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-size: 0.9em;
+}
+
+.path-old {
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+	margin-bottom: 0.25rem;
+}
+
+.path-new {
+	color: var(--text-accent);
+	font-family: var(--font-monospace);
+	font-weight: 500;
+}
+
+.migration-conflicts {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-modifier-error);
+	border-radius: 6px;
+	border: 1px solid var(--text-error);
+}
+
+.migration-conflicts h3 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+	color: var(--text-error);
+	font-size: 1rem;
+}
+
+.migration-conflicts ul {
+	margin: 0.5rem 0;
+	padding-left: 1.5rem;
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+}
+
+.migration-backup-info {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.migration-backup-info h3 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+	font-size: 1rem;
+}
+
+.info-git {
+	color: var(--text-success);
+	padding: 0.5rem;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+	border-left: 3px solid var(--text-success);
+	margin-bottom: 0.5rem;
+}
+
+.warning-no-git {
+	color: var(--text-warning);
+	padding: 0.5rem;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+	border-left: 3px solid var(--text-warning);
+	margin-bottom: 0.5rem;
+}
+
+.migration-buttons {
+	margin-bottom: 1rem;
+}
+
+.migration-notes {
+	margin-top: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.migration-notes h4 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+	font-size: 0.95em;
+}
+
+.migration-notes ul {
+	margin: 0;
+	padding-left: 1.5rem;
+}
+
+.migration-notes li {
+	margin-bottom: 0.25rem;
+}
+
+.more-info {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* 結果モーダル */
+.result-stats {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.result-stats p {
+	margin: 0.25rem 0;
+	font-size: 1rem;
+}
+
+.result-warnings,
+.result-errors {
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.result-warnings h3,
+.result-errors h3 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+	font-size: 1rem;
+}
+
+.result-warnings ul {
+	margin: 0.5rem 0;
+	padding-left: 1.5rem;
+	font-size: 0.85em;
+	color: var(--text-warning);
+}
+
+.result-errors {
+	border: 1px solid var(--text-error);
+}
+
+.result-errors h3 {
+	color: var(--text-error);
+}
+
+.result-errors ul {
+	margin: 0.5rem 0;
+	padding-left: 1.5rem;
+	font-size: 0.85em;
+	color: var(--text-error);
+}

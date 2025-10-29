@@ -36,9 +36,13 @@ export class MigrationConfirmModal extends Modal {
 	}
 
 	override async onOpen() {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("memolog-migration-modal");
+
+		//! モーダルのサイズを大きくする。
+		modalEl.style.width = "800px";
+		modalEl.style.maxWidth = "90vw";
 
 		//! タイトル。
 		contentEl.createEl("h2", { text: "ファイルパス変換の確認" });
@@ -300,9 +304,13 @@ export class MigrationResultModal extends Modal {
 	}
 
 	override onOpen() {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("memolog-migration-result-modal");
+
+		//! モーダルのサイズを大きくする。
+		modalEl.style.width = "800px";
+		modalEl.style.maxWidth = "90vw";
 
 		//! タイトル。
 		contentEl.createEl("h2", { text: "変換結果" });

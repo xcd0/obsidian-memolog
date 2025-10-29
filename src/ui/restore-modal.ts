@@ -15,9 +15,13 @@ export class RestoreBackupModal extends Modal {
 	}
 
 	override async onOpen() {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("memolog-restore-modal");
+
+		//! モーダルのサイズを大きくする。
+		modalEl.style.width = "800px";
+		modalEl.style.maxWidth = "90vw";
 
 		//! タイトル。
 		contentEl.createEl("h2", { text: "バックアップからリストア" });

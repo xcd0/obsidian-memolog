@@ -522,6 +522,23 @@ export class MemologSettingTab extends PluginSettingTab {
 			templateCustomRadio.dispatchEvent(new Event("change"));
 		});
 
+		//! カスタム入力欄からフォーカスが外れた時、{{content}}が含まれているかチェック。
+		templateCustomInput.addEventListener("blur", () => {
+			let value = templateCustomInput.value.trim();
+			if (value && !value.includes("{{content}}")) {
+				//! {{content}}が含まれていない場合は末尾に追加。
+				value = value + "\n{{content}}";
+				templateCustomInput.value = value;
+				templateCustomValue = value;
+				if (templateCustomRadio.checked) {
+					updatePreview(value);
+					void this.plugin.settingsManager.updateGlobalSettings({
+						memoTemplate: value,
+					});
+				}
+			}
+		});
+
 		//! プリセットラジオボタン。
 		for (const preset of templatePresets) {
 			const radioItem = templateRadioGroup.createDiv({

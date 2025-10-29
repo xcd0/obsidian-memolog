@@ -33,6 +33,7 @@ export class MemologSettingTab extends PluginSettingTab {
 	private initialPathFormat: string = "";
 	private initialUseDirectoryCategory: boolean = false;
 	private migrationButton: HTMLButtonElement | null = null;
+	private currentActiveTab: string = "basic"; //! 現在アクティブなタブ。
 
 	constructor(app: App, plugin: MemologPlugin) {
 		super(app, plugin);
@@ -119,13 +120,19 @@ export class MemologSettingTab extends PluginSettingTab {
 				//! クリックされたタブをアクティブ化。
 				tabBtn.addClass("memolog-settings-tab-button-active");
 				tabPane.style.display = "block";
+
+				//! 現在のアクティブなタブを保存。
+				this.currentActiveTab = tab.id;
 			});
 		}
 
-		//! 最初のタブをアクティブ化。
+		//! 保存されているタブをアクティブ化（または最初のタブ）。
 		if (tabButtons.length > 0) {
-			tabButtons[0].addClass("memolog-settings-tab-button-active");
-			tabContents[0].style.display = "block";
+			const activeTabIndex = tabs.findIndex(tab => tab.id === this.currentActiveTab);
+			const indexToActivate = activeTabIndex >= 0 ? activeTabIndex : 0;
+
+			tabButtons[indexToActivate].addClass("memolog-settings-tab-button-active");
+			tabContents[indexToActivate].style.display = "block";
 		}
 
 		//! 各タブのコンテンツをレンダリング。

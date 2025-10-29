@@ -454,6 +454,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		const templatePresets = [
 			{ label: "{{content}}", value: "{{content}}" },
 			{ label: "# %Y-%m-%d %H:%M:%S\\n{{content}}", value: "# %Y-%m-%d %H:%M:%S\n{{content}}" },
+			{ label: "%Y/%m/%d-%H:%M:%S {{content}}", value: "%Y/%m/%d-%H:%M:%S {{content}}" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

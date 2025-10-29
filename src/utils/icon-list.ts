@@ -17,9 +17,17 @@ function getAllIconsFromObsidian(): string[] {
 	}
 
 	try {
-		//! Obsidianのグローバルオブジェクトからlucideアイコンを取得。
+		//! 方法1: window.lucideから取得。
 		const lucide = (window as any).lucide;
 		if (lucide && typeof lucide === "object") {
+			//! デバッグ: lucideオブジェクトのキーをすべて確認。
+			const allKeys = Object.keys(lucide);
+			console.log(`[memolog] Total keys in lucide object: ${allKeys.length}`);
+
+			//! "Smartphone"を含むキーを探す。
+			const smartphoneKeys = allKeys.filter(key => key.toLowerCase().includes("smart"));
+			console.log(`[memolog] Keys containing "smart":`, smartphoneKeys);
+
 			//! lucideオブジェクトのキーを取得（アイコン名のリスト）。
 			const iconNames = Object.keys(lucide)
 				.filter((key) => {
@@ -43,6 +51,14 @@ function getAllIconsFromObsidian(): string[] {
 				console.log(`[memolog] Lucide icons loaded: ${iconNames.length} icons`);
 				return iconNames;
 			}
+		}
+
+		//! 方法2: Obsidianの内部APIから取得を試みる。
+		const obsidianIcons = (window as any).obsidianIconNames;
+		if (obsidianIcons && Array.isArray(obsidianIcons)) {
+			console.log(`[memolog] Found obsidianIconNames: ${obsidianIcons.length} icons`);
+			cachedAllIcons = obsidianIcons.sort();
+			return cachedAllIcons;
 		}
 	} catch (error) {
 		console.warn("[memolog] Failed to load lucide icons dynamically:", error);

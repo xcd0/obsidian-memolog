@@ -886,27 +886,38 @@ export class MemologSidebar extends ItemView {
 	//! メモ削除処理。
 	private async handleDelete(memoId: string): Promise<void> {
 		try {
+			//! 対象のメモを検索。
+			const memo = this.memos.find((m) => m.id === memoId);
+			if (!memo) {
+				new Notice("メモが見つかりませんでした");
+				return;
+			}
+
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = this.currentCategory || settings.defaultCategory;
 
-			//! ファイルパスを生成。
+			//! メモのタイムスタンプから日付を取得。
+			const memoDate = new Date(memo.timestamp);
+
+			//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
 						settings.rootDirectory,
-						category,
+						memo.category,
 						settings.pathFormat,
-						settings.useDirectoryCategory
+						settings.useDirectoryCategory,
+						memoDate
 					)
 				: PathGenerator.generateFilePath(
 						settings.rootDirectory,
-						category,
+						memo.category,
 						settings.saveUnit,
-						settings.useDirectoryCategory
+						settings.useDirectoryCategory,
+						memoDate
 					);
 
 			//! メモを削除。
-			const deleted = await this.memoManager.deleteMemo(filePath, category, memoId);
+			const deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
 
 			if (deleted) {
 				//! メモリストを再読み込み。
@@ -924,29 +935,40 @@ export class MemologSidebar extends ItemView {
 	//! メモ編集保存処理。
 	private async handleSaveEdit(memoId: string, newContent: string): Promise<void> {
 		try {
+			//! 対象のメモを検索。
+			const memo = this.memos.find((m) => m.id === memoId);
+			if (!memo) {
+				new Notice("メモが見つかりませんでした");
+				return;
+			}
+
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = this.currentCategory || settings.defaultCategory;
 
-			//! ファイルパスを生成。
+			//! メモのタイムスタンプから日付を取得。
+			const memoDate = new Date(memo.timestamp);
+
+			//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
 						settings.rootDirectory,
-						category,
+						memo.category,
 						settings.pathFormat,
-						settings.useDirectoryCategory
+						settings.useDirectoryCategory,
+						memoDate
 					)
 				: PathGenerator.generateFilePath(
 						settings.rootDirectory,
-						category,
+						memo.category,
 						settings.saveUnit,
-						settings.useDirectoryCategory
+						settings.useDirectoryCategory,
+						memoDate
 					);
 
 			//! メモを更新。
 			const updated = await this.memoManager.updateMemo(
 				filePath,
-				category,
+				memo.category,
 				memoId,
 				newContent
 			);
@@ -1027,14 +1049,16 @@ export class MemologSidebar extends ItemView {
 				return;
 			}
 
-			//! 新しいファイルにメモを追加。
+			//! 新しいファイルにメモを追加（既存のID、タイムスタンプ、テンプレートを保持）。
 			await this.memoManager.addMemo(
 				newFilePath,
 				newCategory,
 				memo.content,
 				this.currentOrder,
-				settings.memoTemplate,
-				memo.attachments || []
+				memo.template || settings.memoTemplate,
+				memo.attachments || [],
+				memo.id,
+				memo.timestamp
 			);
 
 			//! メモリストを再読み込み。

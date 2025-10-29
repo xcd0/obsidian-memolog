@@ -56,12 +56,8 @@ memolog/
 ├── 2025/
 │   └── 10/
 │       └── 28.md  ← 全カテゴリのメモが混在
-│           <!-- memolog: start category="work" -->
 │           {workメモ}
-│           <!-- memolog: end -->
-│           <!-- memolog: start category="hobby" -->
 │           {hobbyメモ}
-│           <!-- memolog: end -->
 ```
 
 #### モード: `"category-dir"` (カテゴリディレクトリ)
@@ -72,16 +68,12 @@ memolog/
 │   └── 2025/
 │       └── 10/
 │           └── 28.md  ← workカテゴリのみ
-│               <!-- memolog: start category="work" -->
 │               {workメモ}
-│               <!-- memolog: end -->
 └── hobby/
     └── 2025/
         └── 10/
             └── 28.md  ← hobbyカテゴリのみ
-                <!-- memolog: start category="hobby" -->
                 {hobbyメモ}
-                <!-- memolog: end -->
 ```
 
 #### モード: `"daily-notes"` (Daily Notes連携)
@@ -92,9 +84,7 @@ DailyNotes/
     # 今日のメモ
     {ユーザーの任意コンテンツ}
 
-    <!-- memolog: start category="work" -->
     {workメモ}
-    <!-- memolog: end -->
 ```
 
 ---
@@ -186,42 +176,34 @@ function migrateSettings(settings: GlobalSettings): GlobalSettings {
 **移行前**:
 ```
 memolog/2025/10/28.md
-<!-- memolog: start category="work" -->
-<!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z -->
+<!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z, category: "work" -->
 ## 2025-10-28 09:00
 仕事メモ1
 
-<!-- memo-id: w2, timestamp: 2025-10-28T15:00:00Z -->
+<!-- memo-id: w2, timestamp: 2025-10-28T15:00:00Z, category: "work" -->
 ## 2025-10-28 15:00
 仕事メモ2
-<!-- memolog: end -->
 
-<!-- memolog: start category="hobby" -->
-<!-- memo-id: h1, timestamp: 2025-10-28T12:00:00Z -->
+<!-- memo-id: h1, timestamp: 2025-10-28T12:00:00Z, category: "hobby" -->
 ## 2025-10-28 12:00
 趣味メモ1
-<!-- memolog: end -->
 ```
 
 **移行後**:
 ```
 memolog/work/2025/10/28.md
-<!-- memolog: start category="work" -->
-<!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z -->
+<!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z, category: "work" -->
 ## 2025-10-28 09:00
 仕事メモ1
 
-<!-- memo-id: w2, timestamp: 2025-10-28T15:00:00Z -->
+<!-- memo-id: w2, timestamp: 2025-10-28T15:00:00Z, category: "work" -->
 ## 2025-10-28 15:00
 仕事メモ2
-<!-- memolog: end -->
 
 memolog/hobby/2025/10/28.md
-<!-- memolog: start category="hobby" -->
-<!-- memo-id: h1, timestamp: 2025-10-28T12:00:00Z -->
+<!-- memo-id: h1, timestamp: 2025-10-28T12:00:00Z, category: "hobby" -->
 ## 2025-10-28 12:00
 趣味メモ1
-<!-- memolog: end -->
 ```
 
 #### シナリオ2: `category-dir` → `root`

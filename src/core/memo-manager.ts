@@ -213,15 +213,17 @@ export class MemoManager {
 		content: string,
 		order: SortOrder = "asc",
 		template?: string,
-		attachments?: string[]
+		attachments?: string[],
+		existingId?: string,
+		existingTimestamp?: string
 	): Promise<MemoEntry> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
 				//! メモエントリを作成。
 				const memo: MemoEntry = {
-					id: uuidv7(),
+					id: existingId || uuidv7(),
 					category,
-					timestamp: this.generateTimestamp(),
+					timestamp: existingTimestamp || this.generateTimestamp(),
 					content,
 					attachments,
 					template,

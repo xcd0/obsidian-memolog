@@ -340,53 +340,58 @@ export class MemologSidebar extends ItemView {
 
 			//! "all"が選択されている場合は全カテゴリのメモを読み込む。
 			if (this.currentCategory === "all") {
-				this.memos = [];
-				const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
+				//! selectedDateが指定されている場合は、その日付のメモを読み込む。
+				//! selectedDateが指定されていない場合は、過去全件（全期間）を読み込む。
+				if (this.selectedDate) {
+					this.memos = [];
+					const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
 
-				//! ファイルパス生成用の日付（selectedDateがあればその日付を使用）。
-				const targetDate = this.selectedDate || new Date();
+					for (const cat of settings.categories) {
+						const filePath = settings.pathFormat
+							? PathGenerator.generateCustomPath(
+									settings.rootDirectory,
+									cat.directory,
+									settings.pathFormat,
+									settings.useDirectoryCategory,
+									this.selectedDate
+								)
+							: PathGenerator.generateFilePath(
+									settings.rootDirectory,
+									cat.directory,
+									settings.saveUnit,
+									settings.useDirectoryCategory,
+									this.selectedDate
+								);
 
-				for (const cat of settings.categories) {
-					const filePath = settings.pathFormat
-						? PathGenerator.generateCustomPath(
-								settings.rootDirectory,
-								cat.directory,
-								settings.pathFormat,
-								settings.useDirectoryCategory,
-								targetDate
-							)
-						: PathGenerator.generateFilePath(
-								settings.rootDirectory,
-								cat.directory,
-								settings.saveUnit,
-								settings.useDirectoryCategory,
-								targetDate
-							);
+						//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
+						if (processedFiles.has(filePath)) {
+							continue;
+						}
+						processedFiles.add(filePath);
 
-					//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
-					if (processedFiles.has(filePath)) {
-						continue;
-					}
-					processedFiles.add(filePath);
+						const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
 
-					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
-
-					if (fileExists) {
-						//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
-						//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
-						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-						for (const text of memoTexts) {
-							const memo = this.memoManager["parseTextToMemo"](text, "");
-							if (memo) {
-								this.memos.push(memo);
+						if (fileExists) {
+							//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
+							//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
+							const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+							const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+							for (const text of memoTexts) {
+								const memo = this.memoManager["parseTextToMemo"](text, "");
+								if (memo) {
+									this.memos.push(memo);
+								}
 							}
 						}
 					}
-				}
 
-				//! ソート順に応じて並べ替え。
-				this.sortMemos();
+					//! ソート順に応じて並べ替え。
+					this.sortMemos();
+				} else {
+					//! 日付が指定されていない場合は、過去全件を読み込む（詳細検索の全期間相当）。
+					this.memos = await this.loadMemosForDateRange();
+					this.sortMemos();
+				}
 			} else {
 				//! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
 				const categoryDirectory = this.currentCategory;

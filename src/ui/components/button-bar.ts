@@ -74,13 +74,21 @@ export class ButtonBar {
 		for (const { filter, label } of dateRangeFilters) {
 			const btn = dateRangeContainer.createEl("button", {
 				cls: "memolog-btn memolog-date-range-btn",
-				text: label,
 				attr: { "aria-label": label },
 			});
+
+			//! ボタンのラベルとON/OFF状態を設定。
+			btn.createSpan({ cls: "memolog-date-range-btn-label", text: label });
+			const stateSpan = btn.createSpan({ cls: "memolog-date-range-btn-state" });
 
 			//! デフォルトで「全期間」をアクティブに。
 			if (filter === this.currentDateRange) {
 				btn.addClass("memolog-date-range-btn-active");
+				stateSpan.setText("ON");
+				stateSpan.addClass("memolog-date-range-btn-state-on");
+			} else {
+				stateSpan.setText("OFF");
+				stateSpan.addClass("memolog-date-range-btn-state-off");
 			}
 
 			btn.addEventListener("click", () => {
@@ -188,10 +196,22 @@ export class ButtonBar {
 	//! 日付範囲ボタンの表示を更新する。
 	private updateDateRangeButtons(): void {
 		for (const [filter, btn] of this.dateRangeButtons) {
+			const stateSpan = btn.querySelector(".memolog-date-range-btn-state") as HTMLElement;
+
 			if (filter === this.currentDateRange) {
 				btn.addClass("memolog-date-range-btn-active");
+				if (stateSpan) {
+					stateSpan.setText("ON");
+					stateSpan.removeClass("memolog-date-range-btn-state-off");
+					stateSpan.addClass("memolog-date-range-btn-state-on");
+				}
 			} else {
 				btn.removeClass("memolog-date-range-btn-active");
+				if (stateSpan) {
+					stateSpan.setText("OFF");
+					stateSpan.removeClass("memolog-date-range-btn-state-on");
+					stateSpan.addClass("memolog-date-range-btn-state-off");
+				}
 			}
 		}
 	}

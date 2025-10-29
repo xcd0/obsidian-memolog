@@ -472,7 +472,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! 添付ファイル保存先設定。
 		const attachmentPathSetting = new Setting(containerEl)
 			.setName("添付ファイルの保存先")
-			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。");
+			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。変更しても既存のファイルは移動されません。");
 
 		const attachmentPathContainer = attachmentPathSetting.controlEl.createDiv({
 			cls: "memolog-path-format-container"

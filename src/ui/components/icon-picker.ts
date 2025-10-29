@@ -102,7 +102,7 @@ export class IconPicker {
 		});
 
 		//! 設定タブボタンへのフォーカスを防ぐフォーカストラップ。
-		const focusTrap = (e: FocusEvent) => {
+		const focusTrap = (e: FocusEvent): void => {
 			const target = e.target as HTMLElement;
 
 			//! 設定タブボタンへのフォーカスを明示的にブロック。
@@ -114,7 +114,7 @@ export class IconPicker {
 				if (searchInput) {
 					searchInput.focus();
 				}
-				return false;
+				return;
 			}
 
 			//! フォーカスがピッカー内の要素でない場合は検索入力に戻す。

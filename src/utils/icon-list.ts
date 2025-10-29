@@ -1,5 +1,7 @@
 //! Lucide Icons リスト（Obsidianで利用可能なアイコン）。
 
+import { getIconIds } from "obsidian";
+
 //! アイコンカテゴリ。
 export interface IconCategory {
 	name: string;
@@ -17,51 +19,15 @@ function getAllIconsFromObsidian(): string[] {
 	}
 
 	try {
-		//! 方法1: window.lucideから取得。
-		const lucide = (window as any).lucide;
-		if (lucide && typeof lucide === "object") {
-			//! デバッグ: lucideオブジェクトのキーをすべて確認。
-			const allKeys = Object.keys(lucide);
-			console.log(`[memolog] Total keys in lucide object: ${allKeys.length}`);
-
-			//! "Smartphone"を含むキーを探す。
-			const smartphoneKeys = allKeys.filter(key => key.toLowerCase().includes("smart"));
-			console.log(`[memolog] Keys containing "smart":`, smartphoneKeys);
-
-			//! lucideオブジェクトのキーを取得（アイコン名のリスト）。
-			const iconNames = Object.keys(lucide)
-				.filter((key) => {
-					//! アイコン関数のみをフィルタリング（大文字で始まるもの）。
-					//! lucideではアイコンはPascalCaseで定義されているが、
-					//! setIconではkebab-caseを使用するため変換が必要。
-					return /^[A-Z]/.test(key) && typeof lucide[key] === "function";
-				})
-				.map((key) => {
-					//! PascalCaseからkebab-caseに変換。
-					//! 例: AlertCircle -> alert-circle
-					return key
-						.replace(/([A-Z])/g, "-$1")
-						.toLowerCase()
-						.replace(/^-/, "");
-				})
-				.sort();
-
-			if (iconNames.length > 0) {
-				cachedAllIcons = iconNames;
-				console.log(`[memolog] Lucide icons loaded: ${iconNames.length} icons`);
-				return iconNames;
-			}
-		}
-
-		//! 方法2: Obsidianの内部APIから取得を試みる。
-		const obsidianIcons = (window as any).obsidianIconNames;
-		if (obsidianIcons && Array.isArray(obsidianIcons)) {
-			console.log(`[memolog] Found obsidianIconNames: ${obsidianIcons.length} icons`);
-			cachedAllIcons = obsidianIcons.sort();
+		//! Obsidian APIの getIconIds() を使用。
+		const iconIds = getIconIds();
+		console.log(`[memolog] Loaded ${iconIds.length} icons from obsidian.getIconIds()`);
+		if (iconIds && iconIds.length > 0) {
+			cachedAllIcons = iconIds.sort();
 			return cachedAllIcons;
 		}
 	} catch (error) {
-		console.warn("[memolog] Failed to load lucide icons dynamically:", error);
+		console.warn("[memolog] Failed to load icons using obsidian.getIconIds():", error);
 	}
 
 	//! 動的取得に失敗した場合は、静的リストにフォールバック。
@@ -850,11 +816,6 @@ export function getAllIcons(): string[] {
 export function searchIcons(query: string, limit = 50): string[] {
 	const allIcons = getAllIcons();
 
-	//! デバッグログ。
-	console.log(`[memolog] Total icons available: ${allIcons.length}`);
-	console.log(`[memolog] Sample icons:`, allIcons.slice(0, 10));
-	console.log(`[memolog] "smartphone" in list:`, allIcons.filter(icon => icon.includes("phone")));
-
 	if (!query || query.trim() === "") {
 		return allIcons.slice(0, limit);
 	}
@@ -875,12 +836,7 @@ export function searchIcons(query: string, limit = 50): string[] {
 	);
 
 	//! 結果を結合して返す。
-	const results = [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit);
-
-	//! デバッグログ。
-	console.log(`[memolog] Search query: "${query}", results: ${results.length}`, results);
-
-	return results;
+	return [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit);
 }
 
 //! カテゴリからアイコンを取得。

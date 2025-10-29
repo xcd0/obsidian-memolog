@@ -86,6 +86,18 @@ export class IconPicker {
 			cls: "memolog-icon-picker-search-input",
 		});
 
+		//! 検索ボックスクリック時にフォーカスを維持。
+		searchInput.addEventListener("click", (e) => {
+			e.stopPropagation();
+			searchInput.focus();
+		});
+
+		//! 検索コンテナクリック時もフォーカスを設定。
+		searchContainer.addEventListener("click", (e) => {
+			e.stopPropagation();
+			searchInput.focus();
+		});
+
 		//! タブコンテナ。
 		const tabsContainer = this.pickerElement.createDiv({
 			cls: "memolog-icon-picker-tabs",
@@ -181,9 +193,12 @@ export class IconPicker {
 		});
 
 		//! 検索ボックスにフォーカス（DOMレンダリング完了後に実行）。
-		setTimeout(() => {
-			searchInput.focus();
-		}, 50);
+		//! requestAnimationFrameを2回使用して確実にレンダリング完了を待つ。
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				searchInput.focus();
+			});
+		});
 	}
 
 	//! ピッカーを閉じる。

@@ -66,8 +66,8 @@ export class ButtonBar {
 		this.dateRangeButtons.clear();
 
 		const dateRangeFilters: Array<{ filter: DateRangeFilter; label: string }> = [
-			{ filter: "week", label: "一週間" },
 			{ filter: "today", label: "今日" },
+			{ filter: "week", label: "一週間" },
 		];
 
 		for (const { filter, label } of dateRangeFilters) {

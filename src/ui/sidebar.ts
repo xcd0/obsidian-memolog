@@ -40,6 +40,7 @@ export class MemologSidebar extends ItemView {
 	private currentCategory: string = ""; //! ディレクトリ名を保存（"all"は特別扱い）。
 	private currentOrder: SortOrder = "asc";
 	private selectedDate: Date | null = null;
+	private currentDateRange: import("./components/button-bar").DateRangeFilter = "all"; //! 日付範囲フィルター。
 	private calendarVisible: boolean = false;
 	private searchVisible: boolean = false;
 	private currentSearchQuery: SearchQuery | null = null;
@@ -145,11 +146,14 @@ export class MemologSidebar extends ItemView {
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
 		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
 
-		//! 1行目: ツールバー（ハンバーガー、検索バー、検索ボタン、設定、ソート）。
+		//! 1行目: ツールバー（ハンバーガー、日付範囲フィルター、検索バー、検索ボタン、設定、ソート）。
 		const topRow = categoryTabsArea.createDiv({ cls: "memolog-toolbar-row" });
 
 		//! ハンバーガーメニューボタン。
 		topRow.createDiv({ cls: "memolog-hamburger-btn" });
+
+		//! 日付範囲フィルターボタン。
+		topRow.createDiv({ cls: "memolog-date-range-filters" });
 
 		//! 検索バー配置用の空白エリア（SearchBarコンポーネントがここに入る）。
 		topRow.createDiv({ cls: "memolog-search-bar-placeholder" });
@@ -236,6 +240,9 @@ export class MemologSidebar extends ItemView {
 			const hamburgerBtn = categoryTabsArea.querySelector(
 				".memolog-hamburger-btn"
 			) as HTMLElement;
+			const dateRangeFilters = categoryTabsArea.querySelector(
+				".memolog-date-range-filters"
+			) as HTMLElement;
 			const searchBtn = categoryTabsArea.querySelector(
 				".memolog-search-btn"
 			) as HTMLElement;
@@ -246,14 +253,15 @@ export class MemologSidebar extends ItemView {
 				".memolog-sort-btn-wrapper"
 			) as HTMLElement;
 
-			//! ボタンバーを初期化（ハンバーガー、検索、設定、ソートボタン）。
+			//! ボタンバーを初期化（ハンバーガー、日付範囲フィルター、検索、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsArea, {
 				onSortOrderChange: (order) => this.handleSortOrderChange(order),
 				onCalendarClick: () => this.toggleCalendar(),
 				onSearchClick: () => this.toggleSearch(),
 				onSettingsClick: () => this.openSettings(),
+				onDateRangeChange: (filter) => this.handleDateRangeChange(filter),
 			});
-			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, searchBtn, settingsBtn, sortBtnWrapper);
+			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, dateRangeFilters, searchBtn, settingsBtn, sortBtnWrapper);
 		}
 
 		//! カテゴリタブを初期化。
@@ -340,9 +348,31 @@ export class MemologSidebar extends ItemView {
 
 			//! "all"が選択されている場合は全カテゴリのメモを読み込む。
 			if (this.currentCategory === "all") {
-				//! selectedDateが指定されている場合は、その日付のメモを読み込む。
-				//! selectedDateが指定されていない場合は、過去全件（全期間）を読み込む。
-				if (this.selectedDate) {
+				//! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。
+				if (this.currentDateRange) {
+					let startDate: string | undefined;
+					let endDate: string | undefined;
+
+					if (this.currentDateRange === "today") {
+						//! 今日のメモのみ。
+						const today = new Date();
+						const todayStr = today.toISOString().split("T")[0];
+						startDate = todayStr;
+						endDate = todayStr;
+					} else if (this.currentDateRange === "week") {
+						//! 過去一週間。
+						const today = new Date();
+						const weekAgo = new Date(today);
+						weekAgo.setDate(today.getDate() - 7);
+						startDate = weekAgo.toISOString().split("T")[0];
+						endDate = today.toISOString().split("T")[0];
+					}
+					//! "all"の場合はstartDate, endDateともにundefinedのまま（全期間）。
+
+					this.memos = await this.loadMemosForDateRange(startDate, endDate);
+					this.sortMemos();
+				} else if (this.selectedDate) {
+					//! カレンダーで日付が選択されている場合は、その日付のメモを読み込む。
 					this.memos = [];
 					const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
 
@@ -388,7 +418,7 @@ export class MemologSidebar extends ItemView {
 					//! ソート順に応じて並べ替え。
 					this.sortMemos();
 				} else {
-					//! 日付が指定されていない場合は、過去全件を読み込む（詳細検索の全期間相当）。
+					//! 日付範囲フィルターもカレンダー選択もない場合は、「全期間」と同じ挙動。
 					this.memos = await this.loadMemosForDateRange();
 					this.sortMemos();
 				}
@@ -396,36 +426,88 @@ export class MemologSidebar extends ItemView {
 				//! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
 				const categoryDirectory = this.currentCategory;
 
-				//! ファイルパスを生成（selectedDateがあればその日付を使用）。
-				const targetDate = this.selectedDate || new Date();
-				const filePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							categoryDirectory,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							targetDate
-						)
-					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							categoryDirectory,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							targetDate
-						);
+				//! 日付範囲フィルターが設定されている場合は、その範囲のメモを読み込む。
+				if (this.currentDateRange && !this.selectedDate) {
+					const allMemos: MemoEntry[] = [];
 
-				//! ファイルが存在するか確認。
-				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+					//! 日付範囲を計算。
+					let startDate: Date;
+					let endDate: Date = new Date();
 
-				if (fileExists) {
-					//! メモを読み込む。
-					this.memos = await this.memoManager.getMemos(filePath, categoryDirectory);
+					if (this.currentDateRange === "today") {
+						startDate = new Date();
+					} else if (this.currentDateRange === "week") {
+						startDate = new Date();
+						startDate.setDate(endDate.getDate() - 7);
+					} else {
+						//! "all"の場合は、過去2年分のデータを読み込む（パフォーマンス考慮）。
+						startDate = new Date();
+						startDate.setFullYear(endDate.getFullYear() - 2);
+					}
 
-					//! ソート順に応じて並べ替え。
+					//! 日付範囲内の各日付に対してファイルを読み込む。
+					const currentDate = new Date(startDate);
+					while (currentDate <= endDate) {
+						const filePath = settings.pathFormat
+							? PathGenerator.generateCustomPath(
+									settings.rootDirectory,
+									categoryDirectory,
+									settings.pathFormat,
+									settings.useDirectoryCategory,
+									currentDate
+								)
+							: PathGenerator.generateFilePath(
+									settings.rootDirectory,
+									categoryDirectory,
+									settings.saveUnit,
+									settings.useDirectoryCategory,
+									currentDate
+								);
+
+						//! ファイルが存在する場合のみ読み込む。
+						if (this.memoManager.vaultHandler.fileExists(filePath)) {
+							const memos = await this.memoManager.getMemos(filePath, categoryDirectory);
+							allMemos.push(...memos);
+						}
+
+						//! 次の日へ。
+						currentDate.setDate(currentDate.getDate() + 1);
+					}
+
+					this.memos = allMemos;
 					this.sortMemos();
 				} else {
-					//! ファイルが存在しない場合は空配列。
-					this.memos = [];
+					//! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。
+					const targetDate = this.selectedDate || new Date();
+					const filePath = settings.pathFormat
+						? PathGenerator.generateCustomPath(
+								settings.rootDirectory,
+								categoryDirectory,
+								settings.pathFormat,
+								settings.useDirectoryCategory,
+								targetDate
+							)
+						: PathGenerator.generateFilePath(
+								settings.rootDirectory,
+								categoryDirectory,
+								settings.saveUnit,
+								settings.useDirectoryCategory,
+								targetDate
+							);
+
+					//! ファイルが存在するか確認。
+					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+
+					if (fileExists) {
+						//! メモを読み込む。
+						this.memos = await this.memoManager.getMemos(filePath, categoryDirectory);
+
+						//! ソート順に応じて並べ替え。
+						this.sortMemos();
+					} else {
+						//! ファイルが存在しない場合は空配列。
+						this.memos = [];
+					}
 				}
 			}
 
@@ -982,6 +1064,14 @@ export class MemologSidebar extends ItemView {
 		this.updateInputAreaPosition();
 	}
 
+	//! 日付範囲フィルター変更処理。
+	private async handleDateRangeChange(filter: import("./components/button-bar").DateRangeFilter): Promise<void> {
+		this.currentDateRange = filter;
+		//! カレンダーの選択をクリア。
+		this.selectedDate = null;
+		await this.loadMemos();
+	}
+
 	//! サイドバーを更新する。
 	public refresh(): void {
 		void this.onOpen();
@@ -1040,6 +1130,14 @@ export class MemologSidebar extends ItemView {
 	//! 検索処理。
 	private async handleSearch(query: SearchQuery): Promise<void> {
 		this.currentSearchQuery = query;
+
+		//! 日付範囲が指定されている場合は、日付範囲ボタンをクリアする。
+		if (query.startDate || query.endDate) {
+			this.currentDateRange = null;
+			if (this.buttonBar) {
+				this.buttonBar.clearDateRange();
+			}
+		}
 
 		//! 日付範囲が指定されている場合は、その範囲のメモを読み込む。
 		let memosToSearch: MemoEntry[] = [];

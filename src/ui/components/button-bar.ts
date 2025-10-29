@@ -1,6 +1,9 @@
 import { SortOrder } from "../../types";
 import { setIcon } from "obsidian";
 
+//! 日付範囲フィルターの種類。
+export type DateRangeFilter = "all" | "week" | "today" | null;
+
 //! ボタンバーのイベントハンドラー。
 export interface ButtonBarHandlers {
 	//! ソート順変更時のハンドラー。
@@ -17,12 +20,17 @@ export interface ButtonBarHandlers {
 
 	//! リフレッシュボタンクリック時のハンドラー。
 	onRefreshClick?: () => void;
+
+	//! 日付範囲フィルター変更時のハンドラー。
+	onDateRangeChange?: (filter: DateRangeFilter) => void;
 }
 
 //! ボタンバーコンポーネント。
 export class ButtonBar {
 	private handlers: ButtonBarHandlers;
 	private currentOrder: SortOrder = "asc";
+	private currentDateRange: DateRangeFilter = "all";
+	private dateRangeButtons: Map<DateRangeFilter, HTMLElement> = new Map();
 
 	constructor(_container: HTMLElement, handlers: ButtonBarHandlers = {}) {
 		this.handlers = handlers;
@@ -32,6 +40,7 @@ export class ButtonBar {
 	renderInline(
 		initialOrder: SortOrder = "asc",
 		hamburgerContainer: HTMLElement,
+		dateRangeContainer: HTMLElement,
 		searchContainer: HTMLElement,
 		settingsContainer: HTMLElement,
 		sortContainer: HTMLElement
@@ -51,6 +60,35 @@ export class ButtonBar {
 				this.handlers.onCalendarClick();
 			}
 		});
+
+		//! 日付範囲フィルターボタン。
+		dateRangeContainer.empty();
+		this.dateRangeButtons.clear();
+
+		const dateRangeFilters: Array<{ filter: DateRangeFilter; label: string }> = [
+			{ filter: "all", label: "全期間" },
+			{ filter: "week", label: "過去一週間" },
+			{ filter: "today", label: "今日" },
+		];
+
+		for (const { filter, label } of dateRangeFilters) {
+			const btn = dateRangeContainer.createEl("button", {
+				cls: "memolog-btn memolog-date-range-btn",
+				text: label,
+				attr: { "aria-label": label },
+			});
+
+			//! デフォルトで「全期間」をアクティブに。
+			if (filter === this.currentDateRange) {
+				btn.addClass("memolog-date-range-btn-active");
+			}
+
+			btn.addEventListener("click", () => {
+				this.setDateRange(filter);
+			});
+
+			this.dateRangeButtons.set(filter, btn);
+		}
 
 		//! 検索ボタン。
 		searchContainer.empty();
@@ -124,5 +162,43 @@ export class ButtonBar {
 	setOrder(order: SortOrder): void {
 		this.currentOrder = order;
 		//! ボタンテキストを更新（再描画が必要）。
+	}
+
+	//! 日付範囲フィルターを設定する。
+	private setDateRange(filter: DateRangeFilter): void {
+		//! 既に選択されている場合はOFFにする（全てOFF状態にする）。
+		if (this.currentDateRange === filter) {
+			this.currentDateRange = null;
+			this.updateDateRangeButtons();
+			if (this.handlers.onDateRangeChange) {
+				this.handlers.onDateRangeChange(null);
+			}
+			return;
+		}
+
+		//! 新しいフィルターを設定。
+		this.currentDateRange = filter;
+		this.updateDateRangeButtons();
+
+		if (this.handlers.onDateRangeChange) {
+			this.handlers.onDateRangeChange(filter);
+		}
+	}
+
+	//! 日付範囲ボタンの表示を更新する。
+	private updateDateRangeButtons(): void {
+		for (const [filter, btn] of this.dateRangeButtons) {
+			if (filter === this.currentDateRange) {
+				btn.addClass("memolog-date-range-btn-active");
+			} else {
+				btn.removeClass("memolog-date-range-btn-active");
+			}
+		}
+	}
+
+	//! 日付範囲フィルターをクリアする（外部から呼び出し可能）。
+	public clearDateRange(): void {
+		this.currentDateRange = null;
+		this.updateDateRangeButtons();
 	}
 }

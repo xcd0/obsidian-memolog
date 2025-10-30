@@ -24,7 +24,8 @@
       "Bash(git remote get-url:*)",
       "Bash(node:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run lint:fix:*)"
+      "Bash(npm run lint:fix:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

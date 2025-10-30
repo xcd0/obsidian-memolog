@@ -592,6 +592,11 @@
 	word-wrap: break-word;
 }
 
+/* カード内の段落マージンを削除 */
+.memolog-card-content p {
+	margin: 0;
+}
+
 /* Markdown内の画像 */
 .memolog-card-content img {
 	max-width: 100%;

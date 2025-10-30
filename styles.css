@@ -587,7 +587,7 @@
 
 .memolog-card-content {
 	color: var(--text-normal);
-	line-height: 1.5;
+	line-height: 1.3;
 	white-space: pre-wrap;
 	word-wrap: break-word;
 }

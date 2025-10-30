@@ -12,6 +12,7 @@ export class MemoList {
 	private sourcePath: string;
 	private categories: CategoryConfig[];
 	private isTrash: boolean;
+	private pinnedMemoIds: string[];
 
 	constructor(
 		app: App,
@@ -21,7 +22,8 @@ export class MemoList {
 		enableDailyNotes = false,
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
-		isTrash = false
+		isTrash = false,
+		pinnedMemoIds: string[] = []
 	) {
 		this.app = app;
 		this.container = container;
@@ -31,6 +33,7 @@ export class MemoList {
 		this.sourcePath = sourcePath;
 		this.categories = categories;
 		this.isTrash = isTrash;
+		this.pinnedMemoIds = pinnedMemoIds;
 	}
 
 	//! メモリストを描画する。
@@ -50,6 +53,9 @@ export class MemoList {
 			const categoryConfig = this.categories.find((c) => c.directory === memo.category);
 			const memoUseTodoList = categoryConfig?.useTodoList ?? false;
 
+			//! ピン留め状態を確認。
+			const isPinned = this.pinnedMemoIds.includes(memo.id);
+
 			const card = new MemoCard(
 				this.app,
 				this.container,
@@ -59,7 +65,8 @@ export class MemoList {
 				this.sourcePath,
 				this.categories,
 				memoUseTodoList,
-				this.isTrash
+				this.isTrash,
+				isPinned
 			);
 			card.render();
 		}

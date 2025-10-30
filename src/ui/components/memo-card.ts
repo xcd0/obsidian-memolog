@@ -26,6 +26,9 @@ export interface MemoCardHandlers {
 
 	//! ゴミ箱から復活ボタンクリック時のハンドラー。
 	onRestore?: (memoId: string) => void;
+
+	//! ピン留めボタンクリック時のハンドラー。
+	onPinToggle?: (memoId: string, isPinned: boolean) => void;
 }
 
 //! メモカードコンポーネント。
@@ -42,6 +45,7 @@ export class MemoCard {
 	private categories: CategoryConfig[];
 	private useTodoList: boolean;
 	private isTrash: boolean;
+	private isPinned: boolean;
 
 	constructor(
 		app: App,
@@ -52,7 +56,8 @@ export class MemoCard {
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
 		useTodoList = false,
-		isTrash = false
+		isTrash = false,
+		isPinned = false
 	) {
 		this.app = app;
 		this.container = container;
@@ -64,6 +69,7 @@ export class MemoCard {
 		this.categories = categories;
 		this.useTodoList = useTodoList;
 		this.isTrash = isTrash;
+		this.isPinned = isPinned;
 	}
 
 	//! カードを描画する。
@@ -142,6 +148,30 @@ export class MemoCard {
 			//! カテゴリ変更メニューを表示。
 			categoryBtn.addEventListener("click", (e) => {
 				this.showCategoryMenu(categoryBtn, e);
+			});
+		}
+
+		//! ピン留めボタン（ゴミ箱以外）。
+		if (!this.isTrash && this.handlers.onPinToggle) {
+			const pinBtn = actions.createEl("button", {
+				cls: `memolog-btn memolog-btn-pin ${this.isPinned ? "pinned" : ""}`,
+				attr: { "aria-label": this.isPinned ? "ピン留め解除" : "ピン留め" },
+			});
+			setIcon(pinBtn, this.isPinned ? "pin" : "pin-off");
+			pinBtn.addEventListener("click", () => {
+				this.isPinned = !this.isPinned;
+				if (this.handlers.onPinToggle) {
+					this.handlers.onPinToggle(this.memo.id, this.isPinned);
+				}
+				//! ボタンの表示を更新。
+				pinBtn.empty();
+				setIcon(pinBtn, this.isPinned ? "pin" : "pin-off");
+				pinBtn.setAttribute("aria-label", this.isPinned ? "ピン留め解除" : "ピン留め");
+				if (this.isPinned) {
+					pinBtn.addClass("pinned");
+				} else {
+					pinBtn.removeClass("pinned");
+				}
 			});
 		}
 

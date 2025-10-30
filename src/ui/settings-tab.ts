@@ -1277,6 +1277,19 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.refreshSidebar();
 				})
 			);
+
+		//! ピン留めタブ表示設定。
+		new Setting(containerEl)
+			.setName("ピン留めタブを表示")
+			.setDesc("ピン留めされた投稿を表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showPinnedTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showPinnedTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
 	}
 
 	//! カテゴリアイテムを追加する。

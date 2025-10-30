@@ -15,19 +15,22 @@ export class CategoryTabs {
 	private tabElements: Map<string, HTMLElement> = new Map(); //! キーはディレクトリ名。
 	private showAllTab: boolean;
 	private showTrashTab: boolean;
+	private showPinnedTab: boolean;
 
 	constructor(
 		container: HTMLElement,
 		categories: CategoryConfig[],
 		handlers: CategoryTabsHandlers,
 		showAllTab = true,
-		showTrashTab = false
+		showTrashTab = false,
+		showPinnedTab = true
 	) {
 		this.container = container;
 		this.categories = categories;
 		this.handlers = handlers;
 		this.showAllTab = showAllTab;
 		this.showTrashTab = showTrashTab;
+		this.showPinnedTab = showPinnedTab;
 		this.activeCategory = categories[0]?.directory || "";
 	}
 
@@ -72,6 +75,17 @@ export class CategoryTabs {
 			}
 		}
 
+		//! ピン留めタブを追加（showPinnedTabがtrueの場合）。
+		if (this.showPinnedTab) {
+			const pinnedTab = this.createPinnedTab(tabsContainer);
+			this.tabElements.set("pinned", pinnedTab);
+
+			//! アクティブなタブをハイライト。
+			if (this.activeCategory === "pinned") {
+				pinnedTab.addClass("memolog-category-tab-active");
+			}
+		}
+
 		//! ゴミ箱タブを最後に追加（showTrashTabがtrueの場合）。
 		if (this.showTrashTab) {
 			const trashTab = this.createTrashTab(tabsContainer);
@@ -101,6 +115,32 @@ export class CategoryTabs {
 		tab.addEventListener("click", () => {
 			this.setActiveCategory("all");
 			this.handlers.onCategoryChange("all");
+		});
+
+		return tab;
+	}
+
+	//! ピン留めタブを作成する。
+	private createPinnedTab(container: HTMLElement): HTMLElement {
+		const tab = container.createDiv({ cls: "memolog-category-tab" });
+
+		//! ピン留めのカラーを設定（オレンジ系）。
+		tab.style.setProperty("--category-color", "#f59e0b");
+
+		//! アイコンを追加。
+		const iconEl = tab.createDiv({ cls: "memolog-category-tab-icon" });
+		setIcon(iconEl, "pin");
+
+		//! カテゴリ名を追加。
+		tab.createDiv({
+			cls: "memolog-category-tab-name",
+			text: "ピン留め",
+		});
+
+		//! クリックイベントを設定（ディレクトリ名"pinned"を渡す）。
+		tab.addEventListener("click", () => {
+			this.setActiveCategory("pinned");
+			this.handlers.onCategoryChange("pinned");
 		});
 
 		return tab;

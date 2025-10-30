@@ -76,6 +76,12 @@ export interface GlobalSettings {
 
 	//! ゴミ箱タブを表示するか。
 	showTrashTab: boolean;
+
+	//! ピン留めされた投稿のID配列。
+	pinnedMemoIds: string[];
+
+	//! ピン留めタブを表示するか。
+	showPinnedTab: boolean;
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -125,4 +131,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	trashFilePath: "_trash",
 	trashRetentionDays: 30,
 	showTrashTab: false,
+	pinnedMemoIds: [],
+	showPinnedTab: true,
 };

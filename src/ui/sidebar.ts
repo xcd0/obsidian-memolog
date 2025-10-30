@@ -291,7 +291,8 @@ export class MemologSidebar extends ItemView {
 					onCategoryChange: (categoryDirectory) => void this.handleCategoryTabChange(categoryDirectory),
 				},
 				settings.showAllTab,
-				settings.showTrashTab
+				settings.showTrashTab,
+				settings.showPinnedTab
 			);
 			//! defaultCategoryからディレクトリ名を取得。
 			const defaultCategoryConfig = settings.categories.find(
@@ -339,11 +340,13 @@ export class MemologSidebar extends ItemView {
 				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
 				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
 				onRestore: (memoId) => void this.handleRestore(memoId),
+				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
 			},
 			settings.enableDailyNotes,
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
-			false //! 初期状態ではゴミ箱表示ではない。
+			false, //! 初期状態ではゴミ箱表示ではない。
+			settings.pinnedMemoIds
 		);
 		this.memoList.render();
 
@@ -368,13 +371,23 @@ export class MemologSidebar extends ItemView {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 
-			//! ゴミ箱タブの場合は入力フォームを非表示に、それ以外は表示。
+			//! ゴミ箱タブとピン留めタブの場合は入力フォームを非表示に、それ以外は表示。
 			if (this.inputAreaEl) {
-				this.inputAreaEl.style.display = this.currentCategory === "trash" ? "none" : "";
+				this.inputAreaEl.style.display =
+					this.currentCategory === "trash" || this.currentCategory === "pinned" ? "none" : "";
 			}
 
-			//! "trash"が選択されている場合はゴミ箱ファイルから読み込む。
-			if (this.currentCategory === "trash") {
+			//! "pinned"が選択されている場合はピン留めメモのみ読み込む。
+			if (this.currentCategory === "pinned") {
+				//! 全メモから読み込み。
+				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
+
+				//! ピン留めメモのみ抽出。
+				this.memos = allMemos.filter((memo) => settings.pinnedMemoIds.includes(memo.id));
+
+				this.sortMemos();
+			} else if (this.currentCategory === "trash") {
+				//! "trash"が選択されている場合はゴミ箱ファイルから読み込む。
 				const trashFilePath = `${settings.rootDirectory}/${settings.trashFilePath}.md`;
 				const fileExists = this.memoManager.vaultHandler.fileExists(trashFilePath);
 
@@ -567,6 +580,32 @@ export class MemologSidebar extends ItemView {
 			if (this.currentSearchQuery) {
 				const result = SearchEngine.search(displayMemos, this.currentSearchQuery);
 				displayMemos = result.matches;
+			}
+
+			//! ピン留めメモを追加（日付フィルタを無視、allタブ以外はカテゴリフィルタを適用）。
+			if (settings.pinnedMemoIds.length > 0 && this.currentCategory !== "trash") {
+				//! 全メモから読み込み。
+				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
+
+				//! ピン留めメモを抽出。
+				const pinnedMemos = allMemos.filter((memo) =>
+					settings.pinnedMemoIds.includes(memo.id)
+				);
+
+				//! allタブ以外の場合はカテゴリフィルタを適用。
+				const filteredPinnedMemos =
+					this.currentCategory === "all"
+						? pinnedMemos
+						: pinnedMemos.filter((memo) => memo.category === this.currentCategory);
+
+				//! displayMemosに既に含まれているメモは除外。
+				const displayMemoIds = new Set(displayMemos.map((m) => m.id));
+				const uniquePinnedMemos = filteredPinnedMemos.filter(
+					(memo) => !displayMemoIds.has(memo.id)
+				);
+
+				//! ピン留めメモを先頭に追加。
+				displayMemos = [...uniquePinnedMemos, ...displayMemos];
 			}
 
 			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
@@ -1048,6 +1087,37 @@ export class MemologSidebar extends ItemView {
 		} catch (error) {
 			console.error("メモ復活エラー:", error);
 			new Notice("メモの復活に失敗しました");
+		}
+	}
+
+	//! ピン留めトグル処理。
+	private async handlePinToggle(memoId: string, isPinned: boolean): Promise<void> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+
+			//! ピン留め状態を更新。
+			let pinnedMemoIds = [...settings.pinnedMemoIds];
+			if (isPinned) {
+				//! ピン留め追加。
+				if (!pinnedMemoIds.includes(memoId)) {
+					pinnedMemoIds.push(memoId);
+				}
+			} else {
+				//! ピン留め解除。
+				pinnedMemoIds = pinnedMemoIds.filter((id) => id !== memoId);
+			}
+
+			//! 設定を保存。
+			await this.plugin.settingsManager.updateGlobalSettings({
+				pinnedMemoIds,
+			});
+
+			//! メモリストを再描画（ピン留め状態を反映）。
+			await this.loadMemos();
+		} catch (error) {
+			console.error("ピン留めエラー:", error);
+			new Notice("ピン留めの変更に失敗しました");
 		}
 	}
 

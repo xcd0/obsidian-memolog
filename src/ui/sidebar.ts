@@ -1086,6 +1086,11 @@ export class MemologSidebar extends ItemView {
 
 		//! 入力エリアの位置を更新。
 		this.updateInputAreaPosition();
+
+		//! 設定に保存。
+		void this.plugin.settingsManager.updateGlobalSettings({
+			order: order,
+		});
 	}
 
 	//! 日付範囲フィルター変更処理。

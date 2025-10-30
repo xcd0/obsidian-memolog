@@ -1097,12 +1097,16 @@ export class MemologSidebar extends ItemView {
 	//! TODO完了状態変更処理。
 	private async handleTodoToggle(memoId: string, completed: boolean): Promise<void> {
 		try {
+			console.log("[TODO Debug] handleTodoToggle呼び出し:", { memoId, completed });
+
 			//! 対象のメモを検索。
 			const memo = this.memos.find((m) => m.id === memoId);
 			if (!memo) {
+				console.log("[TODO Debug] メモが見つかりません");
 				new Notice("メモが見つかりませんでした");
 				return;
 			}
+			console.log("[TODO Debug] メモを発見:", memo);
 
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
@@ -1125,8 +1129,11 @@ export class MemologSidebar extends ItemView {
 						memoDate
 					);
 
+			console.log("[TODO Debug] updateTodoCompleted呼び出し:", { filePath, category: memo.category, memoId, completed });
+
 			//! TODO完了状態を更新。
-			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed);
+			const result = await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed);
+			console.log("[TODO Debug] updateTodoCompleted結果:", result);
 
 			//! メモリストを再読み込み。
 			await this.loadMemos();

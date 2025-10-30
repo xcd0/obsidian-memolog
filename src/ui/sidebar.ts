@@ -490,7 +490,30 @@ export class MemologSidebar extends ItemView {
 				const categoryDirectory = this.currentCategory;
 
 				//! 日付範囲フィルターが設定されている場合は、その範囲のメモを読み込む。
-				if (this.currentDateRange && !this.selectedDate) {
+				if (this.currentDateRange === "all" && !this.selectedDate) {
+					//! "all"の場合は、Vault内の全ファイルからカテゴリに一致するメモを読み込む。
+					const allFiles = this.app.vault.getMarkdownFiles();
+					const allMemos: MemoEntry[] = [];
+
+					//! rootDirectory配下のファイルのみをフィルタリング。
+					const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+
+					for (const file of memologFiles) {
+						const filePath = file.path;
+						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+						for (const text of memoTexts) {
+							const memo = this.memoManager["parseTextToMemo"](text, "");
+							if (memo && memo.category === categoryDirectory && !memo.trashedAt) {
+								//! カテゴリが一致し、削除されていないメモのみ追加。
+								allMemos.push(memo);
+							}
+						}
+					}
+
+					this.memos = allMemos;
+					this.sortMemos();
+				} else if (this.currentDateRange && this.currentDateRange !== "all" && !this.selectedDate) {
 					const allMemos: MemoEntry[] = [];
 
 					//! 日付範囲を計算。

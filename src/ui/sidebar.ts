@@ -388,11 +388,27 @@ export class MemologSidebar extends ItemView {
 				this.sortMemos();
 			} else if (this.currentCategory === "trash") {
 				//! "trash"が選択されている場合は全カテゴリから削除フラグ付きメモを読み込む。
-				//! 全期間のメモを読み込む。
-				const allMemos = await this.loadMemosForDateRange();
-				//! 削除フラグが付いているメモのみフィルタリング（trashedAtが存在するメモ）。
-				this.memos = allMemos.filter((memo: MemoEntry) => memo.trashedAt);
+				//! Vault内の全ファイルを取得。
+				const allFiles = this.app.vault.getMarkdownFiles();
+				const allMemos: MemoEntry[] = [];
 
+				//! rootDirectory配下のファイルのみをフィルタリング。
+				const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+
+				for (const file of memologFiles) {
+					const filePath = file.path;
+					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
+					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					for (const text of memoTexts) {
+						const memo = this.memoManager["parseTextToMemo"](text, "");
+						if (memo && memo.trashedAt) {
+							//! 削除フラグが付いているメモのみ追加。
+							allMemos.push(memo);
+						}
+					}
+				}
+
+				this.memos = allMemos;
 				this.sortMemos();
 			} else if (this.currentCategory === "all") {
 				//! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。

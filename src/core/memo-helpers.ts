@@ -246,10 +246,11 @@ export function updateTodoStatus(content: string, completed: boolean): string {
 //! テキスト形式からメモエントリを解析する。
 export function parseTextToMemo(text: string, category: string): MemoEntry | null {
 	//! 簡易的なパース実装（タイムスタンプと内容を分離）。
-	const lines = text.trim().split("\n");
-	if (lines.length === 0) {
+	const trimmed = text.trim();
+	if (!trimmed) {
 		return null;
 	}
+	const lines = trimmed.split("\n");
 
 	//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
 	const commentMatch = text.match(/<!-- (.+?) -->/);

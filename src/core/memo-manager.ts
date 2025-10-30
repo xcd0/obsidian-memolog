@@ -217,11 +217,21 @@ export class MemoManager {
 			}
 		}
 
+		//! TODOリストのチェックボックスプレフィックスを削除。
+		//! 先頭の `- [ ] ` または `- [x] ` を削除し、インデント（2スペース）も削除。
+		let cleanedContent = content;
+		if (/^-\s*\[([x ])\]\s+/.test(content)) {
+			//! 先頭のチェックボックスを削除。
+			cleanedContent = content.replace(/^-\s*\[([x ])\]\s+/, "");
+			//! 各行の先頭の2スペースインデントを削除。
+			cleanedContent = cleanedContent.replace(/\n  /g, "\n");
+		}
+
 		return {
 			id,
 			category: finalCategory,
 			timestamp: finalTimestamp,
-			content,
+			content: cleanedContent,
 			attachments,
 			template,
 			todoCompleted,

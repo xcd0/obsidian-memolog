@@ -475,10 +475,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! プリセットオプション。
 		const attachmentPresets = [
-			{ label: "./attachments", value: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ" },
-			{ label: "/attachments", value: "/attachments", desc: "memologルート直下のattachmentsフォルダ" },
-			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け (例: /attachments/2025/10)" },
-			{ label: "/attachments/%Y", value: "/attachments/%Y", desc: "年ごとにフォルダ分け (例: /attachments/2025)" },
+			{ label: "./attachments", value: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ", example: "" },
+			{ label: "/attachments", value: "/attachments", desc: "memologルート直下のattachmentsフォルダ", example: "" },
+			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け", example: "例: /attachments/2025/10" },
+			{ label: "/attachments/%Y", value: "/attachments/%Y", desc: "年ごとにフォルダ分け", example: "例: /attachments/2025" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。
@@ -574,10 +574,17 @@ export class MemologSettingTab extends PluginSettingTab {
 			});
 
 			if (preset.desc) {
-				labelContainer.createDiv({
-					text: preset.desc,
+				const descContainer = labelContainer.createDiv({
 					cls: "memolog-path-format-radio-desc"
 				});
+				descContainer.createSpan({ text: preset.desc });
+
+				if (preset.example) {
+					descContainer.createSpan({
+						text: ` ${preset.example}`,
+						cls: "memolog-path-format-radio-example"
+					});
+				}
 			}
 
 			radio.addEventListener("change", async () => {

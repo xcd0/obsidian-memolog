@@ -111,6 +111,10 @@ export class MemoCard {
 			const currentCategory = this.categories.find((cat) => cat.directory === this.memo.category);
 			if (currentCategory) {
 				setIcon(categoryBtn, currentCategory.icon);
+				//! カテゴリの色を反映。
+				if (currentCategory.color) {
+					categoryBtn.style.color = currentCategory.color;
+				}
 			} else {
 				setIcon(categoryBtn, "folder");
 			}
@@ -120,6 +124,27 @@ export class MemoCard {
 				this.showCategoryMenu(categoryBtn, e);
 			});
 		}
+
+		//! コピーボタン。
+		const copyBtn = actions.createEl("button", {
+			cls: "memolog-btn memolog-btn-copy",
+			attr: { "aria-label": "コピー" },
+		});
+		setIcon(copyBtn, "copy");
+		copyBtn.addEventListener("click", async () => {
+			try {
+				await navigator.clipboard.writeText(this.memo.content);
+				//! アイコンを一時的にチェックマークに変更。
+				copyBtn.empty();
+				setIcon(copyBtn, "check");
+				setTimeout(() => {
+					copyBtn.empty();
+					setIcon(copyBtn, "copy");
+				}, 1500);
+			} catch (error) {
+				console.error("Failed to copy to clipboard:", error);
+			}
+		});
 
 		//! 編集ボタン。
 		const editBtn = actions.createEl("button", {

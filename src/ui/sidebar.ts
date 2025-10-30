@@ -311,6 +311,13 @@ export class MemologSidebar extends ItemView {
 		const currentCategoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
 		const useTodoList = currentCategoryConfig?.useTodoList ?? false;
 
+		console.log("[TODO Debug Sidebar] MemoList初期化", {
+			currentCategory: this.currentCategory,
+			categoryConfig: currentCategoryConfig,
+			useTodoList: useTodoList,
+			allCategories: settings.categories.map(c => ({ directory: c.directory, useTodoList: c.useTodoList }))
+		});
+
 		//! メモリストを初期化。
 		this.memoList = new MemoList(
 			this.app,

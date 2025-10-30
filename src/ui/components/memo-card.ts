@@ -58,6 +58,14 @@ export class MemoCard {
 		this.component = new Component();
 		this.categories = categories;
 		this.useTodoList = useTodoList;
+
+		console.log("[TODO Debug MemoCard Constructor]", {
+			memoId: memo.id,
+			category: memo.category,
+			useTodoList: this.useTodoList,
+			hasOnTodoToggle: !!handlers.onTodoToggle,
+			contentStart: memo.content.substring(0, 50)
+		});
 	}
 
 	//! カードを描画する。

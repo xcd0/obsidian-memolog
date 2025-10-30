@@ -14,6 +14,7 @@ import {
 	updateMemoInList,
 	joinMemosToFileContent,
 } from "./memo-crud-operations";
+import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -119,50 +120,22 @@ export class MemoManager {
 				//! ファイル全体を読み込む。
 				const fileContent = await this.vaultHandler.readFile(filePath);
 
-				//! メモを分割。
-				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				const updatedMemos: string[] = [];
+				//! メモを分割してゴミ箱操作で削除状態にする。
+				const memos = splitFileIntoMemos(fileContent);
+				const trashedAt = this.generateTimestamp();
+				const { memos: updatedMemos, marked } = markMemoAsDeleted(memos, memoId, trashedAt);
 
-				let found = false;
-				for (const memo of memos) {
-					if (memo.includes(`memo-id: ${memoId}`)) {
-						found = true;
-						const trashedAt = this.generateTimestamp();
-
-						//! memo-idヘッダーにdeleted: "true"とtrashedAtを追加。
-						const updatedMemo = memo.replace(
-							/(<!-- memo-id: [^>]+) -->/,
-							`$1, deleted: "true", trashedAt: "${trashedAt}" -->`
-						);
-
-						//! メモのコンテンツ部分を抽出してコメントアウト。
-						//! ヘッダー行とコンテンツを分離。
-						const lines = updatedMemo.split("\n");
-						const headerLine = lines[0]; //! 最初の行がヘッダー。
-						const contentLines = lines.slice(1); //! 残りがコンテンツ。
-
-						//! コンテンツをコメントアウト。
-						const content = contentLines.join("\n").trim();
-						const commentedContent = content ? `<!--\n${content}\n-->` : "";
-
-						//! 結合。
-						updatedMemos.push(headerLine + "\n" + commentedContent);
-					} else {
-						updatedMemos.push(memo);
-					}
-				}
-
-				if (!found) {
+				if (!marked) {
 					notify.warning("削除対象のメモが見つかりません");
 					return false;
 				}
 
 				//! ファイルを更新。
-				const newContent = updatedMemos.join("");
+				const newContent = joinMemosToFileContent(updatedMemos);
 				await this.vaultHandler.writeFile(filePath, newContent);
 
 				//! キャッシュを無効化。
-				const cacheKey = `${filePath}::${category}`;
+				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
 				notify.success("メモをゴミ箱に移動しました");
@@ -195,7 +168,7 @@ export class MemoManager {
 				//! 対象メモを含むファイルを検索。
 				for (const file of memologFiles) {
 					const fileContent = await this.vaultHandler.readFile(file.path);
-					const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					const memos = splitFileIntoMemos(fileContent);
 
 					for (let i = 0; i < memos.length; i++) {
 						if (memos[i].includes(`memo-id: ${memoId}`)) {
@@ -217,37 +190,24 @@ export class MemoManager {
 					return false;
 				}
 
-				//! 対象メモから削除フラグを削除。
-				let restoredMemo = allMemos[targetMemoIndex];
+				//! ゴミ箱操作で復元する。
+				const { memos: updatedMemos, restored } = markMemoAsRestored(allMemos, memoId);
 
-				//! memo-idヘッダーから削除フラグを削除。
-				restoredMemo = restoredMemo.replace(/, deleted: "true", trashedAt: "[^"]*"/, "");
-
-				//! コメントアウトされたコンテンツを展開。
-				const lines = restoredMemo.split("\n");
-				const headerLine = lines[0]; //! 最初の行がヘッダー。
-				const contentLines = lines.slice(1); //! 残りがコンテンツ。
-
-				//! コンテンツがコメントアウトされている場合は展開。
-				let content = contentLines.join("\n").trim();
-				if (content.startsWith("<!--") && content.endsWith("-->")) {
-					content = content.slice(4, -3).trim();
+				if (!restored) {
+					notify.warning("メモの復元に失敗しました");
+					return false;
 				}
 
-				restoredMemo = headerLine + "\n" + content;
-
-				//! メモを更新。
-				allMemos[targetMemoIndex] = restoredMemo;
-
 				//! ファイルに書き込み。
-				const newContent = allMemos.join("");
+				const newContent = joinMemosToFileContent(updatedMemos);
 				await this.vaultHandler.writeFile(targetFilePath, newContent);
 
 				//! categoryを抽出してキャッシュを無効化。
+				const restoredMemo = updatedMemos[targetMemoIndex];
 				const categoryMatch = restoredMemo.match(/category: "([^"]+)"/);
 				if (categoryMatch) {
 					const category = categoryMatch[1];
-					const cacheKey = `${targetFilePath}::${category}`;
+					const cacheKey = generateCacheKey(targetFilePath, category);
 					this.cacheManager.invalidateMemos(cacheKey);
 				}
 

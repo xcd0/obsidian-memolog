@@ -597,6 +597,11 @@
 	margin: 0;
 }
 
+/* カード内のbr要素の行間を狭くする */
+.memolog-card-content br {
+	line-height: 0.5;
+}
+
 /* Markdown内の画像 */
 .memolog-card-content img {
 	max-width: 100%;

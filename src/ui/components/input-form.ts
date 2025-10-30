@@ -99,9 +99,9 @@ export class InputForm {
 			this.handleSubmit();
 		});
 
-		//! Shift+Enterで送信。
+		//! Shift+EnterまたはCtrl+Enterで送信。
 		this.textarea.addEventListener("keydown", (e) => {
-			if (e.shiftKey && e.key === "Enter") {
+			if ((e.shiftKey || e.ctrlKey) && e.key === "Enter") {
 				this.handleSubmit();
 				e.preventDefault();
 			}

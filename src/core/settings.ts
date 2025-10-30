@@ -51,6 +51,15 @@ export class SettingsManager {
 		return null;
 	}
 
+	//! 設定ファイルのパスからrootDirectoryを抽出する。
+	private extractRootDirectoryFromPath(settingsPath: string): string {
+		//! "public/memolog/memolog-setting.json" → "public/memolog"
+		const parts = settingsPath.split("/");
+		//! 最後の要素（ファイル名）を除去。
+		parts.pop();
+		return parts.join("/");
+	}
+
 	//! グローバル設定を更新する。
 	async updateGlobalSettings(settings: Partial<GlobalSettings>): Promise<void> {
 		this.globalSettings = { ...this.globalSettings, ...settings };
@@ -78,6 +87,15 @@ export class SettingsManager {
 				if (file instanceof TFile) {
 					const content = await this.app.vault.read(file);
 					const parsed = JSON.parse(content) as Partial<GlobalSettings>;
+
+					//! 見つかったパスからrootDirectoryを抽出。
+					const extractedRoot = this.extractRootDirectoryFromPath(foundPath);
+
+					//! 設定にrootDirectoryが含まれていない、または異なる場合は抽出した値を使用。
+					if (!parsed.rootDirectory || parsed.rootDirectory !== extractedRoot) {
+						parsed.rootDirectory = extractedRoot;
+					}
+
 					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
 					return;
 				}
@@ -102,6 +120,15 @@ export class SettingsManager {
 					console.log(`Migrating settings from ${oldFoundPath} to new format`);
 					const content = await this.app.vault.read(oldFile);
 					const parsed = JSON.parse(content) as Partial<GlobalSettings>;
+
+					//! 見つかったパスからrootDirectoryを抽出。
+					const extractedRoot = this.extractRootDirectoryFromPath(oldFoundPath);
+
+					//! 設定にrootDirectoryが含まれていない、または異なる場合は抽出した値を使用。
+					if (!parsed.rootDirectory || parsed.rootDirectory !== extractedRoot) {
+						parsed.rootDirectory = extractedRoot;
+					}
+
 					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
 					//! 新しいファイルに保存。
 					await this.saveGlobalSettings();

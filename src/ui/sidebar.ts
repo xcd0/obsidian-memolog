@@ -307,14 +307,8 @@ export class MemologSidebar extends ItemView {
 			this.searchBar.setCategories(categoryNames);
 		}
 
-		//! 現在選択されているカテゴリのuseTodoList設定を取得。
-		const currentCategoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
-		const useTodoList = currentCategoryConfig?.useTodoList ?? false;
-
 		console.log("[TODO Debug Sidebar] MemoList初期化", {
 			currentCategory: this.currentCategory,
-			categoryConfig: currentCategoryConfig,
-			useTodoList: useTodoList,
 			allCategories: settings.categories.map(c => ({ directory: c.directory, useTodoList: c.useTodoList }))
 		});
 
@@ -333,8 +327,7 @@ export class MemologSidebar extends ItemView {
 			},
 			settings.enableDailyNotes,
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
-			settings.categories,
-			useTodoList
+			settings.categories
 		);
 		this.memoList.render();
 

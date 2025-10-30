@@ -11,7 +11,6 @@ export class MemoList {
 	private enableDailyNotes: boolean;
 	private sourcePath: string;
 	private categories: CategoryConfig[];
-	private useTodoList: boolean;
 
 	constructor(
 		app: App,
@@ -20,8 +19,7 @@ export class MemoList {
 		handlers: MemoCardHandlers = {},
 		enableDailyNotes = false,
 		sourcePath = "",
-		categories: CategoryConfig[] = [],
-		useTodoList = false
+		categories: CategoryConfig[] = []
 	) {
 		this.app = app;
 		this.container = container;
@@ -30,7 +28,6 @@ export class MemoList {
 		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
 		this.categories = categories;
-		this.useTodoList = useTodoList;
 	}
 
 	//! メモリストを描画する。
@@ -46,6 +43,10 @@ export class MemoList {
 
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
+			//! メモのカテゴリからuseTodoList設定を取得。
+			const categoryConfig = this.categories.find((c) => c.directory === memo.category);
+			const memoUseTodoList = categoryConfig?.useTodoList ?? false;
+
 			const card = new MemoCard(
 				this.app,
 				this.container,
@@ -54,7 +55,7 @@ export class MemoList {
 				this.enableDailyNotes,
 				this.sourcePath,
 				this.categories,
-				this.useTodoList
+				memoUseTodoList
 			);
 			card.render();
 		}

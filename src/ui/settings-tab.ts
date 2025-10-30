@@ -59,11 +59,10 @@ export class MemologSettingTab extends PluginSettingTab {
 		this.debounceTimers.set(key, timer);
 	}
 
-	//! 設定を保存してJSONファイルから再読み込みする。
-	private async saveAndReloadSettings(updates: Partial<import("../types").GlobalSettings>): Promise<void> {
+	//! 設定を保存する（再読み込みはしない）。
+	private async saveSettings(updates: Partial<import("../types").GlobalSettings>): Promise<void> {
 		await this.plugin.settingsManager.updateGlobalSettings(updates);
-		//! JSONファイルから設定を再読み込み。
-		await this.plugin.settingsManager.loadGlobalSettings();
+		//! 再読み込みはしない（他の入力欄の編集中の値を保持するため）。
 	}
 
 	//! 初期設定値を取得する（変更検出用）。
@@ -1244,7 +1243,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			const save = async (value: string) => {
 				const updatedCategories = [...settings.categories];
 				updatedCategories[index] = { ...updatedCategories[index], directory: value };
-				await this.saveAndReloadSettings({
+				await this.saveSettings({
 					categories: updatedCategories,
 				});
 				this.refreshSidebar();
@@ -1286,7 +1285,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				const save = async (value: string) => {
 					const updatedCategories = [...settings.categories];
 					updatedCategories[index] = { ...updatedCategories[index], name: value };
-					await this.saveAndReloadSettings({
+					await this.saveSettings({
 						categories: updatedCategories,
 					});
 					this.refreshSidebar();
@@ -1355,7 +1354,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
 						const updatedCategories = [...settings.categories];
 						updatedCategories[index] = { ...updatedCategories[index], color: value };
-						await this.saveAndReloadSettings({
+						await this.saveSettings({
 							categories: updatedCategories,
 						});
 						this.refreshCategoryTab();

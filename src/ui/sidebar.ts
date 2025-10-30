@@ -307,6 +307,10 @@ export class MemologSidebar extends ItemView {
 			this.searchBar.setCategories(categoryNames);
 		}
 
+		//! 現在選択されているカテゴリのuseTodoList設定を取得。
+		const currentCategoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
+		const useTodoList = currentCategoryConfig?.useTodoList ?? false;
+
 		//! メモリストを初期化。
 		this.memoList = new MemoList(
 			this.app,
@@ -318,10 +322,12 @@ export class MemologSidebar extends ItemView {
 				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 				onImagePaste: (file) => this.handleImagePaste(file),
 				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
+				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
 			},
 			settings.enableDailyNotes,
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
-			settings.categories
+			settings.categories,
+			useTodoList
 		);
 		this.memoList.render();
 
@@ -521,6 +527,16 @@ export class MemologSidebar extends ItemView {
 			if (this.currentSearchQuery) {
 				const result = SearchEngine.search(displayMemos, this.currentSearchQuery);
 				displayMemos = result.matches;
+			}
+
+			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを非表示にする。
+			if (this.currentCategory !== "all") {
+				const settings = this.plugin.settingsManager.getGlobalSettings();
+				const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
+				if (categoryConfig?.useTodoList) {
+					//! チェック済み（todoCompleted === true）のメモを除外。
+					displayMemos = displayMemos.filter((m) => !m.todoCompleted);
+				}
 			}
 
 			//! メモリストを更新。
@@ -859,6 +875,10 @@ export class MemologSidebar extends ItemView {
 				}
 			}
 
+			//! 現在のカテゴリのTODOリスト設定を取得。
+			const categoryConfig = settings.categories.find((c) => c.directory === categoryDirectory);
+			const useTodoList = categoryConfig?.useTodoList ?? false;
+
 			//! メモを追加（categoryDirectoryをカテゴリとして保存）。
 			await this.memoManager.addMemo(
 				filePath,
@@ -866,7 +886,10 @@ export class MemologSidebar extends ItemView {
 				content,
 				this.currentOrder,
 				settings.memoTemplate,
-				copiedAttachments
+				copiedAttachments,
+				undefined,
+				undefined,
+				useTodoList
 			);
 
 			//! メモリストを再読み込み。
@@ -1068,6 +1091,52 @@ export class MemologSidebar extends ItemView {
 		} catch (error) {
 			console.error("カテゴリ変更エラー:", error);
 			new Notice("カテゴリの変更に失敗しました");
+		}
+	}
+
+	//! TODO完了状態変更処理。
+	private async handleTodoToggle(memoId: string, completed: boolean): Promise<void> {
+		try {
+			//! 対象のメモを検索。
+			const memo = this.memos.find((m) => m.id === memoId);
+			if (!memo) {
+				new Notice("メモが見つかりませんでした");
+				return;
+			}
+
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+			const memoDate = new Date(memo.timestamp);
+
+			//! ファイルパスを生成。
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						memo.category,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						memoDate
+					)
+				: PathGenerator.generateFilePath(
+						settings.rootDirectory,
+						memo.category,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						memoDate
+					);
+
+			//! カテゴリ設定を取得してTODOリストかどうか確認。
+			const categoryConfig = settings.categories.find((c) => c.directory === memo.category);
+			const useTodoList = categoryConfig?.useTodoList ?? false;
+
+			//! TODO完了状態を更新。
+			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed, useTodoList);
+
+			//! メモリストを再読み込み。
+			await this.loadMemos();
+		} catch (error) {
+			console.error("TODO状態変更エラー:", error);
+			new Notice("TODO状態の変更に失敗しました");
 		}
 	}
 

@@ -20,6 +20,9 @@ export interface MemoCardHandlers {
 
 	//! カテゴリ変更時のハンドラー。
 	onCategoryChange?: (memoId: string, newCategory: string) => void;
+
+	//! TODO完了状態変更時のハンドラー。
+	onTodoToggle?: (memoId: string, completed: boolean) => void;
 }
 
 //! メモカードコンポーネント。
@@ -34,6 +37,7 @@ export class MemoCard {
 	private sourcePath: string;
 	private component: Component;
 	private categories: CategoryConfig[];
+	private useTodoList: boolean;
 
 	constructor(
 		app: App,
@@ -42,7 +46,8 @@ export class MemoCard {
 		handlers: MemoCardHandlers = {},
 		enableDailyNotes = false,
 		sourcePath = "",
-		categories: CategoryConfig[] = []
+		categories: CategoryConfig[] = [],
+		useTodoList = false
 	) {
 		this.app = app;
 		this.container = container;
@@ -52,6 +57,7 @@ export class MemoCard {
 		this.sourcePath = sourcePath;
 		this.component = new Component();
 		this.categories = categories;
+		this.useTodoList = useTodoList;
 	}
 
 	//! カードを描画する。
@@ -77,9 +83,27 @@ export class MemoCard {
 	private renderHeader(card: HTMLElement): void {
 		const header = card.createDiv({ cls: "memolog-card-header" });
 
+		//! 左側エリア（TODOチェックボックス + タイムスタンプ）。
+		const leftArea = header.createDiv({ cls: "memolog-card-header-left" });
+
+		//! TODOチェックボックス（useTodoListがtrueの場合のみ）。
+		if (this.useTodoList) {
+			const checkbox = leftArea.createEl("input", {
+				type: "checkbox",
+				cls: "memolog-todo-checkbox",
+			}) as HTMLInputElement;
+			checkbox.checked = this.memo.todoCompleted ?? false;
+
+			checkbox.addEventListener("change", () => {
+				if (this.handlers.onTodoToggle) {
+					this.handlers.onTodoToggle(this.memo.id, checkbox.checked);
+				}
+			});
+		}
+
 		//! タイムスタンプ。
 		const timestamp = this.formatTimestamp(this.memo.timestamp);
-		header.createDiv({
+		leftArea.createDiv({
 			cls: "memolog-card-timestamp",
 			text: timestamp,
 		});

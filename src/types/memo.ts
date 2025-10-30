@@ -26,6 +26,9 @@ export interface MemoEntry {
 
 	//! ゴミ箱に移動した日時（ISO 8601形式）。
 	trashedAt?: string;
+
+	//! ピン留めした日時（ISO 8601形式）。
+	pinnedAt?: string;
 }
 
 //! メモの挿入位置。

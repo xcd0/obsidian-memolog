@@ -41,7 +41,7 @@ export class MemologSettingTab extends PluginSettingTab {
 	}
 
 	//! debounce関数 - 連続入力時に過度な保存を防ぐ。
-	private debounce(key: string, callback: () => void, delay: number = 500): void {
+	private debounce(key: string, callback: () => void, delay: number = 200): void {
 		//! 既存のタイマーをクリア。
 		const existingTimer = this.debounceTimers.get(key);
 		if (existingTimer) {

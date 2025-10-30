@@ -306,6 +306,8 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
 			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
 			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
+			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
+			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
 			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
 		];
 

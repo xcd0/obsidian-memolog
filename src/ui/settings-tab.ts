@@ -1132,32 +1132,6 @@ export class MemologSettingTab extends PluginSettingTab {
 	private addCategorySettings(containerEl: HTMLElement): void {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 
-		//! カテゴリ一覧を表示。
-		for (let i = 0; i < settings.categories.length; i++) {
-			this.addCategoryItem(containerEl, settings.categories[i], i);
-		}
-
-		//! カテゴリ追加ボタン。
-		new Setting(containerEl).addButton((button) =>
-			button
-				.setButtonText("+ カテゴリを追加")
-				.setCta()
-				.onClick(async () => {
-					const newCategory: CategoryConfig = {
-						name: "新しいカテゴリ",
-						directory: "new-category",
-						color: "#3b82f6",
-						icon: "folder",
-					};
-					const updatedCategories = [...settings.categories, newCategory];
-					await this.plugin.settingsManager.updateGlobalSettings({
-						categories: updatedCategories,
-					});
-					this.display();
-					this.refreshSidebar();
-				})
-		);
-
 		//! 全カテゴリタブ表示設定。
 		new Setting(containerEl)
 			.setName("Allタブを表示")
@@ -1282,6 +1256,31 @@ export class MemologSettingTab extends PluginSettingTab {
 				this.refreshSidebar();
 			});
 		}
+		//! カテゴリ一覧を表示。
+		for (let i = 0; i < settings.categories.length; i++) {
+			this.addCategoryItem(containerEl, settings.categories[i], i);
+		}
+
+		//! カテゴリ追加ボタン。
+		new Setting(containerEl).addButton((button) =>
+			button
+				.setButtonText("+ カテゴリを追加")
+				.setCta()
+				.onClick(async () => {
+					const newCategory: CategoryConfig = {
+						name: "新しいカテゴリ",
+						directory: "new-category",
+						color: "#3b82f6",
+						icon: "folder",
+					};
+					const updatedCategories = [...settings.categories, newCategory];
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.display();
+					this.refreshSidebar();
+				})
+		);
 	}
 
 	//! カテゴリアイテムを追加する。

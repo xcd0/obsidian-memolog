@@ -2,10 +2,18 @@ import { App } from "obsidian";
 import { MemoEntry, SortOrder, SaveUnit } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CacheManager } from "./cache-manager";
-import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
 import { memoToText, parseTextToMemo } from "./memo-helpers";
+import {
+	createMemoEntry,
+	insertMemoIntoList,
+	splitFileIntoMemos,
+	generateCacheKey,
+	removeMemoFromList,
+	updateMemoInList,
+	joinMemosToFileContent,
+} from "./memo-crud-operations";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -43,14 +51,14 @@ export class MemoManager {
 		const result = await this.errorHandler.wrap(
 			(async () => {
 				//! メモエントリを作成。
-				const memo: MemoEntry = {
-					id: existingId || uuidv7(),
+				const memo = createMemoEntry(
 					category,
-					timestamp: existingTimestamp || this.generateTimestamp(),
 					content,
+					existingId,
+					existingTimestamp,
 					attachments,
-					template,
-				};
+					template
+				);
 
 				//! メモをテキスト形式に変換。
 				const memoText = memoToText(memo, template, useTodoList);
@@ -62,24 +70,18 @@ export class MemoManager {
 					fileContent = await this.vaultHandler.readFile(filePath);
 				}
 
-				//! 既存のメモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const existingMemos = fileContent ? fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim()) : [];
+				//! 既存のメモを分割。
+				const existingMemos = splitFileIntoMemos(fileContent);
 
 				//! 挿入位置を決定（昇順: bottom、降順: top）。
-				let newContent: string;
-				if (order === "desc") {
-					//! 降順の場合は先頭に追加。
-					newContent = [memoText, ...existingMemos].join("");
-				} else {
-					//! 昇順の場合は末尾に追加。
-					newContent = [...existingMemos, memoText].join("");
-				}
+				const insertAtTop = order === "desc";
+				const newContent = insertMemoIntoList(memoText, existingMemos, insertAtTop);
 
 				//! ファイル全体を書き込む。
 				await this.vaultHandler.writeFile(filePath, newContent);
 
-				//! キャッシュを無効化（ファイル全体のキャッシュ）。
-				const cacheKey = `${filePath}::${category}`;
+				//! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
 				notify.success("メモを追加しました");
@@ -272,22 +274,22 @@ export class MemoManager {
 				//! ファイル全体を読み込む。
 				const fileContent = await this.vaultHandler.readFile(filePath);
 
-				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				const filtered = memos.filter((memo) => !memo.includes(`memo-id: ${memoId}`));
+				//! メモを分割してCRUD操作で削除。
+				const memos = splitFileIntoMemos(fileContent);
+				const { memos: filtered, removed } = removeMemoFromList(memos, memoId);
 
-				if (filtered.length === memos.length) {
+				if (!removed) {
 					//! 削除対象が見つからなかった。
 					notify.warning("削除対象のメモが見つかりません");
 					return false;
 				}
 
 				//! ファイル全体を書き込む。
-				const newContent = filtered.join("");
+				const newContent = joinMemosToFileContent(filtered);
 				await this.vaultHandler.writeFile(filePath, newContent);
 
 				//! キャッシュを無効化。
-				const cacheKey = `${filePath}::${category}`;
+				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
 				notify.success("メモを削除しました");
@@ -304,7 +306,7 @@ export class MemoManager {
 		const result = await this.errorHandler.wrap(
 			(async () => {
 				//! キャッシュキーを生成（ファイルパス + カテゴリ）。
-				const cacheKey = `${filePath}::${category}`;
+				const cacheKey = generateCacheKey(filePath, category);
 
 				//! キャッシュをチェック。
 				const cachedMemos = await this.cacheManager.getMemos(cacheKey);
@@ -325,7 +327,7 @@ export class MemoManager {
 				}
 
 				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				const memoTexts = splitFileIntoMemos(fileContent);
 
 				//! メモエントリに変換（categoryでフィルタリング）。
 				const memos: MemoEntry[] = [];
@@ -375,37 +377,39 @@ export class MemoManager {
 				//! ファイル全体を読み込む。
 				const fileContent = await this.vaultHandler.readFile(filePath);
 
-				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				let updated = false;
+				//! メモを分割してCRUD操作で更新。
+				const memoTexts = splitFileIntoMemos(fileContent);
 
-				const newMemoTexts = memoTexts.map((memoText) => {
-					if (memoText.includes(`memo-id: ${memoId}`)) {
-						//! 対象メモを解析。
-						const memo = parseTextToMemo(memoText, category);
-						if (memo) {
-							//! 内容を更新。
-							memo.content = newContent;
-
-							//! 新しいテキストに変換。
-							updated = true;
-							return memoToText(memo, template, useTodoList);
-						}
-					}
-					return memoText;
-				});
-
-				if (!updated) {
+				//! 対象メモを検索してインデックスを取得。
+				const memoIndex = memoTexts.findIndex((text) => text.includes(`memo-id: ${memoId}`));
+				if (memoIndex === -1) {
 					notify.warning("更新対象のメモが見つかりません");
 					return false;
 				}
 
+				//! 対象メモを解析して内容を更新。
+				const memo = parseTextToMemo(memoTexts[memoIndex], category);
+				if (!memo) {
+					notify.warning("メモの解析に失敗しました");
+					return false;
+				}
+				memo.content = newContent;
+
+				//! 新しいテキストに変換してCRUD操作で更新。
+				const newMemoText = memoToText(memo, template, useTodoList);
+				const { memos: updatedMemos, updated } = updateMemoInList(memoTexts, memoId, newMemoText);
+
+				if (!updated) {
+					notify.warning("メモの更新に失敗しました");
+					return false;
+				}
+
 				//! ファイル全体を書き込む。
-				const newFileContent = newMemoTexts.join("");
+				const newFileContent = joinMemosToFileContent(updatedMemos);
 				await this.vaultHandler.writeFile(filePath, newFileContent);
 
 				//! キャッシュを無効化。
-				const cacheKey = `${filePath}::${category}`;
+				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
 				notify.success("メモを更新しました");

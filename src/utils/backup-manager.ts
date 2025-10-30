@@ -134,9 +134,34 @@ export class BackupManager {
 
 	//! Gitリポジトリかどうかを判定。
 	async isGitRepository(): Promise<boolean> {
-		//! .gitディレクトリの存在をチェック。
-		const gitDir = this.app.vault.getAbstractFileByPath(".git");
-		return gitDir instanceof TFolder;
+		try {
+			//! Vault adapter経由でファイルシステムレベルで.gitディレクトリの存在をチェック。
+			//! Obsidianの通常のAPI (.getAbstractFileByPath) は隠しファイルを返さないため、
+			//! adapter.exists()を使用する。
+			const adapter = this.app.vault.adapter;
+			const gitPath = ".git";
+
+			//! .gitディレクトリの存在確認。
+			const exists = await adapter.exists(gitPath);
+
+			if (!exists) {
+				return false;
+			}
+
+			//! .gitがディレクトリかどうか確認（stat経由）。
+			//! adapter.stat()で取得できればディレクトリとして判定。
+			try {
+				const stat = await adapter.stat(gitPath);
+				return stat?.type === "folder";
+			} catch {
+				//! statが失敗した場合でもexistsがtrueなら、
+				//! Gitリポジトリの可能性が高いと判断。
+				return true;
+			}
+		} catch (error) {
+			console.error("Failed to check git repository:", error);
+			return false;
+		}
 	}
 
 	//! バックアップ推奨メッセージを取得。

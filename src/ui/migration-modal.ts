@@ -92,32 +92,36 @@ export class MigrationConfirmModal extends Modal {
 			});
 		}
 
-		//! 変換例を表示（最初の5件）。
+		//! 変換予定を表示（全件）。
 		if (validCount > 0) {
 			const examplesDiv = contentEl.createDiv({ cls: "migration-examples" });
-			examplesDiv.createEl("h3", { text: "変換例" });
+			examplesDiv.createEl("h3", { text: "変換予定一覧" });
 
-			const exampleList = examplesDiv.createEl("ul");
+			//! スクロール可能なテーブルコンテナ。
+			const tableContainer = examplesDiv.createDiv({ cls: "migration-table-container" });
+			tableContainer.style.maxHeight = "400px";
+			tableContainer.style.overflowY = "auto";
+			tableContainer.style.border = "1px solid var(--background-modifier-border)";
+			tableContainer.style.borderRadius = "4px";
+
+			const table = tableContainer.createEl("table", { cls: "migration-table" });
+			table.style.width = "100%";
+			table.style.borderCollapse = "collapse";
+
+			//! ヘッダー。
+			const thead = table.createEl("thead");
+			const headerRow = thead.createEl("tr");
+			headerRow.createEl("th", { text: "変換前", attr: { style: "padding: 8px; border-bottom: 2px solid var(--background-modifier-border); text-align: left; position: sticky; top: 0; background: var(--background-primary);" } });
+			headerRow.createEl("th", { text: "変換後", attr: { style: "padding: 8px; border-bottom: 2px solid var(--background-modifier-border); text-align: left; position: sticky; top: 0; background: var(--background-primary);" } });
+
+			//! ボディ（全件表示）。
+			const tbody = table.createEl("tbody");
 			const validMappings = this.mappings.filter((m) => !m.hasConflict);
 
-			for (let i = 0; i < Math.min(5, validMappings.length); i++) {
-				const mapping = validMappings[i];
-				const item = exampleList.createEl("li");
-				item.createEl("div", {
-					text: `変換前: ${mapping.oldPath}`,
-					cls: "path-old",
-				});
-				item.createEl("div", {
-					text: `変換後: ${mapping.newPath}`,
-					cls: "path-new",
-				});
-			}
-
-			if (validMappings.length > 5) {
-				examplesDiv.createEl("p", {
-					text: `他 ${validMappings.length - 5}件...`,
-					cls: "more-info",
-				});
+			for (const mapping of validMappings) {
+				const row = tbody.createEl("tr");
+				row.createEl("td", { text: mapping.oldPath, attr: { style: "padding: 8px; border-bottom: 1px solid var(--background-modifier-border); font-family: monospace; font-size: 0.9em;" } });
+				row.createEl("td", { text: mapping.newPath, attr: { style: "padding: 8px; border-bottom: 1px solid var(--background-modifier-border); font-family: monospace; font-size: 0.9em;" } });
 			}
 		}
 
@@ -188,6 +192,11 @@ export class MigrationConfirmModal extends Modal {
 					.onClick(async () => {
 						await this.executeWithBackup();
 					})
+			)
+			.addButton((btn) =>
+				btn.setButtonText("バックアップのみ").onClick(async () => {
+					await this.executeBackupOnly();
+				})
 			)
 			.addButton((btn) =>
 				btn.setButtonText("バックアップせずに変換").onClick(async () => {
@@ -262,6 +271,63 @@ export class MigrationConfirmModal extends Modal {
 
 			//! 変換実行。
 			await this.onConfirm(true);
+			this.close();
+		} catch (error) {
+			notice.hide();
+			new Notice(`❌ エラー: ${error instanceof Error ? error.message : "Unknown error"}`);
+		}
+	}
+
+	//! バックアップのみを実行。
+	private async executeBackupOnly() {
+		const notice = new Notice("バックアップを作成中...", 0);
+
+		try {
+			//! 設定ファイルに古いpathFormatを一時的に書き込む。
+			await this.settingsManager.updateGlobalSettings({
+				pathFormat: this.oldPathFormat,
+			});
+
+			//! バックアップ作成。
+			const result = await this.backupManager.createZipBackup(this.rootDir);
+
+			//! 設定ファイルを新しいpathFormatに戻す。
+			await this.settingsManager.updateGlobalSettings({
+				pathFormat: this.newPathFormat,
+			});
+
+			if (!result.success) {
+				notice.hide();
+				new Notice(`❌ バックアップ失敗: ${result.error}`);
+				return;
+			}
+
+			//! バックアップメタデータを保存。
+			const metadata: BackupMetadata = {
+				timestamp: new Date().toISOString(),
+				oldPathFormat: this.oldPathFormat,
+				newPathFormat: this.newPathFormat,
+				backupPath: result.backupPath,
+				targetDirectory: this.rootDir,
+			};
+			await this.backupManager.saveMetadata(metadata);
+
+			//! .gitignoreに追加(チェックされている場合)。
+			if (this.addToGitignore) {
+				const gitignoreSuccess = await this.backupManager.addToGitignore(
+					"backup-memolog-*.zip"
+				);
+				if (gitignoreSuccess) {
+					console.log(".gitignoreにbackup-memolog-*.zipを追加しました");
+				}
+			}
+
+			notice.hide();
+			new Notice(
+				`✓ バックアップ作成完了: ${result.backupPath} (${result.fileCount}ファイル)`
+			);
+
+			//! 変換は実行せずにモーダルを閉じる。
 			this.close();
 		} catch (error) {
 			notice.hide();

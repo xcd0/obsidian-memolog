@@ -58,14 +58,6 @@ export class MemoCard {
 		this.component = new Component();
 		this.categories = categories;
 		this.useTodoList = useTodoList;
-
-		console.log("[TODO Debug MemoCard Constructor]", {
-			memoId: memo.id,
-			category: memo.category,
-			useTodoList: this.useTodoList,
-			hasOnTodoToggle: !!handlers.onTodoToggle,
-			contentStart: memo.content.substring(0, 50)
-		});
 	}
 
 	//! カードを描画する。
@@ -450,27 +442,18 @@ export class MemoCard {
 
 	//! TODOチェックボックスにイベントリスナーを追加する。
 	private attachTodoCheckboxListener(card: HTMLElement): void {
-		console.log("[TODO Debug MemoCard] attachTodoCheckboxListener呼び出し", { memoId: this.memo.id });
 		//! コンテンツ内の全てのチェックボックスを取得。
 		const checkboxes = card.querySelectorAll<HTMLInputElement>(".memolog-card-content input[type='checkbox']");
-		console.log("[TODO Debug MemoCard] チェックボックス数:", checkboxes.length);
 
 		if (checkboxes.length > 0) {
 			//! 最初のチェックボックスにイベントリスナーを追加。
 			const checkbox = checkboxes[0];
-			console.log("[TODO Debug MemoCard] チェックボックス初期状態:", { memoId: this.memo.id, checked: checkbox.checked });
 
 			checkbox.addEventListener("change", () => {
-				console.log("[TODO Debug MemoCard] チェックボックスchangeイベント発火:", { memoId: this.memo.id, checked: checkbox.checked });
 				if (this.handlers.onTodoToggle) {
-					console.log("[TODO Debug MemoCard] onTodoToggleハンドラーを呼び出し");
 					this.handlers.onTodoToggle(this.memo.id, checkbox.checked);
-				} else {
-					console.log("[TODO Debug MemoCard] onTodoToggleハンドラーが存在しません！");
 				}
 			});
-		} else {
-			console.log("[TODO Debug MemoCard] チェックボックスが見つかりません");
 		}
 	}
 

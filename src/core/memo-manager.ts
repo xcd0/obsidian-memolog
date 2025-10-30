@@ -460,10 +460,6 @@ export class MemoManager {
 
 				const newMemoTexts = memoTexts.map((memoText) => {
 					if (memoText.includes(`memo-id: ${memoId}`)) {
-						console.log("[TODO Debug] 対象メモを発見:", memoId);
-						console.log("[TODO Debug] completed:", completed);
-						console.log("[TODO Debug] 変更前のテキスト:", memoText);
-
 						updated = true;
 						let newText: string;
 						//! チェックボックスを切り替え。
@@ -476,8 +472,6 @@ export class MemoManager {
 							newText = memoText.replace(/(^|\n)-\s*\[x\]\s+/m, "$1- [ ] ");
 						}
 
-						console.log("[TODO Debug] 変更後のテキスト:", newText);
-						console.log("[TODO Debug] 変更があったか:", memoText !== newText);
 						return newText;
 					}
 					return memoText;

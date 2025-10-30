@@ -490,7 +490,7 @@ export class MemologSidebar extends ItemView {
 				const categoryDirectory = this.currentCategory;
 
 				//! 日付範囲フィルターが設定されている場合は、その範囲のメモを読み込む。
-				if (this.currentDateRange && !this.selectedDate) {
+				if (this.currentDateRange && this.currentDateRange !== "all" && !this.selectedDate) {
 					const allMemos: MemoEntry[] = [];
 
 					//! 日付範囲を計算。

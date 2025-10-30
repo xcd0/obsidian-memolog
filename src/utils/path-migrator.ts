@@ -85,6 +85,7 @@ export class PathMigrator {
 				defaultCategory
 			);
 
+			//! 古いパス書式にマッチしないファイル（nullが返される）は除外。
 			if (mapping) {
 				mappings.push(mapping);
 			}
@@ -109,6 +110,21 @@ export class PathMigrator {
 	): Promise<PathMapping | null> {
 		//! rootDirを除いたパスを取得。
 		const relativePath = filePath.substring(rootDir.length + 1);
+
+		//! 特別なファイルを除外。
+		//! rootディレクトリ直下のファイルのみチェック（サブディレクトリは対象）。
+		if (!relativePath.includes("/")) {
+			//! index.mdを除外。
+			if (relativePath === "index.md") {
+				return null;
+			}
+
+			//! _trash.md（またはその他のゴミ箱ファイル名）を除外。
+			//! ゴミ箱ファイルは通常 "_*.md" の形式を想定。
+			if (relativePath.startsWith("_") && relativePath.endsWith(".md")) {
+				return null;
+			}
+		}
 
 		//! カテゴリを推定。
 		let category: string | null = null;
@@ -142,6 +158,12 @@ export class PathMigrator {
 		//! 日付情報がまだない場合はファイル名から抽出を試みる。
 		if (!dateInfo) {
 			dateInfo = this.extractDateFromPath(relativePath);
+		}
+
+		//! 日付情報が抽出できない場合は、古いパス書式にマッチしていない可能性が高い。
+		//! このようなファイルは変換対象から除外する。
+		if (!dateInfo) {
+			return null;
 		}
 
 		//! カテゴリが特定できない場合はファイル内容から読み取る。
@@ -442,6 +464,24 @@ export class PathMigrator {
 		newUseDirectoryCategory: boolean,
 		defaultCategory: string
 	): Promise<MemoSplitMapping | null> {
+		//! rootDirを除いたパスを取得。
+		const relativePath = filePath.substring(rootDir.length + 1);
+
+		//! 特別なファイルを除外。
+		//! rootディレクトリ直下のファイルのみチェック（サブディレクトリは対象）。
+		if (!relativePath.includes("/")) {
+			//! index.mdを除外。
+			if (relativePath === "index.md") {
+				return null;
+			}
+
+			//! _trash.md（またはその他のゴミ箱ファイル名）を除外。
+			//! ゴミ箱ファイルは通常 "_*.md" の形式を想定。
+			if (relativePath.startsWith("_") && relativePath.endsWith(".md")) {
+				return null;
+			}
+		}
+
 		//! ファイルからすべてのメモを取得（カテゴリフィルタなし）。
 		const allMemos = await this.memoManager.getMemos(filePath, "");
 

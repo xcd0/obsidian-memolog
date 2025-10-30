@@ -131,11 +131,6 @@ export class CategoryTabs {
 		const iconEl = tab.createDiv({ cls: "memolog-category-tab-icon" });
 		setIcon(iconEl, "pin");
 
-		//! カテゴリ名を追加。
-		tab.createDiv({
-			cls: "memolog-category-tab-name",
-			text: "ピン留め",
-		});
 
 		//! クリックイベントを設定（ディレクトリ名"pinned"を渡す）。
 		tab.addEventListener("click", () => {

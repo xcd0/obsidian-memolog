@@ -5,7 +5,7 @@ import { CacheManager } from "./cache-manager";
 import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
-import { formatTimestamp, memoToText } from "./memo-helpers";
+import { memoToText, parseTextToMemo } from "./memo-helpers";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -26,133 +26,6 @@ export class MemoManager {
 	//! 現在のタイムスタンプを生成する。
 	private generateTimestamp(): string {
 		return new Date().toISOString();
-	}
-
-
-	//! テキスト形式からメモエントリを解析する。
-	private parseTextToMemo(text: string, category: string): MemoEntry | null {
-		//! 簡易的なパース実装（タイムスタンプと内容を分離）。
-		const lines = text.trim().split("\n");
-		if (lines.length === 0) {
-			return null;
-		}
-
-		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
-		const commentMatch = text.match(/<!-- (.+?) -->/);
-		let id = uuidv7();
-		let timestamp: string | null = null;
-		let parsedCategory: string | null = null;
-		let template: string | undefined = undefined;
-
-		if (commentMatch) {
-			const comment = commentMatch[1];
-			const idMatch = comment.match(/memo-id: ([^,]+)/);
-			const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
-			const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
-			const templateMatch = comment.match(/template: ([^,]+?)(?:,|$)/);
-
-			id = idMatch?.[1].trim() || uuidv7();
-			timestamp = timestampMatch?.[1].trim() || null;
-
-			if (categoryMatch) {
-				try {
-					parsedCategory = JSON.parse(categoryMatch[1].trim()) as string;
-				} catch (e) {
-					//! JSON.parseエラーの場合は直接使用。
-					parsedCategory = categoryMatch[1].trim();
-				}
-			}
-
-			if (templateMatch) {
-				try {
-					template = JSON.parse(templateMatch[1].trim()) as string;
-				} catch (e) {
-					//! JSON.parseエラーは無視（後方互換性）。
-					console.warn("[memolog] Failed to parse template from comment:", e);
-				}
-			}
-		}
-
-
-	//! 削除フラグとtrashedAtタイムスタンプをmemo-idヘッダーから抽出。
-	let trashedAt: string | undefined = undefined;
-	if (commentMatch) {
-		const comment = commentMatch[1];
-		const deletedMatch = comment.match(/deleted: "([^"]+)"/); 
-		const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/); 
-		if (deletedMatch && trashedAtMatch) {
-			const isDeleted = deletedMatch[1] === "true";
-			if (isDeleted) {
-				trashedAt = trashedAtMatch[1];
-			}
-		}
-	}
-
-		//! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
-		const finalCategory = parsedCategory || category;
-
-		//! HTMLコメント行をスキップ。
-		const contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
-
-		//! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
-		if (!timestamp && contentStartIndex < lines.length) {
-			const timestampLine = lines[contentStartIndex];
-			const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
-			timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : this.generateTimestamp();
-		}
-
-		//! timestampがnullの場合はデフォルト値を設定。
-		const finalTimestamp = timestamp || this.generateTimestamp();
-
-		//! 本文を抽出。
-		let content: string;
-
-		//! テンプレートに{{content}}が含まれている場合、テンプレートから{{content}}部分のみを逆算。
-		if (template && template.includes("{{content}}")) {
-			const bodyText = lines.slice(contentStartIndex).join("\n");
-
-			//! テンプレートを{{content}}で分割。
-			const parts = template.split("{{content}}");
-			const beforeContent = parts[0] ? formatTimestamp(finalTimestamp, parts[0]) : "";
-			const afterContent = parts[1] ? formatTimestamp(finalTimestamp, parts[1]) : "";
-
-			//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
-			let extracted = bodyText;
-			if (beforeContent && extracted.startsWith(beforeContent)) {
-				extracted = extracted.slice(beforeContent.length);
-			}
-			if (afterContent && extracted.endsWith(afterContent)) {
-				extracted = extracted.slice(0, -afterContent.length);
-			}
-			content = extracted.trim();
-		} else {
-			//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
-			const actualContentStartIndex = contentStartIndex + 1;
-			content = lines.slice(actualContentStartIndex).join("\n").trim();
-		}
-
-		//! コメントアウトされたコンテンツ（<!--\nCONTENT\n-->）を展開。
-		if (content.startsWith("<!--") && content.endsWith("-->")) {
-			//! HTMLコメントを削除。
-			const uncommented = content.slice(4, -3).trim();
-			content = uncommented;
-		}
-
-		//! 添付ファイルを抽出（[[filename]]形式）。
-		const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g);
-		const attachments = attachmentMatches
-			? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
-			: undefined;
-
-		return {
-			id,
-			category: finalCategory,
-			timestamp: finalTimestamp,
-			content,
-			attachments,
-			template,
-			trashedAt,
-		};
 	}
 
 	//! メモを追加する。
@@ -457,7 +330,7 @@ export class MemoManager {
 				//! メモエントリに変換（categoryでフィルタリング）。
 				const memos: MemoEntry[] = [];
 				for (const text of memoTexts) {
-					const memo = this.parseTextToMemo(text, category);
+					const memo = parseTextToMemo(text, category);
 					//! categoryが空文字の場合はフィルタリングしない（全メモを取得）。
 					if (memo && (!category || memo.category === category)) {
 						memos.push(memo);
@@ -509,7 +382,7 @@ export class MemoManager {
 				const newMemoTexts = memoTexts.map((memoText) => {
 					if (memoText.includes(`memo-id: ${memoId}`)) {
 						//! 対象メモを解析。
-						const memo = this.parseTextToMemo(memoText, category);
+						const memo = parseTextToMemo(memoText, category);
 						if (memo) {
 							//! 内容を更新。
 							memo.content = newContent;

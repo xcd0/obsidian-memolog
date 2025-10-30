@@ -10,6 +10,7 @@ import { CalendarView } from "./components/calendar-view";
 import { SearchBar } from "./components/search-bar";
 import { SearchEngine, SearchQuery } from "../core/search-engine";
 import { PathGenerator } from "../utils/path-generator";
+import { parseTextToMemo } from "../core/memo-helpers";
 
 //! サイドバーのビュータイプ。
 export const VIEW_TYPE_MEMOLOG = "memolog-sidebar";
@@ -400,7 +401,7 @@ export class MemologSidebar extends ItemView {
 					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 					for (const text of memoTexts) {
-						const memo = this.memoManager["parseTextToMemo"](text, "");
+						const memo = parseTextToMemo(text, "");
 						if (memo && memo.trashedAt) {
 							//! 削除フラグが付いているメモのみ追加。
 							allMemos.push(memo);
@@ -470,7 +471,7 @@ export class MemologSidebar extends ItemView {
 							const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 							const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 							for (const text of memoTexts) {
-								const memo = this.memoManager["parseTextToMemo"](text, "");
+								const memo = parseTextToMemo(text, "");
 								if (memo) {
 									this.memos.push(memo);
 								}
@@ -503,7 +504,7 @@ export class MemologSidebar extends ItemView {
 						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 						for (const text of memoTexts) {
-							const memo = this.memoManager["parseTextToMemo"](text, "");
+							const memo = parseTextToMemo(text, "");
 							if (memo && memo.category === categoryDirectory && !memo.trashedAt) {
 								//! カテゴリが一致し、削除されていないメモのみ追加。
 								allMemos.push(memo);
@@ -723,7 +724,7 @@ export class MemologSidebar extends ItemView {
 			const fileTimestamps: string[] = [];
 
 			for (const text of memoTexts) {
-				const memo = this.memoManager["parseTextToMemo"](text, "");
+				const memo = parseTextToMemo(text, "");
 				if (memo) {
 					fileTimestamps.push(memo.timestamp);
 				}
@@ -1585,7 +1586,7 @@ export class MemologSidebar extends ItemView {
 					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
 					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
 					for (const text of memoTexts) {
-						const memo = this.memoManager["parseTextToMemo"](text, "");
+						const memo = parseTextToMemo(text, "");
 						if (memo) {
 							allMemos.push(memo);
 						}

@@ -1505,8 +1505,11 @@ export class MemologSidebar extends ItemView {
 
 		while (currentDate <= endDate) {
 			//! 検索対象のカテゴリを決定。
+			//! "all", "pinned", "trash"の場合は全カテゴリを検索。
 			const categoriesToSearch =
-				this.currentCategory === "all" ? settings.categories : [{ directory: this.currentCategory }];
+				this.currentCategory === "all" || this.currentCategory === "pinned" || this.currentCategory === "trash"
+					? settings.categories
+					: [{ directory: this.currentCategory }];
 
 			for (const cat of categoriesToSearch) {
 				const filePath = settings.pathFormat

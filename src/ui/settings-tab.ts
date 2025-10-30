@@ -522,6 +522,8 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "/attachments", value: "/attachments" },
 			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
 			{ label: "/attachments/%Y", value: "/attachments/%Y" },
+			{ label: "./attachments/%Y-%m-%d", value: "./attachments/%Y-%m-%d" },
+			{ label: "./attachments/%Y%m%d", value: "./attachments/%Y%m%d" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

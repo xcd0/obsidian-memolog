@@ -1375,7 +1375,8 @@ export class MemologSidebar extends ItemView {
 
 	//! 日付範囲フィルター変更処理。
 	private async handleDateRangeChange(filter: import("./components/button-bar").DateRangeFilter): Promise<void> {
-		this.currentDateRange = filter;
+		//! nullが来た時は"all"に変換（両方のボタンがOFFの状態）。
+		this.currentDateRange = filter ?? "all";
 		//! カレンダーの選択をクリア。
 		this.selectedDate = null;
 		await this.loadMemos();

@@ -29,7 +29,7 @@ export interface ButtonBarHandlers {
 export class ButtonBar {
 	private handlers: ButtonBarHandlers;
 	private currentOrder: SortOrder = "asc";
-	private currentDateRange: DateRangeFilter = "today";
+	private currentDateRange: DateRangeFilter = "all";
 	private dateRangeButtons: Map<DateRangeFilter, HTMLElement> = new Map();
 
 	constructor(_container: HTMLElement, handlers: ButtonBarHandlers = {}) {

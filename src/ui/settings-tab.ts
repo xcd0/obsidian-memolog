@@ -186,8 +186,8 @@ export class MemologSettingTab extends PluginSettingTab {
 				//! リアルタイム保存 - input イベントを監視。
 				text.inputEl.addEventListener("input", () => {
 					const value = text.inputEl.value;
-					this.debounce("root-directory", async () => {
-						await saveRootDirectory(value);
+					this.debounce("root-directory", () => {
+						void saveRootDirectory(value);
 					});
 				});
 

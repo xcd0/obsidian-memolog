@@ -467,7 +467,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! 添付ファイル保存先設定。
 		const attachmentPathSetting = new Setting(containerEl)
 			.setName("添付ファイルの保存先")
-			.setDesc("画像などの添付ファイルの保存先を指定します。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。変更しても既存のファイルは移動されません。");
+			.setDesc("画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。変更しても既存のファイルは移動されません。");
 
 		const attachmentPathContainer = attachmentPathSetting.controlEl.createDiv({
 			cls: "memolog-path-format-container"
@@ -475,8 +475,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! プリセットオプション。
 		const attachmentPresets = [
-			{ label: "./attachments", value: "./attachments" },
-			{ label: "/attachments", value: "/attachments" },
+			{ label: "./attachments", value: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ" },
+			{ label: "/attachments", value: "/attachments", desc: "memologルート直下のattachmentsフォルダ" },
+			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け (例: /attachments/2025/10)" },
+			{ label: "/attachments/%Y", value: "/attachments/%Y", desc: "年ごとにフォルダ分け (例: /attachments/2025)" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。
@@ -553,7 +555,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				attr: {
 					name: "attachment-path",
 					value: preset.value,
-					id: `attachment-path-${preset.value}`
+					id: `attachment-path-${preset.value.replace(/[\/\%]/g, "-")}`
 				}
 			}) as HTMLInputElement;
 
@@ -561,13 +563,22 @@ export class MemologSettingTab extends PluginSettingTab {
 				radio.checked = true;
 			}
 
-			radioItem.createEl("label", {
+			const labelContainer = radioItem.createDiv({ cls: "memolog-path-format-label-container" });
+
+			labelContainer.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `attachment-path-${preset.value}`
+					for: `attachment-path-${preset.value.replace(/[\/\%]/g, "-")}`
 				},
 				cls: "memolog-path-format-radio-label"
 			});
+
+			if (preset.desc) {
+				labelContainer.createDiv({
+					text: preset.desc,
+					cls: "memolog-path-format-radio-desc"
+				});
+			}
 
 			radio.addEventListener("change", async () => {
 				if (radio.checked) {

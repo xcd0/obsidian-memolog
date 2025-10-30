@@ -466,8 +466,33 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! 添付ファイル保存先設定。
 		const attachmentPathSetting = new Setting(containerEl)
-			.setName("添付ファイルの保存先")
-			.setDesc("画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。変更しても既存のファイルは移動されません。");
+			.setName("添付ファイルの保存先");
+
+		//! 説明をDescエリアに追加（表形式）。
+		const attachmentPathDesc = attachmentPathSetting.descEl;
+		attachmentPathDesc.empty();
+		attachmentPathDesc.createDiv({
+			text: "画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。"
+		});
+
+		//! プリセットの説明を表形式で追加。
+		const attachmentPresetsDescTable = attachmentPathDesc.createEl("table", {
+			cls: "memolog-format-table"
+		});
+		const attachmentPresetsDescTbody = attachmentPresetsDescTable.createEl("tbody");
+
+		const attachmentPresetDescriptions = [
+			{ format: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ" },
+			{ format: "/attachments", desc: "memologルート直下のattachmentsフォルダ" },
+			{ format: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け (例: /attachments/2025/10)" },
+			{ format: "/attachments/%Y", desc: "年ごとにフォルダ分け (例: /attachments/2025)" },
+		];
+
+		for (const item of attachmentPresetDescriptions) {
+			const row = attachmentPresetsDescTbody.createEl("tr");
+			row.createEl("td", { text: item.format, cls: "memolog-format-code" });
+			row.createEl("td", { text: item.desc });
+		}
 
 		const attachmentPathContainer = attachmentPathSetting.controlEl.createDiv({
 			cls: "memolog-path-format-container"
@@ -475,10 +500,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! プリセットオプション。
 		const attachmentPresets = [
-			{ label: "./attachments", value: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ", example: "" },
-			{ label: "/attachments", value: "/attachments", desc: "memologルート直下のattachmentsフォルダ", example: "" },
-			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け", example: "例: /attachments/2025/10" },
-			{ label: "/attachments/%Y", value: "/attachments/%Y", desc: "年ごとにフォルダ分け", example: "例: /attachments/2025" },
+			{ label: "./attachments", value: "./attachments" },
+			{ label: "/attachments", value: "/attachments" },
+			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
+			{ label: "/attachments/%Y", value: "/attachments/%Y" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。
@@ -572,20 +597,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				},
 				cls: "memolog-path-format-radio-label"
 			});
-
-			if (preset.desc) {
-				const descContainer = labelContainer.createDiv({
-					cls: "memolog-path-format-radio-desc"
-				});
-				descContainer.createSpan({ text: preset.desc });
-
-				if (preset.example) {
-					descContainer.createSpan({
-						text: ` ${preset.example}`,
-						cls: "memolog-path-format-radio-example"
-					});
-				}
-			}
 
 			radio.addEventListener("change", async () => {
 				if (radio.checked) {

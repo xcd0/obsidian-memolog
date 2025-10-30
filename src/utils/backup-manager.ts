@@ -1,5 +1,13 @@
 import { App, TFile, TFolder } from "obsidian";
 import JSZip from "jszip";
+import {
+	generateBackupName,
+	filterBackupFiles,
+	getBackupRecommendationMessage,
+	getMetadataPath,
+	sortBackupsByDate,
+	getOldBackupsToDelete,
+} from "./backup-helpers";
 
 //! バックアップ結果。
 export interface BackupResult {
@@ -58,8 +66,7 @@ export class BackupManager {
 
 		try {
 			//! バックアップ名を生成。
-			const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-			const zipName = backupName || `backup-${targetDir.replace(/\//g, "-")}-${timestamp}.zip`;
+			const zipName = backupName || generateBackupName(targetDir);
 			result.backupPath = zipName;
 
 			//! JSZipインスタンスを作成。
@@ -167,18 +174,13 @@ export class BackupManager {
 	//! バックアップ推奨メッセージを取得。
 	async getBackupRecommendation(): Promise<string> {
 		const isGit = await this.isGitRepository();
-
-		if (isGit) {
-			return "このVaultはGit管理されているようです。Gitでバックアップされている場合、ZIPバックアップは不要かもしれません。";
-		} else {
-			return "このVaultはGit管理されていないようです。ZIPバックアップを作成することを強く推奨します。";
-		}
+		return getBackupRecommendationMessage(isGit);
 	}
 
 	//! バックアップ一覧を取得。
 	listBackups(pattern = "backup-"): TFile[] {
 		const allFiles = this.app.vault.getFiles();
-		return allFiles.filter((file) => file.name.startsWith(pattern) && file.name.endsWith(".zip"));
+		return filterBackupFiles(allFiles, pattern);
 	}
 
 	//! 古いバックアップを削除。
@@ -186,16 +188,16 @@ export class BackupManager {
 		const backups = this.listBackups(pattern);
 
 		//! 日付でソート（新しい順）。
-		backups.sort((a, b) => b.stat.mtime - a.stat.mtime);
+		const sortedBackups = sortBackupsByDate(backups);
 
 		//! 古いバックアップを削除。
-		let deletedCount = 0;
-		for (let i = maxBackups; i < backups.length; i++) {
-			await this.app.vault.delete(backups[i]);
-			deletedCount++;
+		const toDelete = getOldBackupsToDelete(sortedBackups, maxBackups);
+
+		for (const backup of toDelete) {
+			await this.app.vault.delete(backup);
 		}
 
-		return deletedCount;
+		return toDelete.length;
 	}
 
 	//! バックアップからリストア（ZIPの中身を確認する機能）。
@@ -221,14 +223,14 @@ export class BackupManager {
 
 	//! バックアップメタデータを保存。
 	async saveMetadata(metadata: BackupMetadata): Promise<void> {
-		const metadataPath = metadata.backupPath.replace(/\.zip$/, ".json");
+		const metadataPath = getMetadataPath(metadata.backupPath);
 		const jsonContent = JSON.stringify(metadata, null, 2);
 		await this.app.vault.create(metadataPath, jsonContent);
 	}
 
 	//! バックアップメタデータを読み込み。
 	async loadMetadata(zipPath: string): Promise<BackupMetadata | null> {
-		const metadataPath = zipPath.replace(/\.zip$/, ".json");
+		const metadataPath = getMetadataPath(zipPath);
 		const file = this.app.vault.getAbstractFileByPath(metadataPath);
 
 		if (!(file instanceof TFile)) {
@@ -257,9 +259,13 @@ export class BackupManager {
 		}
 
 		//! 日付でソート（新しい順）。
-		results.sort((a, b) => b.file.stat.mtime - a.file.stat.mtime);
+		const sortedFiles = sortBackupsByDate(results.map((r) => r.file));
+		const sortedResults = sortedFiles.map((file) => {
+			const result = results.find((r) => r.file === file);
+			return result!;
+		});
 
-		return results;
+		return sortedResults;
 	}
 
 	//! ZIPバックアップからリストア。

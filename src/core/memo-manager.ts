@@ -5,6 +5,7 @@ import { CacheManager } from "./cache-manager";
 import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
+import { formatTimestamp, memoToText } from "./memo-helpers";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -27,86 +28,6 @@ export class MemoManager {
 		return new Date().toISOString();
 	}
 
-	//! タイムスタンプをフォーマットする（Linuxのdateコマンド書式に対応）。
-	private formatTimestamp(timestamp: string, format: string): string {
-		const date = new Date(timestamp);
-
-		//! 月名（日本語）。
-		const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月",
-			"7月", "8月", "9月", "10月", "11月", "12月"];
-		const monthNamesShort = ["1月", "2月", "3月", "4月", "5月", "6月",
-			"7月", "8月", "9月", "10月", "11月", "12月"];
-
-		//! 曜日名（日本語）。
-		const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
-		const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"];
-
-		//! 12時間形式の時。
-		const hours12 = date.getHours() % 12 || 12;
-
-		//! 曜日（1-7、月曜日=1）。
-		const dayOfWeek = date.getDay();
-		const isoWeekday = dayOfWeek === 0 ? 7 : dayOfWeek;
-
-		//! 置換マップ（順序が重要: 長いパターンを先に置換）。
-		const replacements: Record<string, string> = {
-			"%Y": date.getFullYear().toString(),
-			"%y": date.getFullYear().toString().slice(-2),
-			"%B": monthNames[date.getMonth()],
-			"%b": monthNamesShort[date.getMonth()],
-			"%m": (date.getMonth() + 1).toString().padStart(2, "0"),
-			"%d": date.getDate().toString().padStart(2, "0"),
-			"%A": dayNames[dayOfWeek],
-			"%a": dayNamesShort[dayOfWeek],
-			"%u": isoWeekday.toString(),
-			"%H": date.getHours().toString().padStart(2, "0"),
-			"%I": hours12.toString().padStart(2, "0"),
-			"%M": date.getMinutes().toString().padStart(2, "0"),
-			"%S": date.getSeconds().toString().padStart(2, "0"),
-			"%s": Math.floor(date.getTime() / 1000).toString(),
-		};
-
-		let formatted = format;
-		//! %B, %A を先に置換（%b, %a と衝突しないように）。
-		for (const [key, value] of Object.entries(replacements)) {
-			formatted = formatted.replace(new RegExp(key, "g"), value);
-		}
-
-		return formatted;
-	}
-
-	//! メモエントリをテキスト形式に変換する。
-	private memoToText(memo: MemoEntry, template?: string, useTodoList = false): string {
-		//! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
-		const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M";
-		const formattedTemplate = this.formatTimestamp(memo.timestamp, actualTemplate);
-		const content = memo.content;
-		const attachments =
-			memo.attachments && memo.attachments.length > 0
-				? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
-				: "";
-
-		//! ボディを構築。
-		let body: string;
-		if (actualTemplate.includes("{{content}}")) {
-			//! テンプレート内の{{content}}を実際のメモ内容に置換。
-			body = formattedTemplate.replace(/\{\{content\}\}/g, content);
-		} else {
-			//! テンプレートに{{content}}がない場合は、タイムスタンプの後に改行してcontentを追加。
-			body = `${formattedTemplate}\n${content}`;
-		}
-
-		//! TODOリストの場合、チェックボックスを追加（contentに既にない場合のみ）。
-		if (useTodoList && !/^-\s*\[([x ])\]\s+/.test(content)) {
-			body = "- [ ] " + body.replace(/\n/g, "\n  ");
-		}
-
-		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントとして埋め込む。
-		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
-		const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
-		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
-	}
 
 	//! テキスト形式からメモエントリを解析する。
 	private parseTextToMemo(text: string, category: string): MemoEntry | null {
@@ -192,8 +113,8 @@ export class MemoManager {
 
 			//! テンプレートを{{content}}で分割。
 			const parts = template.split("{{content}}");
-			const beforeContent = parts[0] ? this.formatTimestamp(finalTimestamp, parts[0]) : "";
-			const afterContent = parts[1] ? this.formatTimestamp(finalTimestamp, parts[1]) : "";
+			const beforeContent = parts[0] ? formatTimestamp(finalTimestamp, parts[0]) : "";
+			const afterContent = parts[1] ? formatTimestamp(finalTimestamp, parts[1]) : "";
 
 			//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
 			let extracted = bodyText;
@@ -259,7 +180,7 @@ export class MemoManager {
 				};
 
 				//! メモをテキスト形式に変換。
-				const memoText = this.memoToText(memo, template, useTodoList);
+				const memoText = memoToText(memo, template, useTodoList);
 
 				//! ファイルが存在しない場合は空として扱う。
 				const fileExists = this.vaultHandler.fileExists(filePath);
@@ -595,7 +516,7 @@ export class MemoManager {
 
 							//! 新しいテキストに変換。
 							updated = true;
-							return this.memoToText(memo, template, useTodoList);
+							return memoToText(memo, template, useTodoList);
 						}
 					}
 					return memoText;

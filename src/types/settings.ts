@@ -122,7 +122,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	searchHistoryMaxSize: 50,
 	showAllTab: true,
 	enableTrash: false,
-	trashFilePath: ".trash",
+	trashFilePath: "_trash",
 	trashRetentionDays: 30,
 	showTrashTab: false,
 };

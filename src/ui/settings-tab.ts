@@ -1228,11 +1228,11 @@ export class MemologSettingTab extends PluginSettingTab {
 			.setDesc("ゴミ箱として使用するファイルパス（rootDirectoryからの相対パス、拡張子なし）")
 			.addText((text) =>
 				text
-					.setPlaceholder(".trash")
+					.setPlaceholder("_trash")
 					.setValue(settings.trashFilePath)
 					.onChange(async (value) => {
 						await this.plugin.settingsManager.updateGlobalSettings({
-							trashFilePath: value || ".trash",
+							trashFilePath: value || "_trash",
 						});
 					})
 			);

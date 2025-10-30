@@ -622,6 +622,8 @@ export class MemologSidebar extends ItemView {
 			if (this.memoList) {
 				//! ゴミ箱表示フラグを設定。
 				this.memoList.setIsTrash(this.currentCategory === "trash");
+				//! ピン留めIDリストを更新。
+				this.memoList.updatePinnedMemoIds(settings.pinnedMemoIds);
 				this.memoList.updateMemos(displayMemos);
 				//! 最新メモが表示されるようにスクロール。
 				this.memoList.scrollToLatest(this.currentOrder);

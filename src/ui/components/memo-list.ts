@@ -109,6 +109,11 @@ export class MemoList {
 		this.isTrash = isTrash;
 	}
 
+	//! ピン留めIDリストを更新する。
+	updatePinnedMemoIds(pinnedMemoIds: string[]): void {
+		this.pinnedMemoIds = pinnedMemoIds;
+	}
+
 	//! 最新のメモが表示される位置にスクロールする。
 	scrollToLatest(order: SortOrder): void {
 		//! レンダリング完了を待つ。

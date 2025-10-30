@@ -1158,6 +1158,32 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 		);
 
+		//! 全カテゴリタブ表示設定。
+		new Setting(containerEl)
+			.setName("Allタブを表示")
+			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showAllTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showAllTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
+
+		//! ピン留めタブ表示設定。
+		new Setting(containerEl)
+			.setName("ピン留めタブを表示")
+			.setDesc("ピン留めされた投稿を表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showPinnedTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showPinnedTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
+
 		//! デフォルトカテゴリ設定。
 		const defaultCategorySetting = new Setting(containerEl)
 			.setName("デフォルトカテゴリ")
@@ -1256,32 +1282,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				this.refreshSidebar();
 			});
 		}
-
-		//! 全カテゴリタブ表示設定。
-		new Setting(containerEl)
-			.setName("Allタブを表示")
-			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showAllTab).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						showAllTab: value,
-					});
-					this.refreshSidebar();
-				})
-			);
-
-		//! ピン留めタブ表示設定。
-		new Setting(containerEl)
-			.setName("ピン留めタブを表示")
-			.setDesc("ピン留めされた投稿を表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showPinnedTab).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						showPinnedTab: value,
-					});
-					this.refreshSidebar();
-				})
-			);
 	}
 
 	//! カテゴリアイテムを追加する。

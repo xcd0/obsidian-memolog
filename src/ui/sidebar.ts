@@ -396,7 +396,7 @@ export class MemologSidebar extends ItemView {
 				this.sortMemos();
 			} else if (this.currentCategory === "all") {
 				//! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。
-				if (this.currentDateRange) {
+				if (this.currentDateRange && this.currentDateRange !== "all") {
 					let startDate: string | undefined;
 					let endDate: string | undefined;
 

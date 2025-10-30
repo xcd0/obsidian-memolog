@@ -11,6 +11,7 @@ export class MemoList {
 	private enableDailyNotes: boolean;
 	private sourcePath: string;
 	private categories: CategoryConfig[];
+	private isTrash: boolean;
 
 	constructor(
 		app: App,
@@ -19,7 +20,8 @@ export class MemoList {
 		handlers: MemoCardHandlers = {},
 		enableDailyNotes = false,
 		sourcePath = "",
-		categories: CategoryConfig[] = []
+		categories: CategoryConfig[] = [],
+		isTrash = false
 	) {
 		this.app = app;
 		this.container = container;
@@ -28,6 +30,7 @@ export class MemoList {
 		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
 		this.categories = categories;
+		this.isTrash = isTrash;
 	}
 
 	//! メモリストを描画する。
@@ -55,7 +58,8 @@ export class MemoList {
 				this.enableDailyNotes,
 				this.sourcePath,
 				this.categories,
-				memoUseTodoList
+				memoUseTodoList,
+				this.isTrash
 			);
 			card.render();
 		}
@@ -91,6 +95,11 @@ export class MemoList {
 	clear(): void {
 		this.memos = [];
 		this.render();
+	}
+
+	//! ゴミ箱表示フラグを設定する。
+	setIsTrash(isTrash: boolean): void {
+		this.isTrash = isTrash;
 	}
 
 	//! 最新のメモが表示される位置にスクロールする。

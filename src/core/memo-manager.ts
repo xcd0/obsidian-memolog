@@ -1,10 +1,11 @@
 import { App } from "obsidian";
-import { MemoEntry, SortOrder } from "../types";
+import { MemoEntry, SortOrder, SaveUnit } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CacheManager } from "./cache-manager";
 import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
+import { PathGenerator } from "../utils/path-generator";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -391,6 +392,103 @@ export class MemoManager {
 				return true;
 			})(),
 			{ filePath, category, memoId, rootDirectory, trashFilePath, context: "MemoManager.moveToTrash" }
+		);
+
+		return result.success && result.data ? result.data : false;
+	}
+
+	//! ゴミ箱からメモを復活させる。
+	async restoreFromTrash(
+		memoId: string,
+		rootDirectory: string,
+		trashFilePath: string,
+		pathFormat: string,
+		saveUnit: SaveUnit,
+		useDirectoryCategory: boolean
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! ゴミ箱ファイルが存在しない場合はfalseを返す。
+				const trashFullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
+				const fileExists = this.vaultHandler.fileExists(trashFullPath);
+				if (!fileExists) {
+					notify.warning("ゴミ箱ファイルが見つかりません");
+					return false;
+				}
+
+				//! ゴミ箱ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(trashFullPath);
+
+				//! メモを分割。
+				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				let targetMemo: string | null = null;
+				const filtered = memos.filter((memo) => {
+					if (memo.includes(`memo-id: ${memoId}`)) {
+						targetMemo = memo;
+						return false;
+					}
+					return true;
+				});
+
+				if (!targetMemo) {
+					notify.warning("復活対象のメモが見つかりません");
+					return false;
+				}
+
+				//! ゴミ箱ファイルから削除。
+				const newContent = filtered.join("");
+				await this.vaultHandler.writeFile(trashFullPath, newContent);
+
+				//! メモからcategoryとtimestampを抽出。
+				const categoryMatch = (targetMemo as string).match(/category: "([^"]+)"/);
+				const timestampMatch = (targetMemo as string).match(/timestamp: ([^,]+)/);
+
+				if (!categoryMatch || !timestampMatch) {
+					notify.warning("メモのメタデータが不正です");
+					return false;
+				}
+
+				const category = categoryMatch[1];
+				const timestamp = timestampMatch[1];
+
+				//! trashedAtを削除。
+				const restoredMemo = (targetMemo as string).replace(/\n<!-- trashedAt: "[^"]*" -->/, "");
+
+				//! 元のファイルパスを生成。
+				const targetDate = new Date(timestamp);
+				const targetFilePath = pathFormat
+					? PathGenerator.generateCustomPath(
+							rootDirectory,
+							category,
+							pathFormat,
+							useDirectoryCategory,
+							targetDate
+						)
+					: PathGenerator.generateFilePath(
+							rootDirectory,
+							category,
+							saveUnit,
+							useDirectoryCategory,
+							targetDate
+						);
+
+				//! 元ファイルに追記。
+				const targetFileExists = this.vaultHandler.fileExists(targetFilePath);
+				if (targetFileExists) {
+					const targetContent = await this.vaultHandler.readFile(targetFilePath);
+					await this.vaultHandler.writeFile(targetFilePath, targetContent + "\n" + restoredMemo);
+				} else {
+					await this.vaultHandler.writeFile(targetFilePath, restoredMemo);
+				}
+
+				//! キャッシュを無効化。
+				const cacheKey = `${targetFilePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				notify.success("メモを復活しました");
+				return true;
+			})(),
+			{ memoId, rootDirectory, trashFilePath, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" }
 		);
 
 		return result.success && result.data ? result.data : false;

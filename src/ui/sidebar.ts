@@ -324,10 +324,12 @@ export class MemologSidebar extends ItemView {
 				onImagePaste: (file) => this.handleImagePaste(file),
 				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
 				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
+				onRestore: (memoId) => void this.handleRestore(memoId),
 			},
 			settings.enableDailyNotes,
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
-			settings.categories
+			settings.categories,
+			false //! 初期状態ではゴミ箱表示ではない。
 		);
 		this.memoList.render();
 
@@ -565,6 +567,8 @@ export class MemologSidebar extends ItemView {
 
 			//! メモリストを更新。
 			if (this.memoList) {
+				//! ゴミ箱表示フラグを設定。
+				this.memoList.setIsTrash(this.currentCategory === "trash");
 				this.memoList.updateMemos(displayMemos);
 				//! 最新メモが表示されるようにスクロール。
 				this.memoList.scrollToLatest(this.currentOrder);
@@ -943,47 +947,55 @@ export class MemologSidebar extends ItemView {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 
-			//! メモのタイムスタンプから日付を取得。
-			const memoDate = new Date(memo.timestamp);
+			let deleted = false;
 
-			//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
+			//! ゴミ箱タブからの削除の場合は完全削除。
+			if (this.currentCategory === "trash") {
+				const trashFilePath = `${settings.rootDirectory}/${settings.trashFilePath}.md`;
+				deleted = await this.memoManager.deleteMemo(trashFilePath, memo.category, memoId);
+			} else {
+				//! 通常のカテゴリからの削除。
+				//! メモのタイムスタンプから日付を取得。
+				const memoDate = new Date(memo.timestamp);
+
+				//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
+				const filePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							memo.category,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							memoDate
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							memo.category,
+							settings.saveUnit,
+							settings.useDirectoryCategory,
+							memoDate
+						);
+
+				//! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
+				if (settings.enableTrash) {
+					//! 期限切れのゴミ箱メモを削除。
+					await this.memoManager.cleanupExpiredTrash(
 						settings.rootDirectory,
-						memo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate
-					)
-				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						memo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate
+						settings.trashFilePath,
+						settings.trashRetentionDays
 					);
 
-			//! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
-			let deleted = false;
-			if (settings.enableTrash) {
-				//! 期限切れのゴミ箱メモを削除。
-				await this.memoManager.cleanupExpiredTrash(
-					settings.rootDirectory,
-					settings.trashFilePath,
-					settings.trashRetentionDays
-				);
-
-				//! ゴミ箱に移動。
-				deleted = await this.memoManager.moveToTrash(
-					filePath,
-					memo.category,
-					memoId,
-					settings.rootDirectory,
-					settings.trashFilePath
-				);
-			} else {
-				//! 完全削除。
-				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+					//! ゴミ箱に移動。
+					deleted = await this.memoManager.moveToTrash(
+						filePath,
+						memo.category,
+						memoId,
+						settings.rootDirectory,
+						settings.trashFilePath
+					);
+				} else {
+					//! 完全削除。
+					deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+				}
 			}
 
 			if (deleted) {
@@ -993,6 +1005,32 @@ export class MemologSidebar extends ItemView {
 		} catch (error) {
 			console.error("メモ削除エラー:", error);
 			new Notice("メモの削除に失敗しました");
+		}
+	}
+
+	//! メモ復活処理。
+	private async handleRestore(memoId: string): Promise<void> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+
+			//! ゴミ箱から復活。
+			const restored = await this.memoManager.restoreFromTrash(
+				memoId,
+				settings.rootDirectory,
+				settings.trashFilePath,
+				settings.pathFormat,
+				settings.saveUnit,
+				settings.useDirectoryCategory
+			);
+
+			if (restored) {
+				//! メモリストを再読み込み。
+				await this.loadMemos();
+			}
+		} catch (error) {
+			console.error("メモ復活エラー:", error);
+			new Notice("メモの復活に失敗しました");
 		}
 	}
 

@@ -23,6 +23,9 @@ export interface MemoCardHandlers {
 
 	//! TODO完了状態変更時のハンドラー。
 	onTodoToggle?: (memoId: string, completed: boolean) => void;
+
+	//! ゴミ箱から復活ボタンクリック時のハンドラー。
+	onRestore?: (memoId: string) => void;
 }
 
 //! メモカードコンポーネント。
@@ -38,6 +41,7 @@ export class MemoCard {
 	private component: Component;
 	private categories: CategoryConfig[];
 	private useTodoList: boolean;
+	private isTrash: boolean;
 
 	constructor(
 		app: App,
@@ -47,7 +51,8 @@ export class MemoCard {
 		enableDailyNotes = false,
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
-		useTodoList = false
+		useTodoList = false,
+		isTrash = false
 	) {
 		this.app = app;
 		this.container = container;
@@ -58,6 +63,7 @@ export class MemoCard {
 		this.component = new Component();
 		this.categories = categories;
 		this.useTodoList = useTodoList;
+		this.isTrash = isTrash;
 	}
 
 	//! カードを描画する。
@@ -160,15 +166,31 @@ export class MemoCard {
 			}
 		});
 
-		//! 編集ボタン。
-		const editBtn = actions.createEl("button", {
-			cls: "memolog-btn memolog-btn-edit",
-			attr: { "aria-label": "編集" },
-		});
-		setIcon(editBtn, "pencil");
-		editBtn.addEventListener("click", () => {
-			this.toggleEditMode();
-		});
+		//! 編集ボタン（ゴミ箱以外）。
+		if (!this.isTrash) {
+			const editBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-edit",
+				attr: { "aria-label": "編集" },
+			});
+			setIcon(editBtn, "pencil");
+			editBtn.addEventListener("click", () => {
+				this.toggleEditMode();
+			});
+		}
+
+		//! 復活ボタン（ゴミ箱のみ）。
+		if (this.isTrash && this.handlers.onRestore) {
+			const restoreBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-restore",
+				attr: { "aria-label": "復活" },
+			});
+			setIcon(restoreBtn, "rotate-ccw");
+			restoreBtn.addEventListener("click", () => {
+				if (this.handlers.onRestore) {
+					this.handlers.onRestore(this.memo.id);
+				}
+			});
+		}
 
 		//! 削除ボタン。
 		const deleteBtn = actions.createEl("button", {

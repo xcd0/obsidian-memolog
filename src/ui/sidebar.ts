@@ -1309,17 +1309,11 @@ export class MemologSidebar extends ItemView {
 	}
 
 	//! ソート順変更処理。
-	private handleSortOrderChange(order: SortOrder): void {
+	private async handleSortOrderChange(order: SortOrder): Promise<void> {
 		this.currentOrder = order;
 
-		//! メモをソート。
-		this.sortMemos();
-
-		if (this.memoList) {
-			this.memoList.updateMemos(this.memos);
-			//! 最新メモが表示されるようにスクロール。
-			this.memoList.scrollToLatest(this.currentOrder);
-		}
+		//! メモを再読み込みして、ピン留めメモも含めて正しく表示する。
+		await this.loadMemos();
 
 		//! 入力エリアの位置を更新。
 		this.updateInputAreaPosition();

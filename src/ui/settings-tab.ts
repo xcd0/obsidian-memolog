@@ -224,18 +224,6 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! ディレクトリでカテゴリ分離設定。
-		new Setting(containerEl)
-			.setName("ディレクトリでカテゴリ分離")
-			.setDesc("カテゴリごとに別のディレクトリに保存する")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.useDirectoryCategory).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						useDirectoryCategory: value,
-					});
-				})
-			);
-
 		//! Daily Notes連携設定。
 		new Setting(containerEl)
 			.setName("Daily Notes連携")

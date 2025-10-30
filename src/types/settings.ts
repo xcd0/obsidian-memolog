@@ -64,6 +64,18 @@ export interface GlobalSettings {
 
 	//! 全カテゴリ表示タブ（all）を表示するか。
 	showAllTab: boolean;
+
+	//! ゴミ箱機能を有効化するか。
+	enableTrash: boolean;
+
+	//! ゴミ箱ファイル名（拡張子なし）。
+	trashFileName: string;
+
+	//! ゴミ箱の保持期間（日数）。
+	trashRetentionDays: number;
+
+	//! ゴミ箱タブを表示するか。
+	showTrashTab: boolean;
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -109,4 +121,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	attachmentNameFormat: "pasted-%s-%f%e",
 	searchHistoryMaxSize: 50,
 	showAllTab: true,
+	enableTrash: false,
+	trashFileName: "trash",
+	trashRetentionDays: 30,
+	showTrashTab: false,
 };

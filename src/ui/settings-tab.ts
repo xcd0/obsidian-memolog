@@ -1209,6 +1209,64 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.refreshSidebar();
 				})
 			);
+
+		//! ゴミ箱機能設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱機能を有効化")
+			.setDesc("削除したメモをゴミ箱ファイルに移動します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.enableTrash).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						enableTrash: value,
+					});
+				})
+			);
+
+		//! ゴミ箱ファイル名設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱ファイル名")
+			.setDesc("ゴミ箱として使用するファイル名（拡張子なし）")
+			.addText((text) =>
+				text
+					.setPlaceholder("trash")
+					.setValue(settings.trashFileName)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							trashFileName: value || "trash",
+						});
+					})
+			);
+
+		//! ゴミ箱保持期間設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱保持期間（日数）")
+			.setDesc("ゴミ箱内のメモを保持する期間（日数）。この期間を過ぎたメモは自動的に削除されます")
+			.addText((text) =>
+				text
+					.setPlaceholder("30")
+					.setValue(String(settings.trashRetentionDays))
+					.onChange(async (value) => {
+						const days = parseInt(value, 10);
+						if (!isNaN(days) && days > 0) {
+							await this.plugin.settingsManager.updateGlobalSettings({
+								trashRetentionDays: days,
+							});
+						}
+					})
+			);
+
+		//! ゴミ箱タブ表示設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱タブを表示")
+			.setDesc("ゴミ箱内のメモを表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showTrashTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showTrashTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
 	}
 
 	//! カテゴリアイテムを追加する。

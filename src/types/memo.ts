@@ -23,6 +23,9 @@ export interface MemoEntry {
 
 	//! 更新日時（Date型）。
 	updatedAt?: Date;
+
+	//! ゴミ箱に移動した日時（ISO 8601形式）。
+	trashedAt?: string;
 }
 
 //! メモの挿入位置。

@@ -33,6 +33,24 @@ export class SettingsManager {
 		return `${this.globalSettings.rootDirectory}/${SettingsManager.GLOBAL_SETTINGS_FILENAME}`;
 	}
 
+	//! Vault内から設定ファイルを探索する（最大3階層まで）。
+	private async findSettingsFile(filename: string, maxDepth: number = 3): Promise<string | null> {
+		const allFiles = this.app.vault.getFiles();
+
+		for (const file of allFiles) {
+			//! ファイル名が一致するか確認。
+			if (file.name === filename) {
+				//! パスの深さを確認（階層数）。
+				const depth = file.path.split("/").length - 1;
+				if (depth <= maxDepth) {
+					return file.path;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	//! グローバル設定を更新する。
 	async updateGlobalSettings(settings: Partial<GlobalSettings>): Promise<void> {
 		this.globalSettings = { ...this.globalSettings, ...settings };
@@ -42,25 +60,46 @@ export class SettingsManager {
 	//! グローバル設定を読み込む。
 	async loadGlobalSettings(): Promise<void> {
 		try {
-			//! デフォルトのrootDirectoryでパスを構築。
-			const defaultPath = `${DEFAULT_GLOBAL_SETTINGS.rootDirectory}/${SettingsManager.GLOBAL_SETTINGS_FILENAME}`;
-			const defaultOldPath = `${DEFAULT_GLOBAL_SETTINGS.rootDirectory}/${SettingsManager.OLD_GLOBAL_SETTINGS_FILENAME}`;
+			//! まず、Vault内から設定ファイルを探索（最大3階層）。
+			let foundPath = await this.findSettingsFile(SettingsManager.GLOBAL_SETTINGS_FILENAME);
 
-			//! 新しい設定ファイルを確認。
-			const file = this.app.vault.getAbstractFileByPath(defaultPath);
+			if (!foundPath) {
+				//! 新しい設定ファイルが見つからない場合、デフォルトパスで確認。
+				const defaultPath = `${DEFAULT_GLOBAL_SETTINGS.rootDirectory}/${SettingsManager.GLOBAL_SETTINGS_FILENAME}`;
+				const file = this.app.vault.getAbstractFileByPath(defaultPath);
+				if (file instanceof TFile) {
+					foundPath = defaultPath;
+				}
+			}
 
-			if (file instanceof TFile) {
-				//! 新しいファイルが存在する場合は読み込む。
-				const content = await this.app.vault.read(file);
-				const parsed = JSON.parse(content) as Partial<GlobalSettings>;
-				this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
-			} else {
-				//! 新しいファイルが存在しない場合、古いファイルからマイグレーション。
+			if (foundPath) {
+				//! 設定ファイルが見つかった場合は読み込む。
+				const file = this.app.vault.getAbstractFileByPath(foundPath);
+				if (file instanceof TFile) {
+					const content = await this.app.vault.read(file);
+					const parsed = JSON.parse(content) as Partial<GlobalSettings>;
+					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					return;
+				}
+			}
+
+			//! 新しい設定ファイルが見つからない場合、古いファイルを探索。
+			let oldFoundPath = await this.findSettingsFile(SettingsManager.OLD_GLOBAL_SETTINGS_FILENAME);
+
+			if (!oldFoundPath) {
+				//! 古いファイルもデフォルトパスで確認。
+				const defaultOldPath = `${DEFAULT_GLOBAL_SETTINGS.rootDirectory}/${SettingsManager.OLD_GLOBAL_SETTINGS_FILENAME}`;
 				const oldFile = this.app.vault.getAbstractFileByPath(defaultOldPath);
-
 				if (oldFile instanceof TFile) {
-					//! 古いファイルが存在する場合、内容を読み込んで新しいファイルに保存。
-					console.log("Migrating settings from global-setting.json to memolog-setting.json");
+					oldFoundPath = defaultOldPath;
+				}
+			}
+
+			if (oldFoundPath) {
+				//! 古いファイルが見つかった場合、マイグレーション。
+				const oldFile = this.app.vault.getAbstractFileByPath(oldFoundPath);
+				if (oldFile instanceof TFile) {
+					console.log(`Migrating settings from ${oldFoundPath} to new format`);
 					const content = await this.app.vault.read(oldFile);
 					const parsed = JSON.parse(content) as Partial<GlobalSettings>;
 					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
@@ -69,11 +108,12 @@ export class SettingsManager {
 					//! 古いファイルを削除。
 					await this.app.vault.delete(oldFile);
 					console.log("Settings migration completed");
-				} else {
-					//! どちらのファイルも存在しない場合はデフォルト設定で初期化。
-					await this.saveGlobalSettings();
+					return;
 				}
 			}
+
+			//! どちらのファイルも見つからない場合はデフォルト設定で初期化。
+			await this.saveGlobalSettings();
 		} catch (error) {
 			console.error("Failed to load global settings:", error);
 			//! エラー時はデフォルト設定を使用。

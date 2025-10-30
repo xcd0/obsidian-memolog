@@ -44,9 +44,13 @@ export class MemologSidebar extends ItemView {
 	private calendarVisible: boolean = false;
 	private searchVisible: boolean = false;
 	private currentSearchQuery: SearchQuery | null = null;
+	private showCompletedTodos: boolean = false; //! 完了済みTODOの表示状態（一時的）。
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
+
+	//! UI要素への参照（TODOボタン用）。
+	private todoToggleBtn: HTMLElement | null = null;
 
 	//! ファイル変更監視用のイベントリファレンス。
 	private fileModifyRef: EventRef | null = null;
@@ -162,6 +166,9 @@ export class MemologSidebar extends ItemView {
 		//! 検索バー配置用の空白エリア（SearchBarコンポーネントがここに入る）。
 		topRow.createDiv({ cls: "memolog-search-bar-placeholder" });
 
+		//! TODO完了済み表示切り替えボタン（TODOリストカテゴリの場合のみ表示）。
+		topRow.createDiv({ cls: "memolog-todo-toggle-btn" });
+
 		//! 検索ボタン。
 		topRow.createDiv({ cls: "memolog-search-btn" });
 
@@ -256,6 +263,13 @@ export class MemologSidebar extends ItemView {
 			const sortBtnWrapper = categoryTabsArea.querySelector(
 				".memolog-sort-btn-wrapper"
 			) as HTMLElement;
+			const todoToggleBtn = categoryTabsArea.querySelector(
+				".memolog-todo-toggle-btn"
+			) as HTMLElement;
+
+			//! TODO完了済み表示切り替えボタンを初期化。
+			this.todoToggleBtn = todoToggleBtn;
+			this.initializeTodoToggleButton(todoToggleBtn);
 
 			//! ボタンバーを初期化（ハンバーガー、日付範囲フィルター、検索、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsArea, {
@@ -555,15 +569,18 @@ export class MemologSidebar extends ItemView {
 				displayMemos = result.matches;
 			}
 
-			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを非表示にする。
+			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
 			if (this.currentCategory !== "all") {
 				const settings = this.plugin.settingsManager.getGlobalSettings();
 				const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
-				if (categoryConfig?.useTodoList) {
-					//! チェック済み（content が - [x] で始まる）のメモを除外。
+				if (categoryConfig?.useTodoList && !this.showCompletedTodos) {
+					//! showCompletedTodosがfalseの場合のみ、チェック済み（content が - [x] で始まる）のメモを除外。
 					displayMemos = displayMemos.filter((m) => !/^-\s*\[x\]\s+/.test(m.content));
 				}
 			}
+
+			//! TODO完了済み表示ボタンの表示/非表示を更新。
+			this.updateTodoToggleButtonVisibility();
 
 			//! メモリストを更新。
 			if (this.memoList) {
@@ -1297,6 +1314,65 @@ export class MemologSidebar extends ItemView {
 					this.searchBar.focus();
 				}
 			}, 100);
+		}
+	}
+
+	//! TODO完了済み表示切り替えボタンを初期化する。
+	private initializeTodoToggleButton(container: HTMLElement): void {
+		//! 初期状態では非表示。
+		container.style.display = "none";
+
+		//! ボタンを作成。
+		const btn = container.createEl("button", {
+			cls: "memolog-btn memolog-btn-todo-toggle",
+			attr: { "aria-label": "完了済みTODOを表示" },
+		});
+		setIcon(btn, "square-check-big");
+
+		//! クリックイベント。
+		btn.addEventListener("click", () => {
+			this.showCompletedTodos = !this.showCompletedTodos;
+			this.updateTodoToggleButtonState();
+			void this.loadMemos();
+		});
+	}
+
+	//! TODO完了済み表示ボタンの状態を更新する。
+	private updateTodoToggleButtonState(): void {
+		if (!this.todoToggleBtn) return;
+
+		const btn = this.todoToggleBtn.querySelector("button");
+		if (!btn) return;
+
+		//! アイコンとaria-labelを更新。
+		btn.empty();
+		if (this.showCompletedTodos) {
+			setIcon(btn, "square-check");
+			btn.setAttribute("aria-label", "完了済みTODOを非表示");
+			btn.addClass("memolog-btn-active");
+		} else {
+			setIcon(btn, "square-check-big");
+			btn.setAttribute("aria-label", "完了済みTODOを表示");
+			btn.removeClass("memolog-btn-active");
+		}
+	}
+
+	//! TODO完了済み表示ボタンの表示/非表示を更新する。
+	private updateTodoToggleButtonVisibility(): void {
+		if (!this.todoToggleBtn) return;
+
+		//! 現在のカテゴリがTODOリストカテゴリかチェック。
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
+		const isTodoCategory = categoryConfig?.useTodoList ?? false;
+
+		//! TODOリストカテゴリの場合のみ表示。
+		this.todoToggleBtn.style.display = isTodoCategory ? "" : "none";
+
+		//! カテゴリが切り替わったら状態をリセット。
+		if (!isTodoCategory && this.showCompletedTodos) {
+			this.showCompletedTodos = false;
+			this.updateTodoToggleButtonState();
 		}
 	}
 

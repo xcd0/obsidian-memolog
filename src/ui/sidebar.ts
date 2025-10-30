@@ -579,31 +579,6 @@ export class MemologSidebar extends ItemView {
 				displayMemos = displayMemos.filter((memo) => !memo.trashedAt);
 			}
 
-			//! ピン留めメモを追加（日付フィルタを無視、allタブ以外はカテゴリフィルタを適用）。
-			if (settings.pinnedMemoIds.length > 0 && this.currentCategory !== "trash") {
-				//! 全メモから読み込み。
-				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
-
-				//! ピン留めメモを抽出（削除されていないメモのみ）。
-				const pinnedMemos = allMemos.filter((memo) =>
-					settings.pinnedMemoIds.includes(memo.id) && !memo.trashedAt
-				);
-
-				//! allタブ以外の場合はカテゴリフィルタを適用。
-				const filteredPinnedMemos =
-					this.currentCategory === "all"
-						? pinnedMemos
-						: pinnedMemos.filter((memo) => memo.category === this.currentCategory);
-
-				//! displayMemosに既に含まれているメモは除外。
-				const displayMemoIds = new Set(displayMemos.map((m) => m.id));
-				const uniquePinnedMemos = filteredPinnedMemos.filter(
-					(memo) => !displayMemoIds.has(memo.id)
-				);
-
-				//! ピン留めメモを先頭に追加。
-				displayMemos = [...uniquePinnedMemos, ...displayMemos];
-			}
 
 			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
 			if (this.currentCategory !== "all") {

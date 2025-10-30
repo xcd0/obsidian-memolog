@@ -1907,3 +1907,19 @@
 		transform: translateY(0);
 	}
 }
+
+/* ピン留めボタンのスタイル */
+.memolog-btn-pin {
+	color: var(--text-muted);
+	opacity: 0.6;
+	transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.memolog-btn-pin:hover {
+	opacity: 1;
+}
+
+.memolog-btn-pin.pinned {
+	color: var(--text-error);
+	opacity: 1;
+}

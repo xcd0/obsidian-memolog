@@ -387,23 +387,11 @@ export class MemologSidebar extends ItemView {
 
 				this.sortMemos();
 			} else if (this.currentCategory === "trash") {
-				//! "trash"が選択されている場合はゴミ箱ファイルから読み込む。
-				const trashFilePath = `${settings.rootDirectory}/${settings.trashFilePath}.md`;
-				const fileExists = this.memoManager.vaultHandler.fileExists(trashFilePath);
-
-				if (fileExists) {
-					const fileContent = await this.memoManager.vaultHandler.readFile(trashFilePath);
-					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-					this.memos = [];
-					for (const text of memoTexts) {
-						const memo = this.memoManager["parseTextToMemo"](text, "");
-						if (memo) {
-							this.memos.push(memo);
-						}
-					}
-				} else {
-					this.memos = [];
-				}
+				//! "trash"が選択されている場合は全カテゴリから削除フラグ付きメモを読み込む。
+				//! 全期間のメモを読み込む。
+				const allMemos = await this.loadMemosForDateRange();
+				//! 削除フラグが付いているメモのみフィルタリング（trashedAtが存在するメモ）。
+				this.memos = allMemos.filter((memo: MemoEntry) => memo.trashedAt);
 
 				this.sortMemos();
 			} else if (this.currentCategory === "all") {
@@ -1014,10 +1002,26 @@ export class MemologSidebar extends ItemView {
 
 			let deleted = false;
 
-			//! ゴミ箱タブからの削除の場合は完全削除。
+			//! ゴミ箱タブからの削除の場合は完全削除（元ファイルから削除）。
 			if (this.currentCategory === "trash") {
-				const trashFilePath = `${settings.rootDirectory}/${settings.trashFilePath}.md`;
-				deleted = await this.memoManager.deleteMemo(trashFilePath, memo.category, memoId);
+				//! メモのタイムスタンプから日付とファイルパスを取得。
+				const memoDate = new Date(memo.timestamp);
+				const filePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							memo.category,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							memoDate
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							memo.category,
+							settings.saveUnit,
+							settings.useDirectoryCategory,
+							memoDate
+						);
+				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
 			} else {
 				//! 通常のカテゴリからの削除。
 				//! メモのタイムスタンプから日付を取得。
@@ -1042,20 +1046,12 @@ export class MemologSidebar extends ItemView {
 
 				//! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
 				if (settings.enableTrash) {
-					//! 期限切れのゴミ箱メモを削除。
-					await this.memoManager.cleanupExpiredTrash(
-						settings.rootDirectory,
-						settings.trashFilePath,
-						settings.trashRetentionDays
-					);
-
-					//! ゴミ箱に移動。
+					//! ゴミ箱に移動（削除フラグを追加）。
 					deleted = await this.memoManager.moveToTrash(
 						filePath,
 						memo.category,
 						memoId,
-						settings.rootDirectory,
-						settings.trashFilePath
+						settings.rootDirectory
 					);
 				} else {
 					//! 完全削除。
@@ -1083,7 +1079,6 @@ export class MemologSidebar extends ItemView {
 			const restored = await this.memoManager.restoreFromTrash(
 				memoId,
 				settings.rootDirectory,
-				settings.trashFilePath,
 				settings.pathFormat,
 				settings.saveUnit,
 				settings.useDirectoryCategory

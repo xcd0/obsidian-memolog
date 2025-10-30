@@ -1027,21 +1027,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 			);
 
-		//! ゴミ箱ファイルパス設定。
-		new Setting(containerEl)
-			.setName("ゴミ箱ファイルパス")
-			.setDesc("ゴミ箱として使用するファイルパス（rootDirectoryからの相対パス、拡張子なし）")
-			.addText((text) =>
-				text
-					.setPlaceholder("_trash")
-					.setValue(settings.trashFilePath)
-					.onChange(async (value) => {
-						await this.plugin.settingsManager.updateGlobalSettings({
-							trashFilePath: value || "_trash",
-						});
-					})
-			);
-
 		//! ゴミ箱保持期間設定。
 		new Setting(containerEl)
 			.setName("ゴミ箱保持期間（日数）")

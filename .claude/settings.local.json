@@ -21,7 +21,8 @@
       "Bash(npm run test)",
       "Bash(git tag:*)",
       "Bash(gh run list:*)",
-      "Bash(git remote get-url:*)"
+      "Bash(git remote get-url:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

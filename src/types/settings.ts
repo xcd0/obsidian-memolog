@@ -68,9 +68,6 @@ export interface GlobalSettings {
 	//! ゴミ箱機能を有効化するか。
 	enableTrash: boolean;
 
-	//! ゴミ箱ファイルパス（rootDirectoryからの相対パス、拡張子なし）。
-	trashFilePath: string;
-
 	//! ゴミ箱の保持期間（日数）。
 	trashRetentionDays: number;
 
@@ -128,7 +125,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	searchHistoryMaxSize: 50,
 	showAllTab: true,
 	enableTrash: false,
-	trashFilePath: "_trash",
 	trashRetentionDays: 30,
 	showTrashTab: false,
 	pinnedMemoIds: [],

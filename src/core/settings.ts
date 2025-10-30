@@ -86,7 +86,6 @@ export class SettingsManager {
 		sanitized.pathFormat = sanitizePath(sanitized.pathFormat);
 		sanitized.attachmentPath = sanitizePath(sanitized.attachmentPath);
 		sanitized.attachmentNameFormat = sanitizeString(sanitized.attachmentNameFormat, false);
-		sanitized.trashFilePath = sanitizePath(sanitized.trashFilePath);
 
 		return sanitized;
 	}

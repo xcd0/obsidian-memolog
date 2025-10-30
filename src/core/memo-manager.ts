@@ -299,56 +299,12 @@ export class MemoManager {
 		return result.data;
 	}
 
-	//! ゴミ箱ファイルのフルパスを取得する。
-	private getTrashFilePath(rootDirectory: string, trashFilePath: string): string {
-		return `${rootDirectory}/${trashFilePath}.md`;
-	}
-
-	//! ゴミ箱から期限切れのメモを削除する。
-	async cleanupExpiredTrash(rootDirectory: string, trashFilePath: string, retentionDays: number): Promise<void> {
-		await this.errorHandler.wrap(
-			(async () => {
-				const fullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
-				const fileExists = this.vaultHandler.fileExists(fullPath);
-				if (!fileExists) {
-					return;
-				}
-
-				const fileContent = await this.vaultHandler.readFile(fullPath);
-				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-
-				const now = new Date();
-				const cutoffTime = now.getTime() - retentionDays * 24 * 60 * 60 * 1000;
-
-				const filtered = memos.filter((memoText) => {
-					//! trashedAtを抽出。
-					const match = memoText.match(/trashedAt:\s*"([^"]+)"/);
-					if (!match) {
-						//! trashedAtがない場合は削除しない。
-						return true;
-					}
-
-					const trashedAt = new Date(match[1]);
-					return trashedAt.getTime() > cutoffTime;
-				});
-
-				if (filtered.length < memos.length) {
-					const newContent = filtered.join("");
-					await this.vaultHandler.writeFile(fullPath, newContent);
-					notify.info(`期限切れのメモを${memos.length - filtered.length}件削除しました`);
-				}
-			})(),
-			{ rootDirectory, trashFilePath, retentionDays, context: "MemoManager.cleanupExpiredTrash" }
-		);
-	}
-
 	//! メモをゴミ箱に移動する（削除フラグを追加してコメントアウト）。
 	async moveToTrash(
 		filePath: string,
 		category: string,
 		memoId: string,
-		rootDirectory: string,
-		trashFilePath: string
+		rootDirectory: string
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -423,7 +379,7 @@ export class MemoManager {
 				notify.success("メモをゴミ箱に移動しました");
 				return true;
 			})(),
-			{ filePath, category, memoId, rootDirectory, trashFilePath, context: "MemoManager.moveToTrash" }
+			{ filePath, category, memoId, rootDirectory, context: "MemoManager.moveToTrash" }
 		);
 
 		return result.success && result.data ? result.data : false;
@@ -433,7 +389,6 @@ export class MemoManager {
 	async restoreFromTrash(
 		memoId: string,
 		rootDirectory: string,
-		trashFilePath: string,
 		pathFormat: string,
 		saveUnit: SaveUnit,
 		useDirectoryCategory: boolean
@@ -525,7 +480,7 @@ export class MemoManager {
 				notify.success("メモを復活しました");
 				return true;
 			})(),
-			{ memoId, rootDirectory, trashFilePath, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" }
+			{ memoId, rootDirectory, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" }
 		);
 
 		return result.success && result.data ? result.data : false;

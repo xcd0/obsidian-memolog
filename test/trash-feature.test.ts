@@ -6,33 +6,12 @@ describe("ゴミ箱機能", () => {
 			expect(DEFAULT_GLOBAL_SETTINGS.enableTrash).toBe(false);
 		});
 
-		test("trashFilePathが_trashで初期化される", () => {
-			expect(DEFAULT_GLOBAL_SETTINGS.trashFilePath).toBe("_trash");
-		});
-
 		test("trashRetentionDaysが30で初期化される", () => {
 			expect(DEFAULT_GLOBAL_SETTINGS.trashRetentionDays).toBe(30);
 		});
 
 		test("showTrashTabがfalseで初期化される", () => {
 			expect(DEFAULT_GLOBAL_SETTINGS.showTrashTab).toBe(false);
-		});
-	});
-
-	describe("ゴミ箱ファイルパスの検証", () => {
-		test("デフォルトのゴミ箱ファイルパスは_trash", () => {
-			const trashPath = DEFAULT_GLOBAL_SETTINGS.trashFilePath;
-
-			expect(trashPath).toBe("_trash");
-			expect(trashPath.startsWith("_")).toBe(true);
-			expect(trashPath.startsWith(".")).toBe(false); //! 隠しファイルではない。
-		});
-
-		test("ゴミ箱ファイルパスをカスタマイズできる", () => {
-			const customPath = "_deleted_items";
-
-			expect(customPath.startsWith("_")).toBe(true);
-			expect(customPath).not.toBe("");
 		});
 	});
 

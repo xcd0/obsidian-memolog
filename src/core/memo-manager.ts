@@ -152,15 +152,20 @@ export class MemoManager {
 			}
 		}
 
-		//! 削除フラグとtrashedAtタイムスタンプを2行目のコメントから抽出。
-		let trashedAt: string | undefined = undefined;
-		const deletedCommentMatch = text.match(/<!-- deleted: "([^"]+)", trashedAt: "([^"]+)" -->/);
-		if (deletedCommentMatch) {
-			const isDeleted = deletedCommentMatch[1] === "true";
+
+	//! 削除フラグとtrashedAtタイムスタンプをmemo-idヘッダーから抽出。
+	let trashedAt: string | undefined = undefined;
+	if (commentMatch) {
+		const comment = commentMatch[1];
+		const deletedMatch = comment.match(/deleted: "([^"]+)"/); 
+		const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/); 
+		if (deletedMatch && trashedAtMatch) {
+			const isDeleted = deletedMatch[1] === "true";
 			if (isDeleted) {
-				trashedAt = deletedCommentMatch[2];
+				trashedAt = trashedAtMatch[1];
 			}
 		}
+	}
 
 		//! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
 		const finalCategory = parsedCategory || category;
@@ -329,35 +334,23 @@ export class MemoManager {
 						const trashedAt = this.generateTimestamp();
 
 						//! memo-idヘッダーにdeleted: "true"とtrashedAtを追加。
-						const updatedHeader = memo.replace(
-							/(<!-- memo-id: [^,]+, timestamp: [^,]+, category: "[^"]+", template: "[^"]*" -->)/,
-							`$1\n<!-- deleted: "true", trashedAt: "${trashedAt}" -->`
+						const updatedMemo = memo.replace(
+							/(<!-- memo-id: [^>]+) -->/,
+							`$1, deleted: "true", trashedAt: "${trashedAt}" -->`
 						);
 
 						//! メモのコンテンツ部分を抽出してコメントアウト。
-						//! ヘッダー（<!-- ... -->）とコンテンツを分離。
-						const lines = updatedHeader.split("\n");
-						const headerLines: string[] = [];
-						const contentLines: string[] = [];
-						let inHeader = true;
-
-						for (const line of lines) {
-							if (inHeader && line.trim().startsWith("<!--")) {
-								headerLines.push(line);
-								if (line.includes("-->")) {
-									inHeader = false;
-								}
-							} else {
-								contentLines.push(line);
-							}
-						}
+						//! ヘッダー行とコンテンツを分離。
+						const lines = updatedMemo.split("\n");
+						const headerLine = lines[0]; //! 最初の行がヘッダー。
+						const contentLines = lines.slice(1); //! 残りがコンテンツ。
 
 						//! コンテンツをコメントアウト。
 						const content = contentLines.join("\n").trim();
 						const commentedContent = content ? `<!--\n${content}\n-->` : "";
 
 						//! 結合。
-						updatedMemos.push(headerLines.join("\n") + "\n" + commentedContent);
+						updatedMemos.push(headerLine + "\n" + commentedContent);
 					} else {
 						updatedMemos.push(memo);
 					}
@@ -411,7 +404,7 @@ export class MemoManager {
 					for (let i = 0; i < memos.length; i++) {
 						if (memos[i].includes(`memo-id: ${memoId}`)) {
 							//! 削除フラグが存在するか確認。
-							if (memos[i].includes('<!-- deleted: "true"')) {
+							if (memos[i].includes('deleted: "true"')) {
 								targetFilePath = file.path;
 								targetMemoIndex = i;
 								allMemos = memos;
@@ -431,28 +424,13 @@ export class MemoManager {
 				//! 対象メモから削除フラグを削除。
 				let restoredMemo = allMemos[targetMemoIndex];
 
-				//! 削除フラグ行を削除。
-				restoredMemo = restoredMemo.replace(/<!-- deleted: "true", trashedAt: "[^"]*" -->\n?/, "");
+				//! memo-idヘッダーから削除フラグを削除。
+				restoredMemo = restoredMemo.replace(/, deleted: "true", trashedAt: "[^"]*"/, "");
 
 				//! コメントアウトされたコンテンツを展開。
 				const lines = restoredMemo.split("\n");
-				const headerLines: string[] = [];
-				const contentLines: string[] = [];
-				let inHeader = true;
-
-				for (const line of lines) {
-					if (inHeader && line.trim().startsWith("<!--") && !line.includes("memo-id")) {
-						continue; //! 削除フラグ行をスキップ。
-					}
-					if (inHeader && line.trim().startsWith("<!--") && line.includes("memo-id")) {
-						headerLines.push(line);
-						inHeader = false;
-					} else if (inHeader) {
-						headerLines.push(line);
-					} else {
-						contentLines.push(line);
-					}
-				}
+				const headerLine = lines[0]; //! 最初の行がヘッダー。
+				const contentLines = lines.slice(1); //! 残りがコンテンツ。
 
 				//! コンテンツがコメントアウトされている場合は展開。
 				let content = contentLines.join("\n").trim();
@@ -460,7 +438,7 @@ export class MemoManager {
 					content = content.slice(4, -3).trim();
 				}
 
-				restoredMemo = headerLines.join("\n") + "\n" + content;
+				restoredMemo = headerLine + "\n" + content;
 
 				//! メモを更新。
 				allMemos[targetMemoIndex] = restoredMemo;

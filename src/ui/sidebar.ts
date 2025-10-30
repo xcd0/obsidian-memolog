@@ -95,6 +95,10 @@ export class MemologSidebar extends ItemView {
 		//! コンテナをクリア。
 		container.empty();
 
+		//! 設定からソート順を読み込む。
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+		this.currentOrder = settings.order;
+
 		//! メインコンテナを作成。
 		container.addClass("memolog-container");
 

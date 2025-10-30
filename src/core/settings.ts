@@ -41,7 +41,7 @@ export class SettingsManager {
 	}
 
 	//! Vault内から設定ファイルを探索する（最大3階層まで）。
-	private async findSettingsFile(filename: string, maxDepth: number = 3): Promise<string | null> {
+	private findSettingsFile(filename: string, maxDepth: number = 3): string | null {
 		const allFiles = this.app.vault.getFiles();
 
 		for (const file of allFiles) {

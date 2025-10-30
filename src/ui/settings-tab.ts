@@ -334,7 +334,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				value: "custom",
 				id: "path-format-custom"
 			}
-		}) as HTMLInputElement;
+		});
 
 		if (isPathCustom) {
 			pathCustomRadio.checked = true;
@@ -345,7 +345,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			placeholder: "%Y-%m-%d/memo.md",
 			value: pathCustomValue,
 			cls: "memolog-setting-text-input-inline"
-		}) as HTMLInputElement;
+		});
 
 		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		pathCustomInput.addEventListener("focus", () => {
@@ -382,7 +382,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					value: preset.value,
 					id: `path-format-${preset.value}`
 				}
-			}) as HTMLInputElement;
+			});
 
 			if (settings.pathFormat === preset.value) {
 				radio.checked = true;
@@ -549,7 +549,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				value: "custom",
 				id: "attachment-path-custom"
 			}
-		}) as HTMLInputElement;
+		});
 
 		if (isAttachmentCustom) {
 			attachmentCustomRadio.checked = true;
@@ -560,7 +560,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			placeholder: "./attachments",
 			value: attachmentCustomValue,
 			cls: "memolog-setting-text-input-inline"
-		}) as HTMLInputElement;
+		});
 
 		//! カスタムラジオボタンクリック時。
 		attachmentCustomRadio.addEventListener("change", async () => {
@@ -602,7 +602,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					value: preset.value,
 					id: `attachment-path-${preset.value.replace(/[\/\%]/g, "-")}`
 				}
-			}) as HTMLInputElement;
+			});
 
 			if (settings.attachmentPath === preset.value) {
 				radio.checked = true;
@@ -707,7 +707,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				value: "custom",
 				id: "attachment-name-format-custom"
 			}
-		}) as HTMLInputElement;
+		});
 
 		if (isAttachmentNameCustom) {
 			attachmentNameCustomRadio.checked = true;
@@ -718,7 +718,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			placeholder: "pasted-%s-%f%e",
 			value: attachmentNameCustomValue,
 			cls: "memolog-setting-text-input-inline"
-		}) as HTMLInputElement;
+		});
 
 		//! カスタムラジオボタンクリック時。
 		attachmentNameCustomRadio.addEventListener("change", async () => {
@@ -762,7 +762,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					value: preset.value,
 					id: `attachment-name-format-${preset.value}`
 				}
-			}) as HTMLInputElement;
+			});
 
 			if (settings.attachmentNameFormat === preset.value) {
 				radio.checked = true;
@@ -834,7 +834,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				value: "custom",
 				id: "memo-template-custom"
 			}
-		}) as HTMLInputElement;
+		});
 
 		if (isTemplateCustom) {
 			templateCustomRadio.checked = true;
@@ -844,7 +844,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			placeholder: "# %Y-%m-%d %H:%M:%S\n{{content}}",
 			value: templateCustomValue,
 			cls: "memolog-setting-textarea-input-inline"
-		}) as HTMLTextAreaElement;
+		});
 		templateCustomInput.rows = 4;
 
 		//! カスタムラジオボタンクリック時。
@@ -912,7 +912,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					value: preset.value,
 					id: `memo-template-${preset.value}`
 				}
-			}) as HTMLInputElement;
+			});
 
 			if (settings.memoTemplate === preset.value) {
 				radio.checked = true;
@@ -1174,7 +1174,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		if (!categoryExists || !settings.defaultCategory) {
 			const firstCategory = settings.categories[0];
 			//! 非同期で設定を更新（awaitしない）。
-			this.plugin.settingsManager
+			void this.plugin.settingsManager
 				.updateGlobalSettings({
 					defaultCategory: firstCategory.directory,
 				})

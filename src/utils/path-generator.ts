@@ -147,7 +147,7 @@ export class PathGenerator {
 		const extension = lastDot > 0 ? originalFileName.substring(lastDot) : "";
 
 		//! 変数置換。
-		let fileName = this.formatDateString(nameFormat, date)
+		const fileName = this.formatDateString(nameFormat, date)
 			.replace(/%s/g, timestamp.toString())
 			.replace(/%f/g, baseName)
 			.replace(/%e/g, extension);

@@ -518,7 +518,7 @@ export class MemologSidebar extends ItemView {
 
 					//! 日付範囲を計算。
 					let startDate: Date;
-					let endDate: Date = new Date();
+					const endDate: Date = new Date();
 
 					if (this.currentDateRange === "today") {
 						startDate = new Date();

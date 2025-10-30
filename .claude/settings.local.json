@@ -22,7 +22,9 @@
       "Bash(git tag:*)",
       "Bash(gh run list:*)",
       "Bash(git remote get-url:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint:fix:*)"
     ],
     "deny": [],
     "ask": []

@@ -179,8 +179,8 @@ describe("MemoManager", () => {
 			expect(content).toBeDefined();
 
 			//! メモ1が先、メモ2が後（昇順なのでbottomに追加）。
-			const memo1Index = content!.indexOf("メモ1");
-			const memo2Index = content!.indexOf("メモ2");
+			const memo1Index = content.indexOf("メモ1");
+			const memo2Index = content.indexOf("メモ2");
 			expect(memo1Index).toBeLessThan(memo2Index);
 		});
 
@@ -195,8 +195,8 @@ describe("MemoManager", () => {
 			expect(content).toBeDefined();
 
 			//! メモBが先、メモAが後（降順なのでtopに追加）。
-			const memoAIndex = content!.indexOf("メモA");
-			const memoBIndex = content!.indexOf("メモB");
+			const memoAIndex = content.indexOf("メモA");
+			const memoBIndex = content.indexOf("メモB");
 			expect(memoBIndex).toBeLessThan(memoAIndex);
 		});
 

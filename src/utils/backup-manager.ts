@@ -176,14 +176,14 @@ export class BackupManager {
 	}
 
 	//! バックアップ一覧を取得。
-	async listBackups(pattern = "backup-"): Promise<TFile[]> {
+	listBackups(pattern = "backup-"): TFile[] {
 		const allFiles = this.app.vault.getFiles();
 		return allFiles.filter((file) => file.name.startsWith(pattern) && file.name.endsWith(".zip"));
 	}
 
 	//! 古いバックアップを削除。
 	async cleanOldBackups(maxBackups = 10, pattern = "backup-"): Promise<number> {
-		const backups = await this.listBackups(pattern);
+		const backups = this.listBackups(pattern);
 
 		//! 日付でソート（新しい順）。
 		backups.sort((a, b) => b.stat.mtime - a.stat.mtime);

@@ -596,6 +596,41 @@ export class MemologSidebar extends ItemView {
 			}
 
 
+			//! ピン留めメモを追加（日付フィルタを無視して全期間から読み込み、allタブ以外はカテゴリフィルタを適用）。
+			if (settings.pinnedMemoIds.length > 0 && this.currentCategory !== "trash" && this.currentCategory !== "pinned") {
+				//! 全メモから読み込み。
+				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
+
+				//! ピン留めメモを抽出（削除されていないメモのみ）。
+				const pinnedMemos = allMemos.filter((memo) =>
+					settings.pinnedMemoIds.includes(memo.id) && !memo.trashedAt
+				);
+
+				//! allタブ以外の場合はカテゴリフィルタを適用。
+				const filteredPinnedMemos =
+					this.currentCategory === "all"
+						? pinnedMemos
+						: pinnedMemos.filter((memo) => memo.category === this.currentCategory);
+
+				//! displayMemosに既に含まれているメモは除外。
+				const displayMemoIds = new Set(displayMemos.map((m) => m.id));
+				const uniquePinnedMemos = filteredPinnedMemos.filter(
+					(memo) => !displayMemoIds.has(memo.id)
+				);
+
+				//! ピン留めメモを追加（先頭固定ではなくマージ）。
+				displayMemos = [...displayMemos, ...uniquePinnedMemos];
+
+				//! ソート順に応じて並べ替え。
+				displayMemos.sort((a, b) => {
+					if (this.currentOrder === "asc") {
+						return a.timestamp.localeCompare(b.timestamp);
+					} else {
+						return b.timestamp.localeCompare(a.timestamp);
+					}
+				});
+			}
+
 			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
 			if (this.currentCategory !== "all") {
 				const settings = this.plugin.settingsManager.getGlobalSettings();

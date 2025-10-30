@@ -534,8 +534,8 @@ export class MemologSidebar extends ItemView {
 				const settings = this.plugin.settingsManager.getGlobalSettings();
 				const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
 				if (categoryConfig?.useTodoList) {
-					//! チェック済み（todoCompleted === true）のメモを除外。
-					displayMemos = displayMemos.filter((m) => !m.todoCompleted);
+					//! チェック済み（content が - [x] で始まる）のメモを除外。
+					displayMemos = displayMemos.filter((m) => !/^-\s*\[x\]\s+/.test(m.content));
 				}
 			}
 
@@ -1125,12 +1125,8 @@ export class MemologSidebar extends ItemView {
 						memoDate
 					);
 
-			//! カテゴリ設定を取得してTODOリストかどうか確認。
-			const categoryConfig = settings.categories.find((c) => c.directory === memo.category);
-			const useTodoList = categoryConfig?.useTodoList ?? false;
-
 			//! TODO完了状態を更新。
-			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed, useTodoList);
+			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed);
 
 			//! メモリストを再読み込み。
 			await this.loadMemos();

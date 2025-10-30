@@ -96,18 +96,16 @@ export class MemoManager {
 			body = `${formattedTemplate}\n${content}`;
 		}
 
-		//! TODOリストの場合、チェックボックスを追加。
-		if (useTodoList) {
-			const checkbox = memo.todoCompleted ? "- [x] " : "- [ ] ";
-			body = checkbox + body.replace(/\n/g, "\n  ");
+		//! TODOリストの場合、チェックボックスを追加（contentに既にない場合のみ）。
+		if (useTodoList && !/^-\s*\[([x ])\]\s+/.test(content)) {
+			body = "- [ ] " + body.replace(/\n/g, "\n  ");
 		}
 
 		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントとして埋め込む。
 		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
 		const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
 		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		const todoEncoded = useTodoList ? `, todoCompleted: ${memo.todoCompleted ?? false}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${todoEncoded} -->\n${body}${attachments}\n`;
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -118,13 +116,12 @@ export class MemoManager {
 			return null;
 		}
 
-		//! ID、タイムスタンプ、カテゴリ、テンプレート、TODO完了状態をHTMLコメントから抽出。
+		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
 		const commentMatch = text.match(/<!-- (.+?) -->/);
 		let id = uuidv7();
 		let timestamp: string | null = null;
 		let parsedCategory: string | null = null;
 		let template: string | undefined = undefined;
-		let todoCompleted: boolean | undefined = undefined;
 
 		if (commentMatch) {
 			const comment = commentMatch[1];
@@ -132,7 +129,6 @@ export class MemoManager {
 			const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
 			const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
 			const templateMatch = comment.match(/template: ([^,]+?)(?:,|$)/);
-			const todoMatch = comment.match(/todoCompleted: (true|false)/);
 
 			id = idMatch?.[1].trim() || uuidv7();
 			timestamp = timestampMatch?.[1].trim() || null;
@@ -153,10 +149,6 @@ export class MemoManager {
 					//! JSON.parseエラーは無視（後方互換性）。
 					console.warn("[memolog] Failed to parse template from comment:", e);
 				}
-			}
-
-			if (todoMatch) {
-				todoCompleted = todoMatch[1] === "true";
 			}
 		}
 
@@ -209,32 +201,13 @@ export class MemoManager {
 			? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
 			: undefined;
 
-		//! TODO completed状態を本文からも抽出（HTMLコメントにない場合）。
-		if (todoCompleted === undefined) {
-			const todoCheckboxMatch = text.match(/^-\s*\[([x ])\]\s+/m);
-			if (todoCheckboxMatch) {
-				todoCompleted = todoCheckboxMatch[1] === "x";
-			}
-		}
-
-		//! TODOリストのチェックボックスプレフィックスを削除。
-		//! 先頭の `- [ ] ` または `- [x] ` を削除し、インデント（2スペース）も削除。
-		let cleanedContent = content;
-		if (/^-\s*\[([x ])\]\s+/.test(content)) {
-			//! 先頭のチェックボックスを削除。
-			cleanedContent = content.replace(/^-\s*\[([x ])\]\s+/, "");
-			//! 各行の先頭の2スペースインデントを削除。
-			cleanedContent = cleanedContent.replace(/\n  /g, "\n");
-		}
-
 		return {
 			id,
 			category: finalCategory,
 			timestamp: finalTimestamp,
-			content: cleanedContent,
+			content,
 			attachments,
 			template,
-			todoCompleted,
 		};
 	}
 
@@ -260,7 +233,6 @@ export class MemoManager {
 					content,
 					attachments,
 					template,
-					todoCompleted: false,
 				};
 
 				//! メモをテキスト形式に変換。
@@ -473,8 +445,7 @@ export class MemoManager {
 		filePath: string,
 		category: string,
 		memoId: string,
-		completed: boolean,
-		useTodoList = true
+		completed: boolean
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -489,11 +460,14 @@ export class MemoManager {
 
 				const newMemoTexts = memoTexts.map((memoText) => {
 					if (memoText.includes(`memo-id: ${memoId}`)) {
-						const memo = this.parseTextToMemo(memoText, category);
-						if (memo) {
-							memo.todoCompleted = completed;
-							updated = true;
-							return this.memoToText(memo, memo.template, useTodoList);
+						updated = true;
+						//! チェックボックスを切り替え。
+						if (completed) {
+							//! - [ ] を - [x] に置換。
+							return memoText.replace(/^-\s*\[\s\]\s+/m, "- [x] ");
+						} else {
+							//! - [x] を - [ ] に置換。
+							return memoText.replace(/^-\s*\[x\]\s+/m, "- [ ] ");
 						}
 					}
 					return memoText;

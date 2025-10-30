@@ -92,7 +92,8 @@ export class MemoCard {
 				type: "checkbox",
 				cls: "memolog-todo-checkbox",
 			}) as HTMLInputElement;
-			checkbox.checked = this.memo.todoCompleted ?? false;
+			//! contentの先頭が - [x] かどうかで判定。
+			checkbox.checked = /^-\s*\[x\]\s+/.test(this.memo.content);
 
 			checkbox.addEventListener("change", () => {
 				if (this.handlers.onTodoToggle) {

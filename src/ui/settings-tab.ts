@@ -102,6 +102,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		const tabs = [
 			{ id: "basic", label: "基本", render: (el: HTMLElement) => this.addBasicSettings(el) },
 			{ id: "category", label: "カテゴリ", render: (el: HTMLElement) => this.addCategorySettings(el) },
+			{ id: "trash", label: "ゴミ箱", render: (el: HTMLElement) => this.addTrashSettings(el) },
 			{ id: "advanced", label: "高度な機能", render: (el: HTMLElement) => this.addAdvancedFeaturesWithActions(el) },
 		];
 
@@ -1006,6 +1007,69 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 	}
 
+	//! ゴミ箱設定を追加する。
+	private addTrashSettings(containerEl: HTMLElement): void {
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! ゴミ箱機能設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱機能を有効化")
+			.setDesc("削除したメモをゴミ箱ファイルに移動します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.enableTrash).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						enableTrash: value,
+					});
+				})
+			);
+
+		//! ゴミ箱ファイルパス設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱ファイルパス")
+			.setDesc("ゴミ箱として使用するファイルパス（rootDirectoryからの相対パス、拡張子なし）")
+			.addText((text) =>
+				text
+					.setPlaceholder("_trash")
+					.setValue(settings.trashFilePath)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							trashFilePath: value || "_trash",
+						});
+					})
+			);
+
+		//! ゴミ箱保持期間設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱保持期間（日数）")
+			.setDesc("ゴミ箱内のメモを保持する期間（日数）。この期間を過ぎたメモは自動的に削除されます")
+			.addText((text) =>
+				text
+					.setPlaceholder("30")
+					.setValue(String(settings.trashRetentionDays))
+					.onChange(async (value) => {
+						const days = parseInt(value, 10);
+						if (!isNaN(days) && days > 0) {
+							await this.plugin.settingsManager.updateGlobalSettings({
+								trashRetentionDays: days,
+							});
+						}
+					})
+			);
+
+		//! ゴミ箱タブ表示設定。
+		new Setting(containerEl)
+			.setName("ゴミ箱タブを表示")
+			.setDesc("ゴミ箱内のメモを表示するタブを追加します")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showTrashTab).onChange(async (value) => {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						showTrashTab: value,
+					});
+					this.refreshSidebar();
+				})
+			);
+	}
+
 	//! 高度な機能設定を追加する。
 	private addAdvancedFeatures(containerEl: HTMLElement): void {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
@@ -1205,64 +1269,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				toggle.setValue(settings.showAllTab).onChange(async (value) => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						showAllTab: value,
-					});
-					this.refreshSidebar();
-				})
-			);
-
-		//! ゴミ箱機能設定。
-		new Setting(containerEl)
-			.setName("ゴミ箱機能を有効化")
-			.setDesc("削除したメモをゴミ箱ファイルに移動します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.enableTrash).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						enableTrash: value,
-					});
-				})
-			);
-
-		//! ゴミ箱ファイルパス設定。
-		new Setting(containerEl)
-			.setName("ゴミ箱ファイルパス")
-			.setDesc("ゴミ箱として使用するファイルパス（rootDirectoryからの相対パス、拡張子なし）")
-			.addText((text) =>
-				text
-					.setPlaceholder("_trash")
-					.setValue(settings.trashFilePath)
-					.onChange(async (value) => {
-						await this.plugin.settingsManager.updateGlobalSettings({
-							trashFilePath: value || "_trash",
-						});
-					})
-			);
-
-		//! ゴミ箱保持期間設定。
-		new Setting(containerEl)
-			.setName("ゴミ箱保持期間（日数）")
-			.setDesc("ゴミ箱内のメモを保持する期間（日数）。この期間を過ぎたメモは自動的に削除されます")
-			.addText((text) =>
-				text
-					.setPlaceholder("30")
-					.setValue(String(settings.trashRetentionDays))
-					.onChange(async (value) => {
-						const days = parseInt(value, 10);
-						if (!isNaN(days) && days > 0) {
-							await this.plugin.settingsManager.updateGlobalSettings({
-								trashRetentionDays: days,
-							});
-						}
-					})
-			);
-
-		//! ゴミ箱タブ表示設定。
-		new Setting(containerEl)
-			.setName("ゴミ箱タブを表示")
-			.setDesc("ゴミ箱内のメモを表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showTrashTab).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						showTrashTab: value,
 					});
 					this.refreshSidebar();
 				})

@@ -14,17 +14,20 @@ export class CategoryTabs {
 	private activeCategory: string; //! アクティブなカテゴリのディレクトリ名。
 	private tabElements: Map<string, HTMLElement> = new Map(); //! キーはディレクトリ名。
 	private showAllTab: boolean;
+	private showTrashTab: boolean;
 
 	constructor(
 		container: HTMLElement,
 		categories: CategoryConfig[],
 		handlers: CategoryTabsHandlers,
-		showAllTab = true
+		showAllTab = true,
+		showTrashTab = false
 	) {
 		this.container = container;
 		this.categories = categories;
 		this.handlers = handlers;
 		this.showAllTab = showAllTab;
+		this.showTrashTab = showTrashTab;
 		this.activeCategory = categories[0]?.directory || "";
 	}
 
@@ -68,6 +71,17 @@ export class CategoryTabs {
 				tab.addClass("memolog-category-tab-active");
 			}
 		}
+
+		//! ゴミ箱タブを最後に追加（showTrashTabがtrueの場合）。
+		if (this.showTrashTab) {
+			const trashTab = this.createTrashTab(tabsContainer);
+			this.tabElements.set("trash", trashTab);
+
+			//! アクティブなタブをハイライト。
+			if (this.activeCategory === "trash") {
+				trashTab.addClass("memolog-category-tab-active");
+			}
+		}
 	}
 
 	//! Allタブを作成する。
@@ -87,6 +101,32 @@ export class CategoryTabs {
 		tab.addEventListener("click", () => {
 			this.setActiveCategory("all");
 			this.handlers.onCategoryChange("all");
+		});
+
+		return tab;
+	}
+
+	//! ゴミ箱タブを作成する。
+	private createTrashTab(container: HTMLElement): HTMLElement {
+		const tab = container.createDiv({ cls: "memolog-category-tab" });
+
+		//! ゴミ箱のカラーを設定（グレー系）。
+		tab.style.setProperty("--category-color", "#6c757d");
+
+		//! アイコンを追加。
+		const iconEl = tab.createDiv({ cls: "memolog-category-tab-icon" });
+		setIcon(iconEl, "trash-2");
+
+		//! カテゴリ名を追加。
+		tab.createDiv({
+			cls: "memolog-category-tab-name",
+			text: "ゴミ箱",
+		});
+
+		//! クリックイベントを設定（ディレクトリ名"trash"を渡す）。
+		tab.addEventListener("click", () => {
+			this.setActiveCategory("trash");
+			this.handlers.onCategoryChange("trash");
 		});
 
 		return tab;

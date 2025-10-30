@@ -276,7 +276,8 @@ export class MemologSidebar extends ItemView {
 				{
 					onCategoryChange: (categoryDirectory) => void this.handleCategoryTabChange(categoryDirectory),
 				},
-				settings.showAllTab
+				settings.showAllTab,
+				settings.showTrashTab
 			);
 			//! defaultCategoryからディレクトリ名を取得。
 			const defaultCategoryConfig = settings.categories.find(
@@ -351,8 +352,32 @@ export class MemologSidebar extends ItemView {
 			//! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings();
 
-			//! "all"が選択されている場合は全カテゴリのメモを読み込む。
-			if (this.currentCategory === "all") {
+			//! ゴミ箱タブの場合は入力フォームを非表示に、それ以外は表示。
+			if (this.inputAreaEl) {
+				this.inputAreaEl.style.display = this.currentCategory === "trash" ? "none" : "";
+			}
+
+			//! "trash"が選択されている場合はゴミ箱ファイルから読み込む。
+			if (this.currentCategory === "trash") {
+				const trashFilePath = `${settings.rootDirectory}/${settings.trashFilePath}.md`;
+				const fileExists = this.memoManager.vaultHandler.fileExists(trashFilePath);
+
+				if (fileExists) {
+					const fileContent = await this.memoManager.vaultHandler.readFile(trashFilePath);
+					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					this.memos = [];
+					for (const text of memoTexts) {
+						const memo = this.memoManager["parseTextToMemo"](text, "");
+						if (memo) {
+							this.memos.push(memo);
+						}
+					}
+				} else {
+					this.memos = [];
+				}
+
+				this.sortMemos();
+			} else if (this.currentCategory === "all") {
 				//! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。
 				if (this.currentDateRange) {
 					let startDate: string | undefined;

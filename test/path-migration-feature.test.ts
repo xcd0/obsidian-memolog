@@ -28,7 +28,7 @@ describe("パス変換機能", () => {
 		});
 
 		test("サブディレクトリのindex.mdは除外しない", () => {
-			const relativePath = "work/index.md";
+			const relativePath: string = "work/index.md";
 			const isRootFile = !relativePath.includes("/");
 
 			const shouldExclude = isRootFile && relativePath === "index.md";
@@ -46,7 +46,7 @@ describe("パス変換機能", () => {
 		});
 
 		test("通常のファイルは除外しない", () => {
-			const relativePath = "2025-01-30.md";
+			const relativePath: string = "2025-01-30.md";
 			const isRootFile = !relativePath.includes("/");
 
 			const shouldExclude =

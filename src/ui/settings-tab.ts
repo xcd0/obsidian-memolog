@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
 import { IconPicker } from "./components/icon-picker";
 import MemologPlugin from "../../main";
 import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types";
@@ -1213,6 +1213,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		headerRow.createEl("th", { text: "選択" });
 		headerRow.createEl("th", { text: "カテゴリ名" });
 		headerRow.createEl("th", { text: "カテゴリ表示名" });
+		headerRow.createEl("th", { text: "アイコン" });
 		headerRow.createEl("th", { text: "色" });
 
 		//! ボディ。
@@ -1236,6 +1237,12 @@ export class MemologSettingTab extends PluginSettingTab {
 
 			//! カテゴリ表示名。
 			row.createEl("td", { text: category.name });
+
+			//! アイコン。
+			const iconCell = row.createEl("td");
+			if (category.showIcon !== false && category.icon) {
+				setIcon(iconCell, category.icon);
+			}
 
 			//! 色。
 			const colorCell = row.createEl("td");
@@ -1726,6 +1733,12 @@ export class MemologSettingTab extends PluginSettingTab {
 
 			//! カテゴリ表示名。
 			row.createEl("td", { text: category.name });
+
+			//! アイコン。
+			const iconCell = row.createEl("td");
+			if (category.showIcon !== false && category.icon) {
+				setIcon(iconCell, category.icon);
+			}
 
 			//! 色。
 			const colorCell = row.createEl("td");

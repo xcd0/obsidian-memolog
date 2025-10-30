@@ -384,4 +384,9 @@ export class MemologVaultHandler {
 			};
 		}
 	}
+
+	//! Vault内の全Markdownファイルを取得する。
+	getMarkdownFiles(): TFile[] {
+		return this.app.vault.getMarkdownFiles();
+	}
 }

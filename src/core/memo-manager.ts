@@ -5,7 +5,6 @@ import { CacheManager } from "./cache-manager";
 import { v7 as uuidv7 } from "uuid";
 import { getErrorHandler, FileIOError } from "./error-handler";
 import { notify } from "../utils/notification-manager";
-import { PathGenerator } from "../utils/path-generator";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -153,6 +152,16 @@ export class MemoManager {
 			}
 		}
 
+		//! 削除フラグとtrashedAtタイムスタンプを2行目のコメントから抽出。
+		let trashedAt: string | undefined = undefined;
+		const deletedCommentMatch = text.match(/<!-- deleted: "([^"]+)", trashedAt: "([^"]+)" -->/);
+		if (deletedCommentMatch) {
+			const isDeleted = deletedCommentMatch[1] === "true";
+			if (isDeleted) {
+				trashedAt = deletedCommentMatch[2];
+			}
+		}
+
 		//! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
 		const finalCategory = parsedCategory || category;
 
@@ -196,6 +205,13 @@ export class MemoManager {
 			content = lines.slice(actualContentStartIndex).join("\n").trim();
 		}
 
+		//! コメントアウトされたコンテンツ（<!--\nCONTENT\n-->）を展開。
+		if (content.startsWith("<!--") && content.endsWith("-->")) {
+			//! HTMLコメントを削除。
+			const uncommented = content.slice(4, -3).trim();
+			content = uncommented;
+		}
+
 		//! 添付ファイルを抽出（[[filename]]形式）。
 		const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g);
 		const attachments = attachmentMatches
@@ -209,6 +225,7 @@ export class MemoManager {
 			content,
 			attachments,
 			template,
+			trashedAt,
 		};
 	}
 
@@ -325,7 +342,7 @@ export class MemoManager {
 		);
 	}
 
-	//! メモをゴミ箱に移動する。
+	//! メモをゴミ箱に移動する（削除フラグを追加してコメントアウト）。
 	async moveToTrash(
 		filePath: string,
 		category: string,
@@ -347,42 +364,57 @@ export class MemoManager {
 
 				//! メモを分割。
 				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				let targetMemo: string | null = null;
-				const filtered = memos.filter((memo) => {
-					if (memo.includes(`memo-id: ${memoId}`)) {
-						targetMemo = memo;
-						return false;
-					}
-					return true;
-				});
+				const updatedMemos: string[] = [];
 
-				if (!targetMemo) {
+				let found = false;
+				for (const memo of memos) {
+					if (memo.includes(`memo-id: ${memoId}`)) {
+						found = true;
+						const trashedAt = this.generateTimestamp();
+
+						//! memo-idヘッダーにdeleted: "true"とtrashedAtを追加。
+						const updatedHeader = memo.replace(
+							/(<!-- memo-id: [^,]+, timestamp: [^,]+, category: "[^"]+", template: "[^"]*" -->)/,
+							`$1\n<!-- deleted: "true", trashedAt: "${trashedAt}" -->`
+						);
+
+						//! メモのコンテンツ部分を抽出してコメントアウト。
+						//! ヘッダー（<!-- ... -->）とコンテンツを分離。
+						const lines = updatedHeader.split("\n");
+						const headerLines: string[] = [];
+						const contentLines: string[] = [];
+						let inHeader = true;
+
+						for (const line of lines) {
+							if (inHeader && line.trim().startsWith("<!--")) {
+								headerLines.push(line);
+								if (line.includes("-->")) {
+									inHeader = false;
+								}
+							} else {
+								contentLines.push(line);
+							}
+						}
+
+						//! コンテンツをコメントアウト。
+						const content = contentLines.join("\n").trim();
+						const commentedContent = content ? `<!--\n${content}\n-->` : "";
+
+						//! 結合。
+						updatedMemos.push(headerLines.join("\n") + "\n" + commentedContent);
+					} else {
+						updatedMemos.push(memo);
+					}
+				}
+
+				if (!found) {
 					notify.warning("削除対象のメモが見つかりません");
 					return false;
 				}
 
-				//! 元ファイルから削除。
-				const newContent = filtered.join("");
+				//! ファイルを更新。
+				const newContent = updatedMemos.join("");
 				await this.vaultHandler.writeFile(filePath, newContent);
-
-				//! ゴミ箱ファイルに追加。
-				const trashFullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
-				const trashedAt = this.generateTimestamp();
-
-				//! trashedAtをメモに追加。
-				const updatedMemo = (targetMemo as string).replace(
-					/(<!-- memo-id: [^,]+, timestamp: [^,]+, category: "[^"]+", template: "[^"]*" -->)/,
-					`$1\n<!-- trashedAt: "${trashedAt}" -->`
-				);
-
-				//! ゴミ箱ファイルに追記。
-				const trashExists = this.vaultHandler.fileExists(trashFullPath);
-				if (trashExists) {
-					const trashContent = await this.vaultHandler.readFile(trashFullPath);
-					await this.vaultHandler.writeFile(trashFullPath, trashContent + "\n" + updatedMemo);
-				} else {
-					await this.vaultHandler.writeFile(trashFullPath, updatedMemo);
-				}
 
 				//! キャッシュを無効化。
 				const cacheKey = `${filePath}::${category}`;
@@ -408,82 +440,87 @@ export class MemoManager {
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ゴミ箱ファイルが存在しない場合はfalseを返す。
-				const trashFullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
-				const fileExists = this.vaultHandler.fileExists(trashFullPath);
-				if (!fileExists) {
-					notify.warning("ゴミ箱ファイルが見つかりません");
-					return false;
+				//! 全カテゴリのファイルから対象メモを検索。
+				const allFiles = this.vaultHandler.getMarkdownFiles();
+				const memologFiles = allFiles.filter((file) => file.path.startsWith(rootDirectory + "/"));
+
+				let targetFilePath: string | null = null;
+				let targetMemoIndex = -1;
+				let allMemos: string[] = [];
+
+				//! 対象メモを含むファイルを検索。
+				for (const file of memologFiles) {
+					const fileContent = await this.vaultHandler.readFile(file.path);
+					const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+
+					for (let i = 0; i < memos.length; i++) {
+						if (memos[i].includes(`memo-id: ${memoId}`)) {
+							//! 削除フラグが存在するか確認。
+							if (memos[i].includes('<!-- deleted: "true"')) {
+								targetFilePath = file.path;
+								targetMemoIndex = i;
+								allMemos = memos;
+								break;
+							}
+						}
+					}
+
+					if (targetFilePath) break;
 				}
 
-				//! ゴミ箱ファイル全体を読み込む。
-				const fileContent = await this.vaultHandler.readFile(trashFullPath);
-
-				//! メモを分割。
-				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-				let targetMemo: string | null = null;
-				const filtered = memos.filter((memo) => {
-					if (memo.includes(`memo-id: ${memoId}`)) {
-						targetMemo = memo;
-						return false;
-					}
-					return true;
-				});
-
-				if (!targetMemo) {
+				if (!targetFilePath || targetMemoIndex === -1) {
 					notify.warning("復活対象のメモが見つかりません");
 					return false;
 				}
 
-				//! ゴミ箱ファイルから削除。
-				const newContent = filtered.join("");
-				await this.vaultHandler.writeFile(trashFullPath, newContent);
+				//! 対象メモから削除フラグを削除。
+				let restoredMemo = allMemos[targetMemoIndex];
 
-				//! メモからcategoryとtimestampを抽出。
-				const categoryMatch = (targetMemo as string).match(/category: "([^"]+)"/);
-				const timestampMatch = (targetMemo as string).match(/timestamp: ([^,]+)/);
+				//! 削除フラグ行を削除。
+				restoredMemo = restoredMemo.replace(/<!-- deleted: "true", trashedAt: "[^"]*" -->\n?/, "");
 
-				if (!categoryMatch || !timestampMatch) {
-					notify.warning("メモのメタデータが不正です");
-					return false;
+				//! コメントアウトされたコンテンツを展開。
+				const lines = restoredMemo.split("\n");
+				const headerLines: string[] = [];
+				const contentLines: string[] = [];
+				let inHeader = true;
+
+				for (const line of lines) {
+					if (inHeader && line.trim().startsWith("<!--") && !line.includes("memo-id")) {
+						continue; //! 削除フラグ行をスキップ。
+					}
+					if (inHeader && line.trim().startsWith("<!--") && line.includes("memo-id")) {
+						headerLines.push(line);
+						inHeader = false;
+					} else if (inHeader) {
+						headerLines.push(line);
+					} else {
+						contentLines.push(line);
+					}
 				}
 
-				const category = categoryMatch[1];
-				const timestamp = timestampMatch[1];
-
-				//! trashedAtを削除。
-				const restoredMemo = (targetMemo as string).replace(/\n<!-- trashedAt: "[^"]*" -->/, "");
-
-				//! 元のファイルパスを生成。
-				const targetDate = new Date(timestamp);
-				const targetFilePath = pathFormat
-					? PathGenerator.generateCustomPath(
-							rootDirectory,
-							category,
-							pathFormat,
-							useDirectoryCategory,
-							targetDate
-						)
-					: PathGenerator.generateFilePath(
-							rootDirectory,
-							category,
-							saveUnit,
-							useDirectoryCategory,
-							targetDate
-						);
-
-				//! 元ファイルに追記。
-				const targetFileExists = this.vaultHandler.fileExists(targetFilePath);
-				if (targetFileExists) {
-					const targetContent = await this.vaultHandler.readFile(targetFilePath);
-					await this.vaultHandler.writeFile(targetFilePath, targetContent + "\n" + restoredMemo);
-				} else {
-					await this.vaultHandler.writeFile(targetFilePath, restoredMemo);
+				//! コンテンツがコメントアウトされている場合は展開。
+				let content = contentLines.join("\n").trim();
+				if (content.startsWith("<!--") && content.endsWith("-->")) {
+					content = content.slice(4, -3).trim();
 				}
 
-				//! キャッシュを無効化。
-				const cacheKey = `${targetFilePath}::${category}`;
-				this.cacheManager.invalidateMemos(cacheKey);
+				restoredMemo = headerLines.join("\n") + "\n" + content;
+
+				//! メモを更新。
+				allMemos[targetMemoIndex] = restoredMemo;
+
+				//! ファイルに書き込み。
+				const newContent = allMemos.join("");
+				await this.vaultHandler.writeFile(targetFilePath, newContent);
+
+				//! categoryを抽出してキャッシュを無効化。
+				const categoryMatch = restoredMemo.match(/category: "([^"]+)"/);
+				if (categoryMatch) {
+					const category = categoryMatch[1];
+					const cacheKey = `${targetFilePath}::${category}`;
+					this.cacheManager.invalidateMemos(cacheKey);
+				}
 
 				notify.success("メモを復活しました");
 				return true;

@@ -582,14 +582,23 @@ export class MemologSidebar extends ItemView {
 				displayMemos = result.matches;
 			}
 
+			//! ゴミ箱タブの場合は削除されたメモのみ表示、それ以外は削除されていないメモのみ表示。
+			if (this.currentCategory === "trash") {
+				//! ゴミ箱タブ: trashedAtが存在するメモのみ表示。
+				displayMemos = displayMemos.filter((memo) => memo.trashedAt);
+			} else {
+				//! 通常タブ: trashedAtが存在しないメモのみ表示。
+				displayMemos = displayMemos.filter((memo) => !memo.trashedAt);
+			}
+
 			//! ピン留めメモを追加（日付フィルタを無視、allタブ以外はカテゴリフィルタを適用）。
 			if (settings.pinnedMemoIds.length > 0 && this.currentCategory !== "trash") {
 				//! 全メモから読み込み。
 				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
 
-				//! ピン留めメモを抽出。
+				//! ピン留めメモを抽出（削除されていないメモのみ）。
 				const pinnedMemos = allMemos.filter((memo) =>
-					settings.pinnedMemoIds.includes(memo.id)
+					settings.pinnedMemoIds.includes(memo.id) && !memo.trashedAt
 				);
 
 				//! allタブ以外の場合はカテゴリフィルタを適用。

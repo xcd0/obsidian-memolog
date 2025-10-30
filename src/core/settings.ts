@@ -1,5 +1,12 @@
 import { App, TFile } from "obsidian";
 import { GlobalSettings, LocalSettings, DEFAULT_GLOBAL_SETTINGS } from "../types";
+import {
+	sanitizeCategoryName,
+	sanitizeDirectoryName,
+	sanitizePath,
+	sanitizeTemplate,
+	sanitizeString,
+} from "../utils/sanitizer";
 
 //! 設定ファイルを管理するクラス。
 export class SettingsManager {
@@ -60,6 +67,47 @@ export class SettingsManager {
 		return parts.join("/");
 	}
 
+	//! グローバル設定をサニタイズする。
+	private sanitizeGlobalSettings(settings: GlobalSettings): GlobalSettings {
+		const sanitized = { ...settings };
+
+		//! カテゴリ設定をサニタイズ。
+		sanitized.categories = sanitized.categories.map((cat) => ({
+			...cat,
+			name: sanitizeCategoryName(cat.name),
+			directory: sanitizeDirectoryName(cat.directory),
+			icon: sanitizeString(cat.icon, false),
+		}));
+
+		//! 文字列フィールドをサニタイズ。
+		sanitized.defaultCategory = sanitizeDirectoryName(sanitized.defaultCategory);
+		sanitized.rootDirectory = sanitizePath(sanitized.rootDirectory);
+		sanitized.memoTemplate = sanitizeTemplate(sanitized.memoTemplate);
+		sanitized.pathFormat = sanitizePath(sanitized.pathFormat);
+		sanitized.attachmentPath = sanitizePath(sanitized.attachmentPath);
+		sanitized.attachmentNameFormat = sanitizeString(sanitized.attachmentNameFormat, false);
+		sanitized.trashFilePath = sanitizePath(sanitized.trashFilePath);
+
+		return sanitized;
+	}
+
+	//! ローカル設定をサニタイズする。
+	private sanitizeLocalSettings(settings: LocalSettings): LocalSettings {
+		const sanitized = { ...settings };
+
+		if (sanitized.template) {
+			sanitized.template = sanitizeTemplate(sanitized.template);
+		}
+		if (sanitized.attachmentPath) {
+			sanitized.attachmentPath = sanitizePath(sanitized.attachmentPath);
+		}
+		if (sanitized.pathFormat) {
+			sanitized.pathFormat = sanitizePath(sanitized.pathFormat);
+		}
+
+		return sanitized;
+	}
+
 	//! グローバル設定を更新する。
 	async updateGlobalSettings(settings: Partial<GlobalSettings>): Promise<void> {
 		this.globalSettings = { ...this.globalSettings, ...settings };
@@ -96,7 +144,9 @@ export class SettingsManager {
 						parsed.rootDirectory = extractedRoot;
 					}
 
-					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					//! 読み込んだ設定をサニタイズ。
+					const merged = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					this.globalSettings = this.sanitizeGlobalSettings(merged);
 					return;
 				}
 			}
@@ -129,7 +179,9 @@ export class SettingsManager {
 						parsed.rootDirectory = extractedRoot;
 					}
 
-					this.globalSettings = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					//! 読み込んだ設定をサニタイズ。
+					const merged = { ...DEFAULT_GLOBAL_SETTINGS, ...parsed };
+					this.globalSettings = this.sanitizeGlobalSettings(merged);
 					//! 新しいファイルに保存。
 					await this.saveGlobalSettings();
 					//! 古いファイルを削除。
@@ -151,6 +203,9 @@ export class SettingsManager {
 	//! グローバル設定を保存する。
 	async saveGlobalSettings(): Promise<void> {
 		try {
+			//! 保存前にサニタイズして、メモリにも反映。
+			this.globalSettings = this.sanitizeGlobalSettings(this.globalSettings);
+
 			//! 現在のrootDirectoryを使ってパスを生成。
 			const settingsPath = this.getGlobalSettingsPath();
 			const dirPath = settingsPath.split("/").slice(0, -1).join("/");
@@ -189,9 +244,11 @@ export class SettingsManager {
 			if (file instanceof TFile) {
 				const content = await this.app.vault.read(file);
 				const parsed = JSON.parse(content) as LocalSettings;
+				//! 読み込んだ設定をサニタイズ。
+				const sanitized = this.sanitizeLocalSettings(parsed);
 				//! キャッシュに保存。
-				this.localSettingsCache.set(directoryPath, parsed);
-				return parsed;
+				this.localSettingsCache.set(directoryPath, sanitized);
+				return sanitized;
 			}
 
 			return null;
@@ -204,8 +261,10 @@ export class SettingsManager {
 	//! ローカル設定を保存する。
 	async saveLocalSettings(directoryPath: string, settings: LocalSettings): Promise<void> {
 		try {
+			//! 保存前にサニタイズ。
+			const sanitized = this.sanitizeLocalSettings(settings);
 			const settingsPath = `${directoryPath}/${SettingsManager.LOCAL_SETTINGS_FILENAME}`;
-			const content = JSON.stringify(settings, null, "\t");
+			const content = JSON.stringify(sanitized, null, "\t");
 			const file = this.app.vault.getAbstractFileByPath(settingsPath);
 
 			if (file instanceof TFile) {
@@ -215,7 +274,7 @@ export class SettingsManager {
 			}
 
 			//! キャッシュを更新。
-			this.localSettingsCache.set(directoryPath, settings);
+			this.localSettingsCache.set(directoryPath, sanitized);
 		} catch (error) {
 			console.error(`Failed to save local settings to ${directoryPath}:`, error);
 			throw error;

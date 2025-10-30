@@ -1,8 +1,8 @@
-# memolog 仕様書 v0.0.8 (プロトタイプ版)
+# memolog 仕様書 v0.0.9 (プロトタイプ版)
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-最終更新: 2025-10-28
+最終更新: 2025-10-30
 対象: Obsidian 1.6+（Desktop/Mobile）
 言語: TypeScript
 ライセンス: CC0 1.0 Universal (Public Domain)
@@ -263,5 +263,45 @@ interface MemoTemplate {
 ### ライセンス遵守について
 
 本プロジェクトを使用・改変・再配布する際は、上記の各ライブラリのライセンス条項を遵守してください。特に、MITライセンスやApache-2.0ライセンスのライブラリについては、著作権表示とライセンス文の保持が必要です。
+
+---
+
+## 11. v0.0.9の主な変更点
+
+### 11.1 ゴミ箱機能
+
+削除されたメモを一時的に保管する機能を追加。
+
+**設定項目:**
+- `enableTrash`: ゴミ箱機能の有効化
+- `trashFilePath`: ゴミ箱ファイルパス（デフォルト: `_trash`）
+- `trashRetentionDays`: 保持期間（日数）
+- `showTrashTab`: ゴミ箱タブの表示
+
+**特徴:**
+- ゴミ箱ファイルは `_trash.md` 形式（隠しファイルは不可）
+- 専用設定タブを追加
+- パス変換処理から除外される特別なファイル
+
+### 11.2 パス変換機能の改善
+
+**変換ダイアログの強化:**
+- バックアップのみ実行ボタンの追加
+- 変換予定の全件表示（スクロール可能なテーブル）
+- 特別なファイルの自動除外（`index.md`, `_*.md`, パス書式にマッチしないファイル）
+
+**Git検出の修正:**
+- `adapter.exists()` と `adapter.stat()` を使用
+- 隠しファイル（`.git`）の正確な検出
+
+### 11.3 設定画面の拡充
+
+**ファイルパス書式プリセット追加:**
+- `%C/%Y-%m-%d.md`
+- `%C/%Y%m%d.md`
+
+**添付ファイル保存先プリセット追加:**
+- `./attachments/%Y-%m-%d`
+- `./attachments/%Y%m%d`
 
 ---

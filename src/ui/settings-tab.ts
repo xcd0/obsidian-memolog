@@ -1227,6 +1227,8 @@ export class MemologSettingTab extends PluginSettingTab {
 			const iconCell = row.createEl("td");
 			if (category.showIcon !== false && category.icon) {
 				setIcon(iconCell, category.icon);
+			//! アイコンの色をカテゴリの色に設定。
+			iconCell.style.color = category.color;
 			}
 
 			//! 色。

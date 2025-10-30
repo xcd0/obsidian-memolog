@@ -34,6 +34,8 @@ export class MemologSettingTab extends PluginSettingTab {
 	private initialUseDirectoryCategory: boolean = false;
 	private migrationButton: HTMLButtonElement | null = null;
 	private currentActiveTab: string = "basic"; //! 現在アクティブなタブ。
+	//! 設定画面表示時の初期設定値（JSON文字列）- 将来的な変更検出・比較機能用に保持。
+	private _initialSettings: string = "";
 
 	constructor(app: App, plugin: MemologPlugin) {
 		super(app, plugin);
@@ -57,6 +59,18 @@ export class MemologSettingTab extends PluginSettingTab {
 		this.debounceTimers.set(key, timer);
 	}
 
+	//! 設定を保存してJSONファイルから再読み込みする。
+	private async saveAndReloadSettings(updates: Partial<import("../types").GlobalSettings>): Promise<void> {
+		await this.plugin.settingsManager.updateGlobalSettings(updates);
+		//! JSONファイルから設定を再読み込み。
+		await this.plugin.settingsManager.loadGlobalSettings();
+	}
+
+	//! 初期設定値を取得する（変更検出用）。
+	getInitialSettings(): string {
+		return this._initialSettings;
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -67,6 +81,8 @@ export class MemologSettingTab extends PluginSettingTab {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
 		this.initialPathFormat = settings.pathFormat;
 		this.initialUseDirectoryCategory = settings.useDirectoryCategory;
+		//! 設定画面表示時の全設定値をJSON文字列として保存。
+		this._initialSettings = JSON.stringify(settings);
 
 		//! タブUIを作成。
 		this.createTabUI(containerEl);
@@ -1212,8 +1228,8 @@ export class MemologSettingTab extends PluginSettingTab {
 				.setPlaceholder("directory-name")
 				.setValue(category.directory);
 
-			//! バリデーションと保存の共通処理。
-			const validateAndSave = async (value: string) => {
+			//! バリデーション処理。
+			const validate = (value: string) => {
 				//! ディレクトリ名が空の場合はエラーメッセージを表示。
 				if (!value.trim()) {
 					text.inputEl.addClass("memolog-input-error");
@@ -1222,11 +1238,13 @@ export class MemologSettingTab extends PluginSettingTab {
 					text.inputEl.removeClass("memolog-input-error");
 					directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 				}
+			};
 
-				//! 保存（空文字列でも保存される）。
+			//! 保存処理。
+			const save = async (value: string) => {
 				const updatedCategories = [...settings.categories];
 				updatedCategories[index] = { ...updatedCategories[index], directory: value };
-				await this.plugin.settingsManager.updateGlobalSettings({
+				await this.saveAndReloadSettings({
 					categories: updatedCategories,
 				});
 				this.refreshSidebar();
@@ -1234,27 +1252,16 @@ export class MemologSettingTab extends PluginSettingTab {
 				this.updateDefaultCategoryTable();
 			};
 
-			//! リアルタイム保存 - input イベントを監視。
+			//! 入力時はバリデーションのみ。
 			text.inputEl.addEventListener("input", () => {
-				const value = text.inputEl.value;
-
-				//! debounce付きで保存。
-				this.debounce(`category-directory-${index}`, async () => {
-					await validateAndSave(value);
-				});
+				validate(text.inputEl.value);
 			});
 
-			//! フォーカスが外れた時も即座に保存（debounce待ちをキャンセル）。
+			//! フォーカスが外れた時に保存。
 			text.inputEl.addEventListener("blur", () => {
 				const value = text.inputEl.value;
-				//! debounceのタイマーをクリア。
-				const existingTimer = this.debounceTimers.get(`category-directory-${index}`);
-				if (existingTimer) {
-					clearTimeout(existingTimer);
-					this.debounceTimers.delete(`category-directory-${index}`);
-				}
-				//! 即座に保存。
-				void validateAndSave(value);
+				validate(value);
+				void save(value);
 			});
 
 			//! 初期表示時のチェック。
@@ -1275,11 +1282,11 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setPlaceholder("表示名")
 					.setValue(category.name);
 
-				//! 保存処理の共通関数（空文字列も許容）。
-				const saveDisplayName = async (value: string) => {
+				//! 保存処理（空文字列も許容）。
+				const save = async (value: string) => {
 					const updatedCategories = [...settings.categories];
 					updatedCategories[index] = { ...updatedCategories[index], name: value };
-					await this.plugin.settingsManager.updateGlobalSettings({
+					await this.saveAndReloadSettings({
 						categories: updatedCategories,
 					});
 					this.refreshSidebar();
@@ -1287,27 +1294,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					this.updateDefaultCategoryTable();
 				};
 
-				//! リアルタイム保存 - input イベントを監視。
-				text.inputEl.addEventListener("input", () => {
-					const value = text.inputEl.value;
-
-					//! debounce付きで保存（空文字列も保存される）。
-					this.debounce(`category-name-${index}`, async () => {
-						await saveDisplayName(value);
-					});
-				});
-
-				//! フォーカスが外れた時も即座に保存（debounce待ちをキャンセル）。
+				//! フォーカスが外れた時に保存。
 				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value;
-					//! debounceのタイマーをクリア。
-					const existingTimer = this.debounceTimers.get(`category-name-${index}`);
-					if (existingTimer) {
-						clearTimeout(existingTimer);
-						this.debounceTimers.delete(`category-name-${index}`);
-					}
-					//! 即座に保存（空文字列も保存される）。
-					void saveDisplayName(value);
+					void save(text.inputEl.value);
 				});
 
 				return text;
@@ -1360,12 +1349,13 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setValue(category.color)
 					.setPlaceholder("#3b82f6");
 
-				const saveColor = async (value: string) => {
+				//! 保存処理。
+				const save = async (value: string) => {
 					//! #で始まる6桁の16進数かチェック。
 					if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
 						const updatedCategories = [...settings.categories];
 						updatedCategories[index] = { ...updatedCategories[index], color: value };
-						await this.plugin.settingsManager.updateGlobalSettings({
+						await this.saveAndReloadSettings({
 							categories: updatedCategories,
 						});
 						this.refreshCategoryTab();
@@ -1374,23 +1364,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					}
 				};
 
-				//! リアルタイム保存 - input イベントを監視。
-				text.inputEl.addEventListener("input", () => {
-					const value = text.inputEl.value;
-					this.debounce(`category-color-${index}`, async () => {
-						await saveColor(value);
-					});
-				});
-
-				//! フォーカスが外れた時も即座に保存。
+				//! フォーカスが外れた時に保存。
 				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value;
-					const existingTimer = this.debounceTimers.get(`category-color-${index}`);
-					if (existingTimer) {
-						clearTimeout(existingTimer);
-						this.debounceTimers.delete(`category-color-${index}`);
-					}
-					void saveColor(value);
+					void save(text.inputEl.value);
 				});
 
 				return text;

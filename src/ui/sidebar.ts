@@ -938,15 +938,32 @@ export class MemologSidebar extends ItemView {
 						memoDate
 					);
 
-			//! メモを削除。
-			const deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+			//! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
+			let deleted = false;
+			if (settings.enableTrash) {
+				//! 期限切れのゴミ箱メモを削除。
+				await this.memoManager.cleanupExpiredTrash(
+					settings.rootDirectory,
+					settings.trashFilePath,
+					settings.trashRetentionDays
+				);
+
+				//! ゴミ箱に移動。
+				deleted = await this.memoManager.moveToTrash(
+					filePath,
+					memo.category,
+					memoId,
+					settings.rootDirectory,
+					settings.trashFilePath
+				);
+			} else {
+				//! 完全削除。
+				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+			}
 
 			if (deleted) {
 				//! メモリストを再読み込み。
 				await this.loadMemos();
-				new Notice("メモを削除しました");
-			} else {
-				new Notice("メモが見つかりませんでした");
 			}
 		} catch (error) {
 			console.error("メモ削除エラー:", error);

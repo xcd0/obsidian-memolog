@@ -281,6 +281,121 @@ export class MemoManager {
 		return result.data;
 	}
 
+	//! ゴミ箱ファイルのフルパスを取得する。
+	private getTrashFilePath(rootDirectory: string, trashFilePath: string): string {
+		return `${rootDirectory}/${trashFilePath}.md`;
+	}
+
+	//! ゴミ箱から期限切れのメモを削除する。
+	async cleanupExpiredTrash(rootDirectory: string, trashFilePath: string, retentionDays: number): Promise<void> {
+		await this.errorHandler.wrap(
+			(async () => {
+				const fullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
+				const fileExists = this.vaultHandler.fileExists(fullPath);
+				if (!fileExists) {
+					return;
+				}
+
+				const fileContent = await this.vaultHandler.readFile(fullPath);
+				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+
+				const now = new Date();
+				const cutoffTime = now.getTime() - retentionDays * 24 * 60 * 60 * 1000;
+
+				const filtered = memos.filter((memoText) => {
+					//! trashedAtを抽出。
+					const match = memoText.match(/trashedAt:\s*"([^"]+)"/);
+					if (!match) {
+						//! trashedAtがない場合は削除しない。
+						return true;
+					}
+
+					const trashedAt = new Date(match[1]);
+					return trashedAt.getTime() > cutoffTime;
+				});
+
+				if (filtered.length < memos.length) {
+					const newContent = filtered.join("");
+					await this.vaultHandler.writeFile(fullPath, newContent);
+					notify.info(`期限切れのメモを${memos.length - filtered.length}件削除しました`);
+				}
+			})(),
+			{ rootDirectory, trashFilePath, retentionDays, context: "MemoManager.cleanupExpiredTrash" }
+		);
+	}
+
+	//! メモをゴミ箱に移動する。
+	async moveToTrash(
+		filePath: string,
+		category: string,
+		memoId: string,
+		rootDirectory: string,
+		trashFilePath: string
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				if (!fileExists) {
+					notify.warning("ファイルが見つかりません");
+					return false;
+				}
+
+				//! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+
+				//! メモを分割。
+				const memos = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				let targetMemo: string | null = null;
+				const filtered = memos.filter((memo) => {
+					if (memo.includes(`memo-id: ${memoId}`)) {
+						targetMemo = memo;
+						return false;
+					}
+					return true;
+				});
+
+				if (!targetMemo) {
+					notify.warning("削除対象のメモが見つかりません");
+					return false;
+				}
+
+				//! 元ファイルから削除。
+				const newContent = filtered.join("");
+				await this.vaultHandler.writeFile(filePath, newContent);
+
+				//! ゴミ箱ファイルに追加。
+				const trashFullPath = this.getTrashFilePath(rootDirectory, trashFilePath);
+				const trashedAt = this.generateTimestamp();
+
+				//! trashedAtをメモに追加。
+				const updatedMemo = (targetMemo as string).replace(
+					/(<!-- memo-id: [^,]+, timestamp: [^,]+, category: "[^"]+", template: "[^"]*" -->)/,
+					`$1\n<!-- trashedAt: "${trashedAt}" -->`
+				);
+
+				//! ゴミ箱ファイルに追記。
+				const trashExists = this.vaultHandler.fileExists(trashFullPath);
+				if (trashExists) {
+					const trashContent = await this.vaultHandler.readFile(trashFullPath);
+					await this.vaultHandler.writeFile(trashFullPath, trashContent + "\n" + updatedMemo);
+				} else {
+					await this.vaultHandler.writeFile(trashFullPath, updatedMemo);
+				}
+
+				//! キャッシュを無効化。
+				const cacheKey = `${filePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				notify.success("メモをゴミ箱に移動しました");
+				return true;
+			})(),
+			{ filePath, category, memoId, rootDirectory, trashFilePath, context: "MemoManager.moveToTrash" }
+		);
+
+		return result.success && result.data ? result.data : false;
+	}
+
 	//! メモを削除する（IDで検索して削除）。
 	async deleteMemo(filePath: string, category: string, memoId: string): Promise<boolean> {
 		const result = await this.errorHandler.wrap(

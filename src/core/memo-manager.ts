@@ -464,10 +464,11 @@ export class MemoManager {
 						//! チェックボックスを切り替え。
 						if (completed) {
 							//! - [ ] を - [x] に置換。
-							return memoText.replace(/^-\s*\[\s\]\s+/m, "- [x] ");
+							//! HTMLコメントの後の改行も考慮して、行頭または改行直後のチェックボックスを探す。
+							return memoText.replace(/(^|\n)-\s*\[\s?\]\s+/m, "$1- [x] ");
 						} else {
 							//! - [x] を - [ ] に置換。
-							return memoText.replace(/^-\s*\[x\]\s+/m, "- [ ] ");
+							return memoText.replace(/(^|\n)-\s*\[x\]\s+/m, "$1- [ ] ");
 						}
 					}
 					return memoText;

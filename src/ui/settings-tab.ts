@@ -1438,6 +1438,21 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 			);
 
+		//! TODOリストとして使用するかのトグル。
+		new Setting(categoryDiv)
+			.setName("TODOリストにする")
+			.setDesc("このカテゴリをTODOリストとして使用します。投稿にチェックボックスが表示され、チェックを入れると非表示になります（このカテゴリのタブ選択時のみ）。")
+			.addToggle((toggle) =>
+				toggle.setValue(category.useTodoList ?? false).onChange(async (value) => {
+					const updatedCategories = [...settings.categories];
+					updatedCategories[index] = { ...updatedCategories[index], useTodoList: value };
+					await this.plugin.settingsManager.updateGlobalSettings({
+						categories: updatedCategories,
+					});
+					this.refreshSidebar();
+				})
+			);
+
 		//! 順序変更と削除ボタン。
 		new Setting(categoryDiv)
 			.addButton((button) =>

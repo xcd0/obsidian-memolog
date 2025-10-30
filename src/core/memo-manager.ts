@@ -76,7 +76,7 @@ export class MemoManager {
 	}
 
 	//! メモエントリをテキスト形式に変換する。
-	private memoToText(memo: MemoEntry, template?: string): string {
+	private memoToText(memo: MemoEntry, template?: string, useTodoList = false): string {
 		//! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
 		const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M";
 		const formattedTemplate = this.formatTimestamp(memo.timestamp, actualTemplate);
@@ -96,11 +96,18 @@ export class MemoManager {
 			body = `${formattedTemplate}\n${content}`;
 		}
 
+		//! TODOリストの場合、チェックボックスを追加。
+		if (useTodoList) {
+			const checkbox = memo.todoCompleted ? "- [x] " : "- [ ] ";
+			body = checkbox + body.replace(/\n/g, "\n  ");
+		}
+
 		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントとして埋め込む。
 		//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
 		const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
 		const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
+		const todoEncoded = useTodoList ? `, todoCompleted: ${memo.todoCompleted ?? false}` : "";
+		return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${todoEncoded} -->\n${body}${attachments}\n`;
 	}
 
 	//! テキスト形式からメモエントリを解析する。
@@ -111,19 +118,21 @@ export class MemoManager {
 			return null;
 		}
 
-		//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
+		//! ID、タイムスタンプ、カテゴリ、テンプレート、TODO完了状態をHTMLコメントから抽出。
 		const commentMatch = text.match(/<!-- (.+?) -->/);
 		let id = uuidv7();
 		let timestamp: string | null = null;
 		let parsedCategory: string | null = null;
 		let template: string | undefined = undefined;
+		let todoCompleted: boolean | undefined = undefined;
 
 		if (commentMatch) {
 			const comment = commentMatch[1];
 			const idMatch = comment.match(/memo-id: ([^,]+)/);
 			const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
 			const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
-			const templateMatch = comment.match(/template: (.+)$/);
+			const templateMatch = comment.match(/template: ([^,]+?)(?:,|$)/);
+			const todoMatch = comment.match(/todoCompleted: (true|false)/);
 
 			id = idMatch?.[1].trim() || uuidv7();
 			timestamp = timestampMatch?.[1].trim() || null;
@@ -144,6 +153,10 @@ export class MemoManager {
 					//! JSON.parseエラーは無視（後方互換性）。
 					console.warn("[memolog] Failed to parse template from comment:", e);
 				}
+			}
+
+			if (todoMatch) {
+				todoCompleted = todoMatch[1] === "true";
 			}
 		}
 
@@ -196,6 +209,14 @@ export class MemoManager {
 			? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
 			: undefined;
 
+		//! TODO completed状態を本文からも抽出（HTMLコメントにない場合）。
+		if (todoCompleted === undefined) {
+			const todoCheckboxMatch = text.match(/^-\s*\[([x ])\]\s+/m);
+			if (todoCheckboxMatch) {
+				todoCompleted = todoCheckboxMatch[1] === "x";
+			}
+		}
+
 		return {
 			id,
 			category: finalCategory,
@@ -203,6 +224,7 @@ export class MemoManager {
 			content,
 			attachments,
 			template,
+			todoCompleted,
 		};
 	}
 
@@ -215,7 +237,8 @@ export class MemoManager {
 		template?: string,
 		attachments?: string[],
 		existingId?: string,
-		existingTimestamp?: string
+		existingTimestamp?: string,
+		useTodoList = false
 	): Promise<MemoEntry> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -227,10 +250,11 @@ export class MemoManager {
 					content,
 					attachments,
 					template,
+					todoCompleted: false,
 				};
 
 				//! メモをテキスト形式に変換。
-				const memoText = this.memoToText(memo, template);
+				const memoText = this.memoToText(memo, template, useTodoList);
 
 				//! ファイルが存在しない場合は空として扱う。
 				const fileExists = this.vaultHandler.fileExists(filePath);
@@ -377,7 +401,8 @@ export class MemoManager {
 		category: string,
 		memoId: string,
 		newContent: string,
-		template?: string
+		template?: string,
+		useTodoList = false
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -405,7 +430,7 @@ export class MemoManager {
 
 							//! 新しいテキストに変換。
 							updated = true;
-							return this.memoToText(memo, template);
+							return this.memoToText(memo, template, useTodoList);
 						}
 					}
 					return memoText;
@@ -428,6 +453,55 @@ export class MemoManager {
 				return true;
 			})(),
 			{ filePath, category, memoId, context: "MemoManager.updateMemo" }
+		);
+
+		return result.success && result.data ? result.data : false;
+	}
+
+	//! TODO完了状態を更新する。
+	async updateTodoCompleted(
+		filePath: string,
+		category: string,
+		memoId: string,
+		completed: boolean,
+		useTodoList = true
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				const fileExists = this.vaultHandler.fileExists(filePath);
+				if (!fileExists) {
+					return false;
+				}
+
+				const fileContent = await this.vaultHandler.readFile(filePath);
+				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				let updated = false;
+
+				const newMemoTexts = memoTexts.map((memoText) => {
+					if (memoText.includes(`memo-id: ${memoId}`)) {
+						const memo = this.parseTextToMemo(memoText, category);
+						if (memo) {
+							memo.todoCompleted = completed;
+							updated = true;
+							return this.memoToText(memo, memo.template, useTodoList);
+						}
+					}
+					return memoText;
+				});
+
+				if (!updated) {
+					return false;
+				}
+
+				const newFileContent = newMemoTexts.join("");
+				await this.vaultHandler.writeFile(filePath, newFileContent);
+
+				const cacheKey = `${filePath}::${category}`;
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				return true;
+			})(),
+			{ filePath, category, memoId, context: "MemoManager.updateTodoCompleted" }
 		);
 
 		return result.success && result.data ? result.data : false;

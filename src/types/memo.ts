@@ -23,6 +23,9 @@ export interface MemoEntry {
 
 	//! 更新日時（Date型）。
 	updatedAt?: Date;
+
+	//! TODO完了状態（TODOリストカテゴリの場合のみ使用）。
+	todoCompleted?: boolean;
 }
 
 //! メモの挿入位置。

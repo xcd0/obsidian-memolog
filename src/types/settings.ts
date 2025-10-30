@@ -16,6 +16,9 @@ export interface CategoryConfig {
 
 	//! アイコンを表示するか（デフォルト: true）。
 	showIcon?: boolean;
+
+	//! TODOリストとして使用するか（デフォルト: false）。
+	useTodoList?: boolean;
 }
 
 //! 保存単位。

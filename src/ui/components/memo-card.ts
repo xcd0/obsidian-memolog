@@ -88,18 +88,27 @@ export class MemoCard {
 
 		//! TODOチェックボックス（useTodoListがtrueの場合のみ）。
 		if (this.useTodoList) {
+			console.log("[TODO Debug MemoCard] useTodoListがtrue、チェックボックスを作成");
 			const checkbox = leftArea.createEl("input", {
 				type: "checkbox",
 				cls: "memolog-todo-checkbox",
 			}) as HTMLInputElement;
 			//! contentの先頭が - [x] かどうかで判定。
-			checkbox.checked = /^-\s*\[x\]\s+/.test(this.memo.content);
+			const isCompleted = /^-\s*\[x\]\s+/.test(this.memo.content);
+			checkbox.checked = isCompleted;
+			console.log("[TODO Debug MemoCard] チェックボックス初期状態:", { memoId: this.memo.id, checked: isCompleted, content: this.memo.content.substring(0, 50) });
 
 			checkbox.addEventListener("change", () => {
+				console.log("[TODO Debug MemoCard] チェックボックスchangeイベント発火:", { memoId: this.memo.id, checked: checkbox.checked });
 				if (this.handlers.onTodoToggle) {
+					console.log("[TODO Debug MemoCard] onTodoToggleハンドラーを呼び出し");
 					this.handlers.onTodoToggle(this.memo.id, checkbox.checked);
+				} else {
+					console.log("[TODO Debug MemoCard] onTodoToggleハンドラーが存在しません！");
 				}
 			});
+		} else {
+			console.log("[TODO Debug MemoCard] useTodoListがfalse、チェックボックス非表示");
 		}
 
 		//! タイムスタンプ。

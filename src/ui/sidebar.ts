@@ -536,8 +536,8 @@ export class MemologSidebar extends ItemView {
 						startDate.setHours(0, 0, 0, 0); //! 今日の始まり。
 					} else if (this.currentDateRange === "week") {
 						startDate = new Date();
-						startDate.setDate(endDate.getDate() - 7);
-						startDate.setHours(0, 0, 0, 0); //! 7日前の始まり。
+						startDate.setDate(endDate.getDate() - 6);
+						startDate.setHours(0, 0, 0, 0); //! 6日前の始まり(今日を含めて7日間)。
 					} else {
 						//! "all"の場合は、過去2年分のデータを読み込む（パフォーマンス考慮）。
 						startDate = new Date();
@@ -576,10 +576,16 @@ export class MemologSidebar extends ItemView {
 					}
 
 					//! メモのタイムスタンプで日付範囲フィルタリング。
-					this.memos = allMemos.filter((memo) => {
+					const filteredMemos = allMemos.filter((memo) => {
 						const memoDate = new Date(memo.timestamp);
 						return memoDate >= startDate && memoDate <= endDate;
 					});
+
+					//! 重複を除外(同じメモIDが複数のファイルに含まれている場合)。
+					this.memos = filteredMemos.filter(
+						(memo, index, self) => self.findIndex((m) => m.id === memo.id) === index
+					);
+
 					this.sortMemos();
 				} else {
 					//! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。

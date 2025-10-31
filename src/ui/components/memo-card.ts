@@ -1,5 +1,6 @@
 import { MemoEntry, CategoryConfig } from "../../types";
 import { MarkdownRenderer, Component, setIcon, App, TFile } from "obsidian";
+import { Logger } from "../../utils/logger";
 
 //! メモカードのイベントハンドラー。
 export interface MemoCardHandlers {
@@ -187,7 +188,7 @@ export class MemoCard {
 					setIcon(copyBtn, "copy");
 				}, 1500);
 			} catch (error) {
-				console.error("Failed to copy to clipboard:", error);
+				Logger.error("Failed to copy to clipboard:", error);
 			}
 		});
 
@@ -335,7 +336,7 @@ export class MemoCard {
 				}
 			}
 		} catch (error) {
-			console.error("Failed to handle paste:", error);
+			Logger.error("Failed to handle paste:", error);
 		}
 	}
 

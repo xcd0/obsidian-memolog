@@ -2,6 +2,7 @@ import { App, Modal, Notice, Setting } from "obsidian";
 import { PathMapping, MigrationResult } from "../utils/path-migrator";
 import { BackupManager, BackupMetadata } from "../utils/backup-manager";
 import { SettingsManager } from "../core/settings";
+import { Logger } from "../utils/logger";
 
 //! マイグレーション確認モーダル。
 export class MigrationConfirmModal extends Modal {
@@ -260,7 +261,7 @@ export class MigrationConfirmModal extends Modal {
 					"backup-memolog-*.zip"
 				);
 				if (gitignoreSuccess) {
-					console.log(".gitignoreにbackup-memolog-*.zipを追加しました");
+					Logger.info(".gitignoreにbackup-memolog-*.zipを追加しました");
 				}
 			}
 
@@ -318,7 +319,7 @@ export class MigrationConfirmModal extends Modal {
 					"backup-memolog-*.zip"
 				);
 				if (gitignoreSuccess) {
-					console.log(".gitignoreにbackup-memolog-*.zipを追加しました");
+					Logger.info(".gitignoreにbackup-memolog-*.zipを追加しました");
 				}
 			}
 

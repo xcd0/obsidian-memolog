@@ -11,6 +11,7 @@ import { SearchBar } from "./components/search-bar";
 import { SearchEngine, SearchQuery } from "../core/search-engine";
 import { PathGenerator } from "../utils/path-generator";
 import { parseTextToMemo } from "../core/memo-helpers";
+import { Logger } from "../utils/logger";
 
 //! サイドバーのビュータイプ。
 export const VIEW_TYPE_MEMOLOG = "memolog-sidebar";
@@ -685,7 +686,7 @@ export class MemologSidebar extends ItemView {
 				this.calendarView.updateMemoCounts(timestamps);
 			}
 		} catch (error) {
-			console.error("メモ読み込みエラー:", error);
+			Logger.error("メモ読み込みエラー:", error);
 			new Notice("メモの読み込みに失敗しました");
 			this.memos = [];
 		} finally {
@@ -776,7 +777,7 @@ export class MemologSidebar extends ItemView {
 			//! メモを再読み込み。
 			await this.loadMemos();
 		} catch (error) {
-			console.error("ファイル変更処理エラー:", error);
+			Logger.error("ファイル変更処理エラー:", error);
 		}
 	}
 
@@ -855,7 +856,7 @@ export class MemologSidebar extends ItemView {
 				new Notice("Daily Noteに追加しました");
 			}
 		} catch (error) {
-			console.error("Daily Note追加エラー:", error);
+			Logger.error("Daily Note追加エラー:", error);
 			new Notice("Daily Noteへの追加に失敗しました");
 		}
 	}
@@ -944,7 +945,7 @@ export class MemologSidebar extends ItemView {
 
 			return markdownLink;
 		} catch (error) {
-			console.error("Failed to save pasted image:", error);
+			Logger.error("Failed to save pasted image:", error);
 			new Notice("画像の保存に失敗しました");
 			return null;
 		}
@@ -1030,10 +1031,10 @@ export class MemologSidebar extends ItemView {
 
 			new Notice("メモを追加しました");
 		} catch (error) {
-			console.error("メモ追加エラー:", error);
+			Logger.error("メモ追加エラー:", error);
 			if (error instanceof Error) {
-				console.error("Error message:", error.message);
-				console.error("Error stack:", error.stack);
+				Logger.error("Error message:", error.message);
+				Logger.error("Error stack:", error.stack);
 			}
 			new Notice("メモの追加に失敗しました");
 		}
@@ -1116,7 +1117,7 @@ export class MemologSidebar extends ItemView {
 				await this.loadMemos();
 			}
 		} catch (error) {
-			console.error("メモ削除エラー:", error);
+			Logger.error("メモ削除エラー:", error);
 			new Notice("メモの削除に失敗しました");
 		}
 	}
@@ -1141,7 +1142,7 @@ export class MemologSidebar extends ItemView {
 				await this.loadMemos();
 			}
 		} catch (error) {
-			console.error("メモ復活エラー:", error);
+			Logger.error("メモ復活エラー:", error);
 			new Notice("メモの復活に失敗しました");
 		}
 	}
@@ -1172,7 +1173,7 @@ export class MemologSidebar extends ItemView {
 			//! メモリストを再描画（ピン留め状態を反映）。
 			await this.loadMemos();
 		} catch (error) {
-			console.error("ピン留めエラー:", error);
+			Logger.error("ピン留めエラー:", error);
 			new Notice("ピン留めの変更に失敗しました");
 		}
 	}
@@ -1225,7 +1226,7 @@ export class MemologSidebar extends ItemView {
 				new Notice("メモの更新に失敗しました");
 			}
 		} catch (error) {
-			console.error("メモ更新エラー:", error);
+			Logger.error("メモ更新エラー:", error);
 			new Notice("メモの更新に失敗しました");
 		}
 	}
@@ -1311,7 +1312,7 @@ export class MemologSidebar extends ItemView {
 
 			new Notice("カテゴリを変更しました");
 		} catch (error) {
-			console.error("カテゴリ変更エラー:", error);
+			Logger.error("カテゴリ変更エラー:", error);
 			new Notice("カテゴリの変更に失敗しました");
 		}
 	}
@@ -1353,7 +1354,7 @@ export class MemologSidebar extends ItemView {
 			//! メモリストを再読み込み。
 			await this.loadMemos();
 		} catch (error) {
-			console.error("TODO状態変更エラー:", error);
+			Logger.error("TODO状態変更エラー:", error);
 			new Notice("TODO状態の変更に失敗しました");
 		}
 	}

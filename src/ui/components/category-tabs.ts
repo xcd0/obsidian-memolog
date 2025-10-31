@@ -152,11 +152,7 @@ export class CategoryTabs {
 		const iconEl = tab.createDiv({ cls: "memolog-category-tab-icon" });
 		setIcon(iconEl, "trash-2");
 
-		//! カテゴリ名を追加。
-		tab.createDiv({
-			cls: "memolog-category-tab-name",
-			text: "ゴミ箱",
-		});
+		//! ラベルは表示しない（アイコンのみ）。
 
 		//! クリックイベントを設定（ディレクトリ名"trash"を渡す）。
 		tab.addEventListener("click", () => {

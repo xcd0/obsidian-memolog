@@ -43,7 +43,6 @@ export class MemoCard {
 	private sourcePath: string;
 	private component: Component;
 	private categories: CategoryConfig[];
-	private useTodoList: boolean;
 	private isTrash: boolean;
 	private isPinned: boolean;
 
@@ -55,7 +54,6 @@ export class MemoCard {
 		enableDailyNotes = false,
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
-		useTodoList = false,
 		isTrash = false,
 		isPinned = false
 	) {
@@ -67,7 +65,6 @@ export class MemoCard {
 		this.sourcePath = sourcePath;
 		this.component = new Component();
 		this.categories = categories;
-		this.useTodoList = useTodoList;
 		this.isTrash = isTrash;
 		this.isPinned = isPinned;
 	}
@@ -82,10 +79,8 @@ export class MemoCard {
 
 		//! 本文（非同期でレンダリング）。
 		void this.renderContent(card).then(() => {
-			//! TODOチェックボックスにイベントリスナーを追加。
-			if (this.useTodoList) {
-				this.attachTodoCheckboxListener(card);
-			}
+			//! TODOチェックボックスにイベントリスナーを追加（全カテゴリで有効）。
+			this.attachTodoCheckboxListener(card);
 		});
 
 		//! 添付ファイル。
@@ -522,8 +517,8 @@ export class MemoCard {
 
 			//! 本文を再描画（編集モードに応じて変わる）（非同期）。
 			void this.renderContent(this.cardElement).then(() => {
-				//! TODOチェックボックスにイベントリスナーを追加。
-				if (this.useTodoList && !this.isEditMode && this.cardElement) {
+				//! TODOチェックボックスにイベントリスナーを追加（編集モード以外）。
+				if (!this.isEditMode && this.cardElement) {
 					this.attachTodoCheckboxListener(this.cardElement);
 				}
 			});

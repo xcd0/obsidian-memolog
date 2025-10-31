@@ -309,6 +309,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
 			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
 			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
+			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。
@@ -1062,6 +1063,30 @@ export class MemologSettingTab extends PluginSettingTab {
 	//! 高度な機能設定を追加する。
 	private addAdvancedFeatures(containerEl: HTMLElement): void {
 		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! ログ設定。
+		containerEl.createEl("h4", { text: "ログ設定" });
+
+		new Setting(containerEl)
+			.setName("ログ出力レベル")
+			.setDesc("コンソールに出力するログのレベルを設定します")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("none", "なし")
+					.addOption("error", "エラーのみ")
+					.addOption("warn", "警告以上")
+					.addOption("info", "情報以上")
+					.addOption("debug", "デバッグ（全て）")
+					.setValue(settings.logLevel)
+					.onChange(async (value) => {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							logLevel: value as "none" | "error" | "warn" | "info" | "debug",
+						});
+						//! Loggerのログレベルを更新。
+						const { Logger } = await import("../utils/logger");
+						Logger.setLogLevel(value as "none" | "error" | "warn" | "info" | "debug");
+					})
+			);
 
 		//! 検索履歴設定。
 		containerEl.createEl("h4", { text: "検索履歴" });

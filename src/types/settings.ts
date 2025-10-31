@@ -77,6 +77,9 @@ export interface GlobalSettings {
 	//! ピン留めされた投稿のID配列。
 	pinnedMemoIds: string[];
 
+	//! ログ出力レベル（none, error, warn, info, debug）。
+	logLevel: "none" | "error" | "warn" | "info" | "debug";
+
 	//! ピン留めタブを表示するか。
 	showPinnedTab: boolean;
 }
@@ -129,4 +132,5 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	showTrashTab: false,
 	pinnedMemoIds: [],
 	showPinnedTab: true,
+	logLevel: "info",
 };

@@ -49,10 +49,6 @@ export class MemoList {
 
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
-			//! メモのカテゴリからuseTodoList設定を取得。
-			const categoryConfig = this.categories.find((c) => c.directory === memo.category);
-			const memoUseTodoList = categoryConfig?.useTodoList ?? false;
-
 			//! ピン留め状態を確認。
 			const isPinned = this.pinnedMemoIds.includes(memo.id);
 
@@ -64,7 +60,6 @@ export class MemoList {
 				this.enableDailyNotes,
 				this.sourcePath,
 				this.categories,
-				memoUseTodoList,
 				this.isTrash,
 				isPinned
 			);

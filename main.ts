@@ -2,6 +2,7 @@ import { Plugin } from "obsidian";
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./src/ui/sidebar";
 import { SettingsManager } from "./src/core/settings";
 import { MemologSettingTab } from "./src/ui/settings-tab";
+import { Logger } from "./src/utils/logger";
 
 //! memologプラグインのメインクラス。
 export default class MemologPlugin extends Plugin {
@@ -13,6 +14,10 @@ export default class MemologPlugin extends Plugin {
 		//! 設定マネージャーを初期化。
 		this.settingsManager = new SettingsManager(this.app);
 		await this.settingsManager.loadGlobalSettings();
+
+		//! ログレベルを初期化。
+		const settings = this.settingsManager.getGlobalSettings();
+		Logger.setLogLevel(settings.logLevel);
 
 		//! サイドバービューを登録。
 		this.registerView(VIEW_TYPE_MEMOLOG, (leaf) => new MemologSidebar(leaf, this));

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-メモを素早く記録・整理・回顧する (v0.0.10 - プロトタイプ版)
+メモを素早く記録・整理・回顧する (v0.0.11 - 開発進行中)
 
 ## 概要
 
@@ -12,7 +12,24 @@ memologは、Obsidianでメモを効率的に管理するためのプラグイ�
 
 ### 主な機能
 
-#### v0.0.10 (最新 - プロトタイプ版)
+#### v0.0.11 (開発中 - リファクタリングと品質向上)
+- **大規模リファクタリング**: コードの保守性とテスト容易性を大幅に改善
+  - memo-manager.ts: 610行 → 442行 (-168行, -27.5%)
+  - cache-manager.ts: 210行 → 115行 (-95行, -45.2%)
+  - path-migrator.ts: 497行 → 460行 (-37行, -7.4%)
+- **純粋関数の抽出**: I/O操作と業務ロジックの分離
+  - memo-crud-operations.ts (8関数, 100%カバレッジ)
+  - memo-trash-operations.ts (8関数, 100%カバレッジ)
+  - memo-query-operations.ts (13関数, 100%カバレッジ)
+  - memo-split-operations.ts (5関数, 100%カバレッジ)
+  - cache/lru-cache.ts (LRUCache実装, 100%カバレッジ)
+- **テスト拡充**: 包括的なテストスイート
+  - テスト数: 527件 → 703件 (+176件, +33.4%)
+  - 全体カバレッジ: 88.4% → 91.89% (+3.49%)
+  - tag-manager.ts: 88.46% → 100%
+  - cache-manager.ts: 83.09% → 92.5%
+
+#### v0.0.10 (プロトタイプ版)
 - **コード品質向上**: v0.1.0に向けた既存機能のブラッシュアップ
   - ESLintエラー修正 (61件→41件に削減)
   - 不要なasync/await削除

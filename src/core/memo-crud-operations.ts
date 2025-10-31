@@ -4,6 +4,32 @@ import { v7 as uuidv7 } from "uuid";
 //! メモCRUD操作の純粋関数群。
 //! I/O操作を含まず、ビジネスロジックのみを提供する。
 
+//! ローカルタイムゾーンオフセット付きのISO 8601形式の日時文字列を生成する。
+//! @param date 変換するDateオブジェクト(省略時は現在時刻)
+//! @returns ISO 8601形式の文字列 (例: "2025-10-31T14:30:00.000+09:00")
+export function toLocalISOString(date: Date = new Date()): string {
+	//! タイムゾーンオフセットを取得 (分単位)。
+	//! getTimezoneOffset()は「UTC-ローカル」なので、符号を反転する。
+	const offsetMinutes = -date.getTimezoneOffset();
+	const offsetHours = Math.floor(offsetMinutes / 60);
+	const offsetMins = Math.abs(offsetMinutes % 60);
+
+	//! オフセット文字列を作成 (+09:00 形式)。
+	const offsetStr = `${offsetHours >= 0 ? "+" : ""}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
+
+	//! ローカル時刻の各要素を取得。
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	const hours = String(date.getHours()).padStart(2, "0");
+	const minutes = String(date.getMinutes()).padStart(2, "0");
+	const seconds = String(date.getSeconds()).padStart(2, "0");
+	const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+
+	//! ISO 8601形式で組み立て。
+	return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}${offsetStr}`;
+}
+
 //! 新しいメモエントリを作成する。
 export function createMemoEntry(
 	category: string,
@@ -16,7 +42,7 @@ export function createMemoEntry(
 	return {
 		id: existingId || uuidv7(),
 		category,
-		timestamp: existingTimestamp || new Date().toISOString(),
+		timestamp: existingTimestamp || toLocalISOString(),
 		content,
 		attachments,
 		template,

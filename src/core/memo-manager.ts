@@ -13,6 +13,7 @@ import {
 	removeMemoFromList,
 	updateMemoInList,
 	joinMemosToFileContent,
+	toLocalISOString,
 } from "./memo-crud-operations";
 import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations";
 import {
@@ -123,7 +124,7 @@ export class MemoManager {
 
 				//! メモを分割してゴミ箱操作で削除状態にする。
 				const memos = splitFileIntoMemos(fileContent);
-				const trashedAt = new Date().toISOString();
+				const trashedAt = toLocalISOString();
 				const { memos: updatedMemos, marked } = markMemoAsDeleted(memos, memoId, trashedAt);
 
 				if (!marked) {

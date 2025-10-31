@@ -65,24 +65,24 @@ describe("タイムゾーン処理", () => {
 	});
 
 	describe("新規投稿時のタイムスタンプ", () => {
-		it("【仕様1】投稿者のタイムゾーンオフセット付きでタイムスタンプが保存されること", async () => {
+		it("【新仕様】新規投稿がISO 8601形式(タイムゾーンオフセット付き)で保存されること", async () => {
 			//! シナリオ:
 			//! - ユーザーA (GMT+9、日本) が 2025-10-31 14:30:00 JST に投稿
 			//!
 			//! 期待される動作:
 			//! - タイムスタンプは ISO 8601 形式でタイムゾーンオフセット付きで保存される
-			//! - 旧形式: 2025-10-31T05:30:00.000Z (UTC形式)
+			//! - 旧形式: 2025-10-31T05:30:00.000Z (UTC形式、Z終端)
 			//! - 新形式: 2025-10-31T14:30:00.000+09:00 (タイムゾーンオフセット付き)
 			//!
 			//! これにより:
-			//! - 投稿者がどのタイムゾーンで投稿したかが分かる
+			//! - 投稿者がどのタイムゾーンで投稿したかが分かる (+09:00)
 			//! - ローカル時刻が直接分かる (14:30)
-			//! - UTC時刻への変換も可能 (14:30 JST = 05:30 UTC)
+			//! - UTC時刻への変換も可能 (JavaScriptが自動変換)
 
 			//! モックの現在時刻を設定（テスト実行時の実際の時刻を使用）。
 			const now = new Date();
 			const localTimeStr = now.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-			console.log("=== 新規投稿テスト (タイムゾーンオフセット付き) ===");
+			console.log("=== 新規投稿テスト (ISO形式、タイムゾーンオフセット付き) ===");
 			console.log("テスト実行時刻 (ローカル):", localTimeStr);
 			console.log("テスト実行時刻 (UTC):", now.toISOString());
 
@@ -113,14 +113,17 @@ describe("タイムゾーン処理", () => {
 
 			//! 【新仕様】タイムゾーンオフセット付きのISO 8601形式であることを確認。
 			//! 形式: 2025-10-31T14:30:00.000+09:00 (末尾が +09:00 など)
-			//! または: 2025-10-31T05:30:00.000Z (UTC形式、互換性のため)
-			expect(savedTimestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}([+-]\d{2}:\d{2}|Z)$/);
+			expect(savedTimestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/);
 
 			//! 【新仕様の検証】タイムゾーンオフセットが含まれていることを確認。
 			if (offsetStr !== "+00:00") {
 				//! UTC以外のタイムゾーンの場合、オフセットが含まれるべき。
 				expect(savedTimestamp).toContain(offsetStr);
 				console.log("✓ タイムゾーンオフセットが含まれています:", offsetStr);
+			} else {
+				//! UTCタイムゾーンの場合、+00:00が含まれるべき。
+				expect(savedTimestamp).toContain("+00:00");
+				console.log("✓ UTCタイムゾーンオフセットが含まれています: +00:00");
 			}
 
 			//! 保存されたタイムスタンプをDateオブジェクトに変換。
@@ -132,10 +135,43 @@ describe("タイムゾーン処理", () => {
 			const timeDiff = Math.abs(savedDate.getTime() - now.getTime());
 			expect(timeDiff).toBeLessThan(5000); //! 5秒以内。
 
-			//! 【重要】新形式の利点:
-			//! 1. 投稿者のタイムゾーンが分かる (+09:00)
-			//! 2. ローカル時刻が直接読める (14:30)
-			//! 3. UTC時刻への変換も可能 (JavaScriptが自動変換)
+			console.log("✓ ISO 8601形式(タイムゾーンオフセット付き)で保存されています");
+		});
+
+		it("【新仕様】新規投稿がUTC形式(Z終端)ではないことを確認", async () => {
+			//! シナリオ:
+			//! - 旧形式(UTC形式、Z終端)で保存されないことを確認する
+			//!
+			//! 期待される動作:
+			//! - タイムスタンプは Z で終わらない (UTC形式ではない)
+			//! - タイムゾーンオフセット(+09:00など)で終わる
+
+			console.log("=== 新規投稿テスト (UTC形式でないことを確認) ===");
+
+			//! メモを追加。
+			await memoManager.addMemo(filePath, "work", "テストメモ", "asc");
+
+			//! vault.modifyが呼ばれたことを確認。
+			const modifyCalls = (mockApp.vault.modify as jest.Mock).mock.calls;
+			expect(modifyCalls.length).toBeGreaterThan(0);
+
+			//! 保存されたコンテンツを取得。
+			const savedContent = modifyCalls[0][1] as string;
+
+			//! タイムスタンプを抽出。
+			const timestampMatch = savedContent.match(/timestamp: ([^,]+),/);
+			expect(timestampMatch).not.toBeNull();
+
+			const savedTimestamp = timestampMatch![1];
+			console.log("保存されたタイムスタンプ:", savedTimestamp);
+
+			//! 【新仕様の検証】UTC形式(Z終端)ではないことを確認。
+			expect(savedTimestamp).not.toMatch(/Z$/);
+			console.log("✓ UTC形式(Z終端)ではありません");
+
+			//! タイムゾーンオフセットで終わることを確認。
+			expect(savedTimestamp).toMatch(/[+-]\d{2}:\d{2}$/);
+			console.log("✓ タイムゾーンオフセット形式で終わっています");
 		});
 
 		it("異なるタイムゾーンのユーザーが同時刻に投稿した場合、異なるUTC時刻が保存されること", async () => {

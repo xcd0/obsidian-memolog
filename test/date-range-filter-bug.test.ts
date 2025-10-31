@@ -425,11 +425,9 @@ eee
 			//! 比較時に、両方がローカルタイムゾーンに揃っているか確認が必要。
 
 			//! 「今日」フィルターのロジック（ローカルタイムゾーン）。
-			const today = new Date("2025-10-29T12:00:00+09:00"); //! 日本時間の2025-10-29。
-			const startDate = new Date(today);
-			startDate.setHours(0, 0, 0, 0); //! ローカルタイムゾーンの0時。
-			const endDate = new Date(today);
-			endDate.setHours(23, 59, 59, 999); //! ローカルタイムゾーンの23:59。
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			console.log("=== フィルター範囲 (ローカルタイムゾーン) ===");
 			console.log("開始:", startDate.toISOString(), "(ローカル:", startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
@@ -456,12 +454,10 @@ eee
 			//! ファイルから全メモを読み込む。
 			const allMemos = await memoManager.getMemos(filePath, "work");
 
-			//! 2025-10-29の範囲でフィルタリング。
-			const targetDate = new Date("2025-10-29T12:00:00Z");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0); //! 2025-10-29 00:00:00。
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999); //! 2025-10-29 23:59:59。
+			//! 2025-10-29の範囲でフィルタリング（GMT+9基準）。
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			//! タイムスタンプベースのフィルタリング。
 			const filteredMemos = allMemos.filter((memo) => {

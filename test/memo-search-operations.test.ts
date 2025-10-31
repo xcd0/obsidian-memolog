@@ -80,7 +80,7 @@ describe("memo-search-operations", () => {
 		});
 
 		test("空のファイルリストではnullを返す", () => {
-			const fileContents = new Map();
+			const fileContents = new Map<string, string>();
 
 			const result = findMemoInFiles(fileContents, "id1");
 
@@ -302,7 +302,7 @@ describe("memo-search-operations", () => {
 		});
 
 		test("空のマップに対しても正常に動作する", () => {
-			const fileContents = new Map();
+			const fileContents = new Map<string, string>();
 
 			const filtered = filterMemologFiles(fileContents, "memolog");
 

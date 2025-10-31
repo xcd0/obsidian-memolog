@@ -143,8 +143,8 @@ export function parseMetadata(text: string): {
 	return {
 		id: idMatch?.[1].trim() || null,
 		timestamp: timestampMatch?.[1].trim() || null,
-		category: categoryMatch ? JSON.parse(categoryMatch[1].trim()) : null,
-		template: templateMatch ? JSON.parse(templateMatch[1].trim()) : undefined,
+		category: categoryMatch ? (JSON.parse(categoryMatch[1].trim()) as string) : null,
+		template: templateMatch ? (JSON.parse(templateMatch[1].trim()) as string) : undefined,
 		deleted: deletedMatch?.[1] === "true",
 		trashedAt: trashedAtMatch?.[1] || null,
 		pinnedAt: pinnedAtMatch?.[1] || null,

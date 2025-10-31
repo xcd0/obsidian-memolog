@@ -571,12 +571,14 @@ export class MemologSettingTab extends PluginSettingTab {
 		});
 
 		//! カスタムラジオボタンクリック時。
-		attachmentCustomRadio.addEventListener("change", async () => {
-			if (attachmentCustomRadio.checked) {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					attachmentPath: attachmentCustomInput.value,
-				});
-			}
+		attachmentCustomRadio.addEventListener("change", () => {
+			void (async () => {
+				if (attachmentCustomRadio.checked) {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						attachmentPath: attachmentCustomInput.value,
+					});
+				}
+			})();
 		});
 
 		//! カスタム入力欄の入力時。
@@ -608,7 +610,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				attr: {
 					name: "attachment-path",
 					value: preset.value,
-					id: `attachment-path-${preset.value.replace(/[\/\%]/g, "-")}`
+					id: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`
 				}
 			});
 
@@ -621,17 +623,19 @@ export class MemologSettingTab extends PluginSettingTab {
 			labelContainer.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `attachment-path-${preset.value.replace(/[\/\%]/g, "-")}`
+					for: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`
 				},
 				cls: "memolog-path-format-radio-label"
 			});
 
-			radio.addEventListener("change", async () => {
-				if (radio.checked) {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						attachmentPath: preset.value,
-					});
-				}
+			radio.addEventListener("change", () => {
+				void (async () => {
+					if (radio.checked) {
+						await this.plugin.settingsManager.updateGlobalSettings({
+							attachmentPath: preset.value,
+						});
+					}
+				})();
 			});
 		}
 

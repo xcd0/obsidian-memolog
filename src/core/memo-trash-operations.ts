@@ -29,7 +29,7 @@ export function markAsDeleted(memoText: string, trashedAt: string): string {
 //! @returns 復元されたメモテキスト
 export function markAsRestored(memoText: string): string {
 	//! memo-idヘッダーから削除フラグを削除。
-	let restored = memoText.replace(/, deleted: "true", trashedAt: "[^"]*"/, "");
+	const restored = memoText.replace(/, deleted: "true", trashedAt: "[^"]*"/, "");
 
 	//! コメントアウトされたコンテンツを展開。
 	const lines = restored.split("\n");

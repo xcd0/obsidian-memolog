@@ -117,7 +117,7 @@ export class SettingsManager {
 	async loadGlobalSettings(): Promise<void> {
 		try {
 			//! まず、Vault内から設定ファイルを探索（最大3階層）。
-			let foundPath = await this.findSettingsFile(SettingsManager.GLOBAL_SETTINGS_FILENAME);
+			let foundPath = this.findSettingsFile(SettingsManager.GLOBAL_SETTINGS_FILENAME);
 
 			if (!foundPath) {
 				//! 新しい設定ファイルが見つからない場合、デフォルトパスで確認。
@@ -151,7 +151,7 @@ export class SettingsManager {
 			}
 
 			//! 新しい設定ファイルが見つからない場合、古いファイルを探索。
-			let oldFoundPath = await this.findSettingsFile(SettingsManager.OLD_GLOBAL_SETTINGS_FILENAME);
+			let oldFoundPath = this.findSettingsFile(SettingsManager.OLD_GLOBAL_SETTINGS_FILENAME);
 
 			if (!oldFoundPath) {
 				//! 古いファイルもデフォルトパスで確認。

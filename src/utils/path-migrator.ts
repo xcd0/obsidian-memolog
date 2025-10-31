@@ -11,6 +11,8 @@ import {
 	isSpecialFile,
 	extractCategoryFromDirectory,
 } from "./path-migration-helpers";
+import { isSpecialFileForSplit, planMemoSplit } from "./memo-split-operations";
+import { memoToText } from "../core/memo-helpers";
 
 //! ファイルパス変換のマッピング情報。
 export interface PathMapping {
@@ -355,18 +357,8 @@ export class PathMigrator {
 		const relativePath = filePath.substring(rootDir.length + 1);
 
 		//! 特別なファイルを除外。
-		//! rootディレクトリ直下のファイルのみチェック（サブディレクトリは対象）。
-		if (!relativePath.includes("/")) {
-			//! index.mdを除外。
-			if (relativePath === "index.md") {
-				return null;
-			}
-
-			//! _trash.md（またはその他のゴミ箱ファイル名）を除外。
-			//! ゴミ箱ファイルは通常 "_*.md" の形式を想定。
-			if (relativePath.startsWith("_") && relativePath.endsWith(".md")) {
-				return null;
-			}
+		if (isSpecialFileForSplit(relativePath)) {
+			return null;
 		}
 
 		//! ファイルからすべてのメモを取得（カテゴリフィルタなし）。
@@ -376,39 +368,19 @@ export class PathMigrator {
 			return null;
 		}
 
-		//! カテゴリごとにグループ化。
-		const categoryGroups = new Map<string, MemoEntry[]>();
-		for (const memo of allMemos) {
-			const category = memo.category || defaultCategory;
-			if (!categoryGroups.has(category)) {
-				categoryGroups.set(category, []);
-			}
-			categoryGroups.get(category)!.push(memo);
-		}
-
-		//! 各カテゴリグループをタイムスタンプ順にソート。
-		for (const [_, memos] of categoryGroups) {
-			memos.sort((a, b) => {
-				return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-			});
-		}
-
-		//! 新しいファイルパスを生成。
-		const newPathToMemos = new Map<string, MemoEntry[]>();
-		for (const [category, memos] of categoryGroups) {
-			//! 最初のメモのタイムスタンプから日付情報を取得。
-			const firstMemoDate = new Date(memos[0].timestamp);
-
-			const newPath = PathGenerator.generateCustomPath(
+		//! パス生成関数を定義。
+		const pathGenerator = (category: string, date: Date) => {
+			return PathGenerator.generateCustomPath(
 				rootDir,
 				category,
 				newPathFormat,
 				newUseDirectoryCategory,
-				firstMemoDate
+				date
 			);
+		};
 
-			newPathToMemos.set(newPath, memos);
-		}
+		//! 純粋関数でメモ分割計画を作成。
+		const newPathToMemos = planMemoSplit(allMemos, defaultCategory, pathGenerator);
 
 		return {
 			oldPath: filePath,
@@ -454,13 +426,13 @@ export class PathMigrator {
 						existingContent = await this.vaultHandler.readFile(newPath);
 					}
 
-					//! メモをテキストに変換（v0.0.8では各メモにcategory情報が含まれるため、タグペアは不要）。
-					const memoTexts = memos.map((memo) => this.memoToText(memo)).join("\n\n");
+					//! メモをテキストに変換（memo-helpers.tsの標準関数を使用）。
+					const memoTexts = memos.map((memo) => memoToText(memo)).join("\n");
 
 					//! ファイルに書き込み。
 					let newContent: string;
 					if (existingContent.trim()) {
-						newContent = `${existingContent.trim()}\n\n${memoTexts}`;
+						newContent = `${existingContent.trim()}\n${memoTexts}`;
 					} else {
 						newContent = memoTexts;
 					}
@@ -484,14 +456,5 @@ export class PathMigrator {
 		}
 
 		return result;
-	}
-
-	//! メモエントリをテキストに変換する（簡易版）。
-	private memoToText(memo: MemoEntry): string {
-		const metadata = `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}, category: ${JSON.stringify(memo.category)}${memo.template ? `, template: ${JSON.stringify(memo.template)}` : ""} -->`;
-		const content = memo.content;
-		const attachments = memo.attachments && memo.attachments.length > 0 ? "\n" + memo.attachments.map((a) => `![[${a}]]`).join("\n") : "";
-
-		return `${metadata}\n${content}${attachments}`;
 	}
 }

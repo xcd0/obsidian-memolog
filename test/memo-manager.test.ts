@@ -120,6 +120,11 @@ class MockVaultHandler {
 	clearFiles(): void {
 		this.files.clear();
 	}
+
+	//! Markdown ファイルの一覧を取得。
+	getMarkdownFiles(): Array<{ path: string }> {
+		return Array.from(this.files.keys()).map((path) => ({ path }));
+	}
 }
 
 //! Appのモック（最小限）。
@@ -585,6 +590,115 @@ describe("MemoManager", () => {
 			await expect(
 				memoManager.addMemo(filePath, category, "テスト", "asc")
 			).rejects.toThrow();
+		});
+	});
+
+	describe("moveToTrash", () => {
+		const filePath = "test.md";
+		const category = "test";
+		const rootDirectory = "memolog";
+
+		it("メモをゴミ箱に移動できる", async () => {
+			//! メモを追加。
+			const memo = await memoManager.addMemo(filePath, category, "削除するメモ", "asc");
+
+			//! ゴミ箱に移動。
+			const result = await memoManager.moveToTrash(filePath, category, memo.id, rootDirectory);
+
+			expect(result).toBe(true);
+
+			//! ファイル内容を確認。
+			const content = await mockVaultHandler.readFile(filePath);
+			expect(content).toContain('deleted: "true"');
+			expect(content).toContain("trashedAt:");
+			expect(content).toContain("<!--");
+		});
+
+		it("存在しないメモの削除でfalseを返す", async () => {
+			//! メモを追加。
+			await memoManager.addMemo(filePath, category, "メモ1", "asc");
+
+			//! 存在しないIDで削除試行。
+			const result = await memoManager.moveToTrash(
+				filePath,
+				category,
+				"nonexistent-id",
+				rootDirectory
+			);
+
+			expect(result).toBe(false);
+		});
+
+		it("存在しないファイルでfalseを返す", async () => {
+			const result = await memoManager.moveToTrash(
+				"nonexistent.md",
+				category,
+				"some-id",
+				rootDirectory
+			);
+
+			expect(result).toBe(false);
+		});
+	});
+
+	describe("restoreFromTrash", () => {
+		const filePath = "memolog/test.md";
+		const category = "test";
+		const rootDirectory = "memolog";
+		const pathFormat = "YYYY-MM-DD";
+		const saveUnit = "month" as const;
+
+		it("ゴミ箱からメモを復活できる", async () => {
+			//! メモを追加。
+			const memo = await memoManager.addMemo(filePath, category, "復活するメモ", "asc");
+
+			//! ゴミ箱に移動。
+			await memoManager.moveToTrash(filePath, category, memo.id, rootDirectory);
+
+			//! ゴミ箱から復活。
+			const result = await memoManager.restoreFromTrash(
+				memo.id,
+				rootDirectory,
+				pathFormat,
+				saveUnit,
+				false
+			);
+
+			expect(result).toBe(true);
+
+			//! ファイル内容を確認。
+			const content = await mockVaultHandler.readFile(filePath);
+			expect(content).not.toContain('deleted: "true"');
+			expect(content).not.toContain("trashedAt:");
+			expect(content).not.toContain("<!--\n## ");
+		});
+
+		it("存在しないメモの復活でfalseを返す", async () => {
+			const result = await memoManager.restoreFromTrash(
+				"nonexistent-id",
+				rootDirectory,
+				pathFormat,
+				saveUnit,
+				false
+			);
+
+			expect(result).toBe(false);
+		});
+
+		it("削除されていないメモの復活でfalseを返す", async () => {
+			//! 通常のメモを追加（削除されていない）。
+			const memo = await memoManager.addMemo(filePath, category, "通常のメモ", "asc");
+
+			//! 復活を試みる。
+			const result = await memoManager.restoreFromTrash(
+				memo.id,
+				rootDirectory,
+				pathFormat,
+				saveUnit,
+				false
+			);
+
+			expect(result).toBe(false);
 		});
 	});
 });

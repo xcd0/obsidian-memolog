@@ -85,6 +85,29 @@ describe("TemplateManager", () => {
 			templateManager.removeTemplate("test-template");
 			expect(templateManager.getTemplate("test-template")).toBeUndefined();
 		});
+
+		test("無効なテンプレートを追加しようとするとエラー", () => {
+			const invalidTemplate: Template = {
+				name: "invalid-template",
+				content: "{{unclosed",
+				description: "無効なテンプレート",
+			};
+
+			expect(() => {
+				templateManager.addTemplate(invalidTemplate);
+			}).toThrow("Invalid template");
+		});
+
+		test("閉じ括弧のないテンプレートでエラー", () => {
+			const invalidTemplate: Template = {
+				name: "invalid-template2",
+				content: "{{content",
+			};
+
+			expect(() => {
+				templateManager.addTemplate(invalidTemplate);
+			}).toThrow();
+		});
 	});
 
 	describe("テンプレート展開", () => {

@@ -208,14 +208,14 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! 保存単位設定。
 		new Setting(containerEl)
 			.setName("保存単位")
-			.setDesc("メモを保存するファイルの単位")
+			.setDesc("メモを保存するファイルの単位（使用頻度順）")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("day", "日単位")
-					.addOption("week", "週単位")
 					.addOption("month", "月単位")
-					.addOption("year", "年単位")
+					.addOption("day", "日単位")
 					.addOption("all", "全て1ファイル")
+					.addOption("week", "週単位")
+					.addOption("year", "年単位")
 					.setValue(settings.saveUnit)
 					.onChange(async (value) => {
 						await this.plugin.settingsManager.updateGlobalSettings({
@@ -299,18 +299,19 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-path-format-container"
 		});
 
-		//! プリセットオプション（使用頻度順・論理的順序）。
+		//! プリセットオプション（使用頻度・推奨順）。
 		const pathPresets = [
-			// シンプルな日付形式（カテゴリなし）。
-			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
+			// 最も一般的な形式（シンプル）。
+			{ label: "%Y-%m-%d.md（推奨）", value: "%Y-%m-%d.md" },
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
-			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
-			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
-			// カテゴリを含む形式（カテゴリが先）。
+			// カテゴリを含む形式（一般的）。
 			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
 			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
+			// ディレクトリ構造を持つ形式。
+			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
+			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
 			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
-			// カテゴリを含む形式（日付が先）。
+			// カテゴリ後置形式。
 			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
 			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
 		];
@@ -524,14 +525,17 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-path-format-container"
 		});
 
-		//! プリセットオプション。
+		//! プリセットオプション（推奨/使用頻度順）。
 		const attachmentPresets = [
-			{ label: "./attachments", value: "./attachments" },
+			// 最も一般的な形式（相対パス・シンプル）。
+			{ label: "./attachments（推奨）", value: "./attachments" },
 			{ label: "/attachments", value: "/attachments" },
-			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
-			{ label: "/attachments/%Y", value: "/attachments/%Y" },
+			// 日付ベースの形式。
 			{ label: "./attachments/%Y-%m-%d", value: "./attachments/%Y-%m-%d" },
 			{ label: "./attachments/%Y%m%d", value: "./attachments/%Y%m%d" },
+			// 階層構造の形式。
+			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
+			{ label: "/attachments/%Y", value: "/attachments/%Y" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

@@ -240,20 +240,6 @@ export class MemologSettingTab extends PluginSettingTab {
 					})
 			);
 
-		//! Daily Notes連携設定。
-		new Setting(containerEl)
-			.setName("Daily Notes連携")
-			.setDesc("メモをDaily Noteに追加するボタンを表示する")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.enableDailyNotes).onChange(async (value) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						enableDailyNotes: value,
-					});
-					//! サイドバーを再描画。
-					this.plugin.refreshSidebar();
-				})
-			);
-
 		//! ファイルパス書式設定。
 		const pathFormatSetting = new Setting(containerEl)
 			.setName("ファイルパスの書式")

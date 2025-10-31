@@ -8,7 +8,6 @@ export class MemoList {
 	private container: HTMLElement;
 	private memos: MemoEntry[];
 	private handlers: MemoCardHandlers;
-	private enableDailyNotes: boolean;
 	private sourcePath: string;
 	private categories: CategoryConfig[];
 	private isTrash: boolean;
@@ -19,7 +18,6 @@ export class MemoList {
 		container: HTMLElement,
 		memos: MemoEntry[] = [],
 		handlers: MemoCardHandlers = {},
-		enableDailyNotes = false,
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
 		isTrash = false,
@@ -29,7 +27,6 @@ export class MemoList {
 		this.container = container;
 		this.memos = memos;
 		this.handlers = handlers;
-		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
 		this.categories = categories;
 		this.isTrash = isTrash;
@@ -57,7 +54,6 @@ export class MemoList {
 				this.container,
 				memo,
 				this.handlers,
-				this.enableDailyNotes,
 				this.sourcePath,
 				this.categories,
 				this.isTrash,

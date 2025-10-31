@@ -41,9 +41,6 @@ export interface GlobalSettings {
 	//! ソート順（昇順/降順）。
 	order: "asc" | "desc";
 
-	//! Daily Notes連携を有効化するか。
-	enableDailyNotes: boolean;
-
 	//! memologファイルの保存先ルートディレクトリ。
 	rootDirectory: string;
 
@@ -119,7 +116,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	defaultCategory: "work",
 	saveUnit: "day",
 	order: "asc",
-	enableDailyNotes: false,
 	rootDirectory: "memolog",
 	memoTemplate: "# %Y-%m-%d %H:%M:%S\n{{content}}",
 	pathFormat: "%Y-%m-%d.md",

@@ -291,6 +291,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
 			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
 			// /なし - カテゴリあり。
+			{ label: "%C.md", value: "%C.md" },
 			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
 			// /が1つ - カテゴリなし。
 			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },

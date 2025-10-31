@@ -92,6 +92,7 @@ describe("SettingsManager - 改善版", () => {
 			await settingsManager.updateGlobalSettings(updates);
 
 			// Assert: ファイル保存が呼ばれたことを検証。
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			expect(mockApp.vault.modify).toHaveBeenCalledWith(
 				mockFile,
 				expect.stringContaining('"defaultCategory": "hobby"')
@@ -110,6 +111,7 @@ describe("SettingsManager - 改善版", () => {
 			await settingsManager.updateGlobalSettings(updates);
 
 			// Assert: 新規ファイル作成が呼ばれたことを検証。
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			expect(mockApp.vault.create).toHaveBeenCalledWith(
 				"memolog/memolog-setting.json",
 				expect.stringContaining('"searchHistoryMaxSize": 100')
@@ -200,7 +202,9 @@ describe("SettingsManager - 改善版", () => {
 			await settingsManager.loadGlobalSettings();
 
 			// Assert: 新しいファイルが作成され、古いファイルが削除されることを検証。
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			expect(mockApp.vault.create).toHaveBeenCalled();
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			expect(mockApp.vault.delete).toHaveBeenCalledWith(oldFile);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
 				expect.stringContaining("Migrating settings")

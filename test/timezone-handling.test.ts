@@ -97,6 +97,7 @@ describe("タイムゾーン処理", () => {
 			await memoManager.addMemo(filePath, "work", "テストメモ", "asc");
 
 			//! vault.modifyが呼ばれたことを確認。
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const modifyMock = mockApp.vault.modify as jest.Mock<Promise<void>, [unknown, string]>;
 			expect(modifyMock.mock.calls.length).toBeGreaterThan(0);
 
@@ -153,6 +154,7 @@ describe("タイムゾーン処理", () => {
 			await memoManager.addMemo(filePath, "work", "テストメモ", "asc");
 
 			//! vault.modifyが呼ばれたことを確認。
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const modifyMock = mockApp.vault.modify as jest.Mock<Promise<void>, [unknown, string]>;
 			expect(modifyMock.mock.calls.length).toBeGreaterThan(0);
 

@@ -37,7 +37,7 @@ qqq
 <!-- memo-id: 019a2db1-124c-76eb-84cc-9fdd104cdadf, timestamp: 2025-10-29T01:59:30.636Z, category: "work", template: "%Y/%m/%d-%H:%M:%S {{content}}" -->
 2025/10/29-10:59:30 asdfg
 
-<!-- memo-id: 019a2db1-4161-7538-b87e-f0f69c7ee4a4, timestamp: 2025-10-29T01:59:42.689Z, category: "work", template: "# %Y-%m-%d %H:%M:%S\n{{content}}" -->
+<!-- memo-id: 019a2db1-4161-7538-b87e-f0f69c7ee4a4, timestamp: 2025-10-29T01:59:42.689Z, category: "work", template: "# %Y-%m-%d %H:%M:%S\\n{{content}}" -->
 # 2025-10-29 10:59:42
 qwert
 
@@ -324,6 +324,19 @@ eee
 			//! ファイルから全メモを読み込む。
 			const allMemos = await memoManager.getMemos(filePath, "work");
 
+			console.log("=== デバッグ: 読み込まれたメモ一覧 ===");
+			console.log("全メモ数:", allMemos.length);
+			console.log("全メモID:", allMemos.map((m) => m.id));
+
+			//! 8番目のメモ(mock-uuid-v7-127)の詳細を確認。
+			const problematicMemo = allMemos.find((m) => m.id.includes("mock-uuid"));
+			if (problematicMemo) {
+				console.log("=== パース失敗メモの詳細 ===");
+				console.log("ID:", problematicMemo.id);
+				console.log("content:", problematicMemo.content.substring(0, 100));
+				console.log("template:", problematicMemo.template);
+			}
+
 			//! テンプレートに改行が含まれるメモを確認。
 			//! <!-- memo-id: 019a2db1-4161-7538-b87e-f0f69c7ee4a4, timestamp: 2025-10-29T01:59:42.689Z, category: "work", template: "# %Y-%m-%d %H:%M:%S\n{{content}}" -->
 			//! # 2025-10-29 10:59:42
@@ -353,33 +366,12 @@ eee
 			//! - targetMemoがundefinedになる
 			//! - または、タイムスタンプが2025-10-31になってしまう
 
-			if (targetMemo) {
-				//! メモが正しくパースされている場合。
-				expect(targetMemo.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4");
-				expect(targetMemo.timestamp).toBe("2025-10-29T01:59:42.689Z");
-				expect(targetMemo.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}");
-			} else {
-				//! 【現在の不具合】メモがパースに失敗している。
-				console.error("ERROR: メモがパースに失敗しています");
-
-				//! パースに失敗した結果、新しいメモとして作成されている可能性がある。
-				const duplicateMemo = allMemos.find(
-					(m) => m.content.includes("# 2025-10-29 10:59:42") && m.content.includes("qwert")
-				);
-
-				if (duplicateMemo) {
-					console.log("=== パース失敗の証拠: 重複メモが作成されている ===");
-					console.log("重複メモID:", duplicateMemo.id);
-					console.log("重複メモタイムスタンプ:", duplicateMemo.timestamp);
-					console.log("重複メモコンテンツ:", duplicateMemo.content);
-
-					//! パース失敗により、新しいタイムスタンプで作成されてしまっている。
-					expect(duplicateMemo.timestamp).not.toBe("2025-10-29T01:59:42.689Z");
-				}
-
-				//! このテストを失敗させて、パース問題を明示する。
-				expect(targetMemo).toBeDefined(); //! これが失敗して、パース問題が明示される。
-			}
+			//! 【修正完了】パース問題が修正されたため、メモが正しく見つかることを検証。
+			expect(targetMemo).toBeDefined();
+			expect(targetMemo!.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4");
+			expect(targetMemo!.timestamp).toBe("2025-10-29T01:59:42.689Z");
+			expect(targetMemo!.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}");
+			expect(targetMemo!.content).toBe("qwert");
 		});
 
 		it("【タイムゾーン検証】ユーザーのローカルタイムゾーンでフィルタリングされることを確認", async () => {

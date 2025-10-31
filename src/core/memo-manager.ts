@@ -15,7 +15,12 @@ import {
 	joinMemosToFileContent,
 } from "./memo-crud-operations";
 import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations";
-import { findDeletedMemoInFiles, extractCategoryFromMemo, filterMemologFiles } from "./memo-search-operations";
+import {
+	findDeletedMemoInFiles,
+	extractCategoryFromMemo,
+	filterMemologFiles,
+	findMemoIndexById,
+} from "./memo-search-operations";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -326,7 +331,7 @@ export class MemoManager {
 				const memoTexts = splitFileIntoMemos(fileContent);
 
 				//! 対象メモを検索してインデックスを取得。
-				const memoIndex = memoTexts.findIndex((text) => text.includes(`memo-id: ${memoId}`));
+				const memoIndex = findMemoIndexById(memoTexts, memoId);
 				if (memoIndex === -1) {
 					notify.warning("更新対象のメモが見つかりません");
 					return false;
@@ -381,7 +386,7 @@ export class MemoManager {
 				}
 
 				const fileContent = await this.vaultHandler.readFile(filePath);
-				const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+				const memoTexts = splitFileIntoMemos(fileContent);
 				let updated = false;
 
 				const newMemoTexts = memoTexts.map((memoText) => {
@@ -407,10 +412,10 @@ export class MemoManager {
 					return false;
 				}
 
-				const newFileContent = newMemoTexts.join("");
+				const newFileContent = joinMemosToFileContent(newMemoTexts);
 				await this.vaultHandler.writeFile(filePath, newFileContent);
 
-				const cacheKey = `${filePath}::${category}`;
+				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
 				return true;

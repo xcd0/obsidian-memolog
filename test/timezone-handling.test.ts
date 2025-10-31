@@ -101,7 +101,7 @@ describe("タイムゾーン処理", () => {
 			expect(modifyCalls.length).toBeGreaterThan(0);
 
 			//! 保存されたコンテンツを取得。
-			const savedContent = modifyCalls[0][1] as string;
+			const savedContent = String(modifyCalls[0]?.[1] ?? "");
 			console.log("保存されたコンテンツ:", savedContent);
 
 			//! タイムスタンプを抽出。
@@ -157,7 +157,7 @@ describe("タイムゾーン処理", () => {
 			expect(modifyCalls.length).toBeGreaterThan(0);
 
 			//! 保存されたコンテンツを取得。
-			const savedContent = modifyCalls[0][1] as string;
+			const savedContent = String(modifyCalls[0]?.[1] ?? "");
 
 			//! タイムスタンプを抽出。
 			const timestampMatch = savedContent.match(/timestamp: ([^,]+),/);

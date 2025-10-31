@@ -208,14 +208,14 @@ export class MemologSettingTab extends PluginSettingTab {
 		//! 保存単位設定。
 		new Setting(containerEl)
 			.setName("保存単位")
-			.setDesc("メモを保存するファイルの単位（使用頻度順）")
+			.setDesc("メモを保存するファイルの単位（時間の長さ順）")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("month", "月単位")
-					.addOption("day", "日単位")
 					.addOption("all", "全て1ファイル")
-					.addOption("week", "週単位")
 					.addOption("year", "年単位")
+					.addOption("month", "月単位")
+					.addOption("week", "週単位")
+					.addOption("day", "日単位")
 					.setValue(settings.saveUnit)
 					.onChange(async (value) => {
 						await this.plugin.settingsManager.updateGlobalSettings({
@@ -285,21 +285,22 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-path-format-container"
 		});
 
-		//! プリセットオプション（使用頻度・推奨順）。
+		//! プリセットオプション（構造的な優先度順: /の数 < %Cの有無 < 文字列長）。
 		const pathPresets = [
-			// 最も一般的な形式（シンプル）。
-			{ label: "%Y-%m-%d.md（推奨）", value: "%Y-%m-%d.md" },
+			// /なし - カテゴリなし。
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
-			// カテゴリを含む形式（一般的）。
-			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
-			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
-			// ディレクトリ構造を持つ形式。
-			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
-			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
-			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
-			// カテゴリ後置形式。
+			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
+			// /なし - カテゴリあり。
 			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
+			// /が1つ - カテゴリなし。
+			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
+			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
+			// /が1つ - カテゴリあり。
+			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
+			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
 			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
+			// /が2つ - カテゴリあり。
+			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。
@@ -511,17 +512,17 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-path-format-container"
 		});
 
-		//! プリセットオプション（推奨/使用頻度順）。
+		//! プリセットオプション（構造的な優先度順: /の数 < 文字列長）。
 		const attachmentPresets = [
-			// 最も一般的な形式（相対パス・シンプル）。
-			{ label: "./attachments（推奨）", value: "./attachments" },
+			// /なし。
+			{ label: "./attachments", value: "./attachments" },
 			{ label: "/attachments", value: "/attachments" },
-			// 日付ベースの形式。
-			{ label: "./attachments/%Y-%m-%d", value: "./attachments/%Y-%m-%d" },
-			{ label: "./attachments/%Y%m%d", value: "./attachments/%Y%m%d" },
-			// 階層構造の形式。
-			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
+			// /が2つ。
 			{ label: "/attachments/%Y", value: "/attachments/%Y" },
+			{ label: "./attachments/%Y%m%d", value: "./attachments/%Y%m%d" },
+			{ label: "./attachments/%Y-%m-%d", value: "./attachments/%Y-%m-%d" },
+			// /が3つ。
+			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

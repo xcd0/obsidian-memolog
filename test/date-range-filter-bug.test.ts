@@ -166,7 +166,7 @@ eee
 			expect(todayMemo?.content).toBe("test");
 		});
 
-		it("【バグ検証】「今日」フィルター適用時、過去の日付のメモが含まれてしまう不具合", async () => {
+		it("【バグ検証】修正前: ファイル内の全メモが読み込まれていた（不具合の再現確認）", async () => {
 			//! ファイルから全メモを読み込む。
 			const allMemos = await memoManager.getMemos(filePath, "work");
 
@@ -179,48 +179,30 @@ eee
 				"2025-10-31": allMemos.filter((m) => m.timestamp.startsWith("2025-10-31")),
 			};
 
-			console.log("=== バグ検証: 今日フィルター適用前 ===");
-			console.log("全メモ数:", allMemos.length);
+			console.log("=== 修正前の状況: ファイル読み込み ===");
+			console.log("ファイルパス:", filePath);
+			console.log("ファイル内の全メモ数:", allMemos.length);
 			console.log("2025-10-27のメモ:", memosByDate["2025-10-27"].length, "件");
 			console.log("2025-10-28のメモ:", memosByDate["2025-10-28"].length, "件");
 			console.log("2025-10-29のメモ:", memosByDate["2025-10-29"].length, "件");
 			console.log("2025-10-30のメモ:", memosByDate["2025-10-30"].length, "件");
 			console.log("2025-10-31のメモ:", memosByDate["2025-10-31"].length, "件");
 
-			//! 【重要】このテストでは、sidebar.tsの実装を模倣せず、
-			//! 実際のフィルタリングロジックをテストする。
+			//! 【不具合の再現】
+			//! 問題の状況:
+			//! - ファイル名: 2025-10-31.md
+			//! - ファイル内容: 2025-10-27から2025-10-31までのメモが混在（25件）
+			//! - ユーザーの操作: 「今日」ボタンをON（2025-10-31のメモだけを表示したい）
 			//!
-			//! 不具合の状況:
-			//! - sidebar.tsで「今日」フィルターを適用すると、allMemosがそのまま表示される
-			//! - つまり、タイムスタンプでのフィルタリングが行われていない
+			//! 修正前の不具合:
+			//! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでのフィルタリングがなかった
+			//! - そのため、allMemosに含まれる全てのメモ(25件)が表示されていた
 			//!
-			//! このテストでは、フィルタリングが「正しく実装されていれば」
-			//! 1件のみが返されることを確認する。
+			//! 修正後の動作:
+			//! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでフィルタリングを行う
+			//! - そのため、2025-10-31のメモのみ(2件)が表示される
 
-			//! 「今日」フィルターのロジック（2025-10-31を今日と仮定）。
-			const today = new Date("2025-10-31T12:00:00Z"); //! 固定日時でテスト。
-			const startDate = new Date(today);
-			startDate.setHours(0, 0, 0, 0); //! 2025-10-31 00:00:00。
-			const endDate = new Date(today);
-			endDate.setHours(23, 59, 59, 999); //! 2025-10-31 23:59:59。
-
-			//! タイムスタンプベースのフィルタリング（正しい実装）。
-			const filteredMemos = allMemos.filter((memo) => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
-
-			console.log("=== バグ検証: 今日フィルター適用後 ===");
-			console.log("フィルター後のメモ数:", filteredMemos.length);
-			console.log("期待されるメモ数:", 1);
-
-			//! 【バグ検証のポイント】
-			//! もしsidebar.tsの実装で、このフィルタリングが行われていない場合、
-			//! ユーザーには全てのメモ(allMemos.length件)が表示される。
-			//!
-			//! 正しい実装では、filteredMemosは1件のみになるはず。
-
-			//! 過去の日付のメモが含まれていることを確認（不具合の証拠）。
+			//! 過去の日付のメモがファイル内に含まれていることを確認。
 			const oldMemoIds = [
 				"019a24be-b267-765c-925a-1e63455bced8", //! 2025-10-27。
 				"019a24bf-b268-765c-925a-1e63453bced3", //! 2025-10-27。
@@ -231,26 +213,74 @@ eee
 				"019a32a3-5a56-7360-8d2e-acf8d06377f6", //! 2025-10-30。
 			];
 
-			//! 不具合の状況を検証: allMemosには過去のメモが含まれている。
-			const oldMemosInAllMemos = allMemos.filter((m) => oldMemoIds.includes(m.id));
-			console.log("allMemosに含まれる過去の日付のメモ数:", oldMemosInAllMemos.length, "件");
+			const oldMemosInFile = allMemos.filter((m) => oldMemoIds.includes(m.id));
+			console.log("ファイル内の過去の日付のメモ数:", oldMemosInFile.length, "件");
 
-			//! これが不具合: sidebar.tsの実装では、これらの過去のメモが
-			//! 「今日」フィルター適用時にも表示されてしまう。
-			expect(oldMemosInAllMemos.length).toBeGreaterThan(0);
+			//! 【修正前の状況を確認】
+			//! ファイル内に過去の日付のメモが含まれている。
+			expect(oldMemosInFile.length).toBeGreaterThan(0);
 
-			//! 正しいフィルタリングでは、過去のメモは除外される。
+			//! 【修正前の不具合】
+			//! タイムスタンプフィルタリングがない場合、
+			//! ユーザーには全てのメモが表示される（不具合）。
+			console.log("修正前の不具合: 「今日」ボタンONでも全", allMemos.length, "件が表示される");
+		});
+
+		it("【バグ検証】修正後: タイムスタンプフィルタリングにより正しく動作する", async () => {
+			//! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work");
+
+			console.log("=== 修正後の動作: タイムスタンプフィルタリング ===");
+			console.log("ファイル内の全メモ数:", allMemos.length);
+
+			//! 「今日」フィルターのロジック（2025-10-31を今日と仮定）。
+			const today = new Date("2025-10-31T12:00:00Z"); //! 固定日時でテスト。
+			const startDate = new Date(today);
+			startDate.setHours(0, 0, 0, 0); //! 2025-10-31 00:00:00。
+			const endDate = new Date(today);
+			endDate.setHours(23, 59, 59, 999); //! 2025-10-31 23:59:59。
+
+			console.log("フィルター範囲:");
+			console.log("  開始:", startDate.toISOString());
+			console.log("  終了:", endDate.toISOString());
+
+			//! 【修正後の実装】タイムスタンプベースのフィルタリング。
+			//! (sidebar.ts 578-582行目と同じロジック)
+			const filteredMemos = allMemos.filter((memo) => {
+				const memoDate = new Date(memo.timestamp);
+				return memoDate >= startDate && memoDate <= endDate;
+			});
+
+			console.log("フィルター後のメモ数:", filteredMemos.length);
+			console.log("フィルター後のメモID:", filteredMemos.map((m) => m.id));
+
+			//! 【修正後の動作確認】
+			//! 過去の日付のメモは除外される。
+			const oldMemoIds = [
+				"019a24be-b267-765c-925a-1e63455bced8", //! 2025-10-27。
+				"019a24bf-b268-765c-925a-1e63453bced3", //! 2025-10-27。
+				"019a2809-b5ef-71c8-a2d0-746c3234b97a", //! 2025-10-27。
+				"019a280f-44b7-7213-b284-142ee6274f5f", //! 2025-10-27。
+				"019a2d36-7d1a-7231-97ce-89b1399e26b0", //! 2025-10-28。
+				"019a2db1-124c-76eb-84cc-9fdd104cdadf", //! 2025-10-29。
+				"019a32a3-5a56-7360-8d2e-acf8d06377f6", //! 2025-10-30。
+			];
+
 			const oldMemosInFiltered = filteredMemos.filter((m) => oldMemoIds.includes(m.id));
+			console.log("フィルター後の過去の日付のメモ数:", oldMemosInFiltered.length, "件");
+
+			//! 過去のメモは除外されることを確認。
 			expect(oldMemosInFiltered.length).toBe(0);
 
-			//! 正しいフィルタリングでは、2025-10-31のメモのみが残る。
-			//! (パース問題で複数のメモが2025-10-31になる場合があるため、最低1件を確認)
+			//! 2025-10-31のメモのみが残る。
 			expect(filteredMemos.length).toBeGreaterThanOrEqual(1);
 
-			//! 重要なのは、正しいIDのメモが含まれていること。
+			//! 正しいIDのメモが含まれていることを確認。
 			const correctMemo = filteredMemos.find((m) => m.id === "019a38a5-98d9-74be-a09f-992e6fafe2f4");
 			expect(correctMemo).toBeDefined();
 			expect(correctMemo?.content).toBe("test");
+
+			console.log("修正後の正しい動作: 「今日」ボタンONで", filteredMemos.length, "件のみ表示される");
 		});
 
 		it("フィルタリングなしの場合、全メモが表示されることを確認", async () => {

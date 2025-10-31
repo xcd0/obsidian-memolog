@@ -108,7 +108,8 @@ describe("タイムゾーン処理", () => {
 			const timestampMatch = savedContent.match(/timestamp: ([^,]+),/);
 			expect(timestampMatch).not.toBeNull();
 
-			const savedTimestamp = timestampMatch![1];
+			if (!timestampMatch) throw new Error("Timestamp not found");
+		const savedTimestamp = timestampMatch[1];
 			console.log("保存されたタイムスタンプ:", savedTimestamp);
 
 			//! 【新仕様】タイムゾーンオフセット付きのISO 8601形式であることを確認。
@@ -162,7 +163,8 @@ describe("タイムゾーン処理", () => {
 			const timestampMatch = savedContent.match(/timestamp: ([^,]+),/);
 			expect(timestampMatch).not.toBeNull();
 
-			const savedTimestamp = timestampMatch![1];
+			if (!timestampMatch) throw new Error("Timestamp not found");
+		const savedTimestamp = timestampMatch[1];
 			console.log("保存されたタイムスタンプ:", savedTimestamp);
 
 			//! 【新仕様の検証】UTC形式(Z終端)ではないことを確認。
@@ -174,7 +176,7 @@ describe("タイムゾーン処理", () => {
 			console.log("✓ タイムゾーンオフセット形式で終わっています");
 		});
 
-		it("異なるタイムゾーンのユーザーが同時刻に投稿した場合、異なるUTC時刻が保存されること", async () => {
+		it("異なるタイムゾーンのユーザーが同時刻に投稿した場合、異なるUTC時刻が保存されること", () => {
 			//! シナリオ:
 			//! - ユーザーA (GMT+9) が 2025-10-31 14:30:00 JST に投稿
 			//!   -> UTC: 2025-10-31 05:30:00 UTC
@@ -269,7 +271,7 @@ describe("タイムゾーン処理", () => {
 			expect(isInRange).toBe(true);
 		});
 
-		it("異なるタイムゾーンのユーザーが同じメモを見た場合、異なる日付として表示される可能性があること", async () => {
+		it("異なるタイムゾーンのユーザーが同じメモを見た場合、異なる日付として表示される可能性があること", () => {
 			//! シナリオ:
 			//! - GMT+9のユーザーAが 2025-10-29 00:30 JST に投稿
 			//!   -> UTC: 2025-10-28 15:30 UTC
@@ -383,7 +385,7 @@ describe("タイムゾーン処理", () => {
 	});
 
 	describe("タイムゾーン変換の正確性", () => {
-		it("夏時間 (DST) の切り替え時にも正確にフィルタリングできること", async () => {
+		it("夏時間 (DST) の切り替え時にも正確にフィルタリングできること", () => {
 			//! シナリオ:
 			//! - アメリカの夏時間切り替え時（3月第2日曜日、11月第1日曜日）
 			//! - 2025年3月9日 02:00に時計が3:00になる（1時間進む）
@@ -421,7 +423,7 @@ describe("タイムゾーン処理", () => {
 			console.log("実際の時間経過:", timeDiffHours, "時間");
 		});
 
-		it("異なる日付表記形式でも正確にパースできること", async () => {
+		it("異なる日付表記形式でも正確にパースできること", () => {
 			//! シナリオ:
 			//! - ISO 8601形式のタイムスタンプが正確にパースされる
 			//! - タイムゾーンオフセット付き、なし、両方とも正確に扱える

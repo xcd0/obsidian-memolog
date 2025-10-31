@@ -368,10 +368,11 @@ eee
 
 			//! 【修正完了】パース問題が修正されたため、メモが正しく見つかることを検証。
 			expect(targetMemo).toBeDefined();
-			expect(targetMemo!.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4");
-			expect(targetMemo!.timestamp).toBe("2025-10-29T01:59:42.689Z");
-			expect(targetMemo!.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}");
-			expect(targetMemo!.content).toBe("qwert");
+			if (!targetMemo) throw new Error("Target memo not found");
+			expect(targetMemo.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4");
+			expect(targetMemo.timestamp).toBe("2025-10-29T01:59:42.689Z");
+			expect(targetMemo.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}");
+			expect(targetMemo.content).toBe("qwert");
 		});
 
 		it("【タイムゾーン検証】ユーザーのローカルタイムゾーンでフィルタリングされることを確認", async () => {
@@ -395,7 +396,8 @@ eee
 			console.log("UTC時刻:", testMemo?.timestamp);
 
 			//! このメモのローカル時刻を計算。
-			const utcDate = new Date(testMemo!.timestamp);
+			if (!testMemo) throw new Error("Test memo not found");
+			const utcDate = new Date(testMemo.timestamp);
 			const localDateStr = utcDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
 			console.log("日本時間 (GMT+9):", localDateStr);
 
@@ -434,7 +436,7 @@ eee
 			console.log("終了:", endDate.toISOString(), "(ローカル:", endDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
 
 			//! メモの日時をDateオブジェクトに変換（UTCとして解釈される）。
-			const memoDate = new Date(testMemo!.timestamp);
+			const memoDate = new Date(testMemo.timestamp);
 			console.log("メモ日時:", memoDate.toISOString(), "(ローカル:", memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
 
 			//! 比較。

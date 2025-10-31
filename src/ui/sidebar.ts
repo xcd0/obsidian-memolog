@@ -347,14 +347,12 @@ export class MemologSidebar extends ItemView {
 			{
 				onDelete: (memoId) => void this.handleDelete(memoId),
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
-				onAddToDailyNote: (memo) => void this.handleAddToDailyNote(memo),
 				onImagePaste: (file) => this.handleImagePaste(file),
 				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
 				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
 				onRestore: (memoId) => void this.handleRestore(memoId),
 				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
 			},
-			settings.enableDailyNotes,
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
 			false, //! 初期状態ではゴミ箱表示ではない。
@@ -830,82 +828,6 @@ export class MemologSidebar extends ItemView {
 	private async handleDateSelect(date: Date | null): Promise<void> {
 		this.selectedDate = date;
 		await this.loadMemos();
-	}
-
-	//! Daily Noteに追加処理。
-	private async handleAddToDailyNote(memo: MemoEntry): Promise<void> {
-		try {
-			//! Daily Noteのパスを取得。
-			const memoDate = new Date(memo.timestamp);
-			const dailyNotePath = this.getDailyNotePath(memoDate);
-
-			//! Daily Noteを開く（存在しない場合は作成）。
-			let dailyNote = this.app.vault.getAbstractFileByPath(dailyNotePath);
-
-			if (!dailyNote) {
-				//! Daily Noteが存在しない場合は作成。
-				const dailyNoteContent = `# ${this.formatDateForDailyNote(memoDate)}\n\n`;
-				dailyNote = await this.app.vault.create(dailyNotePath, dailyNoteContent);
-			}
-
-			if (dailyNote && dailyNote instanceof TFile) {
-				//! 既存の内容を読み込む。
-				const existingContent = await this.app.vault.read(dailyNote);
-
-				//! メモを追加するテキストを作成。
-				const memoText = this.formatMemoForDailyNote(memo);
-
-				//! ファイル末尾に追加。
-				const newContent = `${existingContent}\n${memoText}`;
-				await this.app.vault.modify(dailyNote, newContent);
-
-				//! Daily Noteを開く。
-				const leaf = this.app.workspace.getLeaf(false);
-				await leaf.openFile(dailyNote);
-
-				new Notice("Daily Noteに追加しました");
-			}
-		} catch (error) {
-			Logger.error("Daily Note追加エラー:", error);
-			new Notice("Daily Noteへの追加に失敗しました");
-		}
-	}
-
-	//! Daily Noteのパスを取得する。
-	private getDailyNotePath(date: Date): string {
-		const year = date.getFullYear();
-		const month = (date.getMonth() + 1).toString().padStart(2, "0");
-		const day = date.getDate().toString().padStart(2, "0");
-
-		//! デフォルトのDaily Notesフォーマット（YYYY-MM-DD.md）。
-		return `Daily Notes/${year}-${month}-${day}.md`;
-	}
-
-	//! 日付をDaily Note用にフォーマットする。
-	private formatDateForDailyNote(date: Date): string {
-		const year = date.getFullYear();
-		const month = (date.getMonth() + 1).toString().padStart(2, "0");
-		const day = date.getDate().toString().padStart(2, "0");
-		return `${year}-${month}-${day}`;
-	}
-
-	//! メモをDaily Note用にフォーマットする。
-	private formatMemoForDailyNote(memo: MemoEntry): string {
-		const timestamp = new Date(memo.timestamp);
-		const hours = timestamp.getHours().toString().padStart(2, "0");
-		const minutes = timestamp.getMinutes().toString().padStart(2, "0");
-
-		let text = `## ${hours}:${minutes}\n\n${memo.content}\n`;
-
-		//! 添付ファイルがある場合は追加。
-		if (memo.attachments && memo.attachments.length > 0) {
-			text += "\n### 添付ファイル\n\n";
-			for (const attachment of memo.attachments) {
-				text += `![[${attachment}]]\n`;
-			}
-		}
-
-		return text;
 	}
 
 	//! 画像ペースト処理（画像を保存してMarkdownリンクを返す）。

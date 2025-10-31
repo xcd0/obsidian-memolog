@@ -13,9 +13,6 @@ export interface MemoCardHandlers {
 	//! 編集保存時のハンドラー。
 	onSaveEdit?: (memoId: string, newContent: string) => void;
 
-	//! Daily Noteに追加ボタンクリック時のハンドラー。
-	onAddToDailyNote?: (memo: MemoEntry) => void;
-
 	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
 	onImagePaste?: (file: File) => Promise<string | null>;
 
@@ -38,7 +35,6 @@ export class MemoCard {
 	private container: HTMLElement;
 	private memo: MemoEntry;
 	private handlers: MemoCardHandlers;
-	private enableDailyNotes: boolean;
 	private isEditMode = false;
 	private cardElement: HTMLElement | null = null;
 	private sourcePath: string;
@@ -52,7 +48,6 @@ export class MemoCard {
 		container: HTMLElement,
 		memo: MemoEntry,
 		handlers: MemoCardHandlers = {},
-		enableDailyNotes = false,
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
 		isTrash = false,
@@ -62,7 +57,6 @@ export class MemoCard {
 		this.container = container;
 		this.memo = memo;
 		this.handlers = handlers;
-		this.enableDailyNotes = enableDailyNotes;
 		this.sourcePath = sourcePath;
 		this.component = new Component();
 		this.categories = categories;
@@ -108,19 +102,6 @@ export class MemoCard {
 
 		//! アクションボタン。
 		const actions = header.createDiv({ cls: "memolog-card-actions" });
-
-		//! Daily Noteに追加ボタン。
-		if (this.enableDailyNotes && this.handlers.onAddToDailyNote) {
-			const dailyNoteBtn = actions.createEl("button", {
-				cls: "memolog-btn memolog-btn-daily-note",
-				text: "Daily Noteに追加",
-			});
-			dailyNoteBtn.addEventListener("click", () => {
-				if (this.handlers.onAddToDailyNote) {
-					this.handlers.onAddToDailyNote(this.memo);
-				}
-			});
-		}
 
 		//! カテゴリ変更ボタン。
 		if (this.categories.length > 0 && this.handlers.onCategoryChange) {

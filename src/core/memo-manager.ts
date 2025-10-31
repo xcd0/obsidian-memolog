@@ -32,11 +32,6 @@ export class MemoManager {
 		this.cacheManager = new CacheManager(app);
 	}
 
-	//! 現在のタイムスタンプを生成する。
-	private generateTimestamp(): string {
-		return new Date().toISOString();
-	}
-
 	//! メモを追加する。
 	async addMemo(
 		filePath: string,
@@ -122,7 +117,7 @@ export class MemoManager {
 
 				//! メモを分割してゴミ箱操作で削除状態にする。
 				const memos = splitFileIntoMemos(fileContent);
-				const trashedAt = this.generateTimestamp();
+				const trashedAt = new Date().toISOString();
 				const { memos: updatedMemos, marked } = markMemoAsDeleted(memos, memoId, trashedAt);
 
 				if (!marked) {

@@ -31,7 +31,9 @@ describe("path-migration-helpers", () => {
 		test("YYYY-Wxx形式を抽出", () => {
 			const result = extractDateFromPath("work/2025-W43.md");
 			expect(result).toBeDefined();
-			expect(result!.getFullYear()).toBe(2025);
+			if (result !== null) {
+				expect(result.getFullYear()).toBe(2025);
+			}
 		});
 
 		test("YYYY形式を抽出", () => {

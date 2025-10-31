@@ -18,7 +18,10 @@ export function groupMemosByCategory(
 		if (!categoryGroups.has(category)) {
 			categoryGroups.set(category, []);
 		}
-		categoryGroups.get(category)!.push(memo);
+		const group = categoryGroups.get(category);
+		if (group !== undefined) {
+			group.push(memo);
+		}
 	}
 
 	return categoryGroups;

@@ -98,7 +98,8 @@ export function detectConflicts(mappings: PathMapping[]): void {
 
 	//! 競合フラグを設定。
 	for (const mapping of mappings) {
-		if (pathCounts.get(mapping.newPath)! > 1) {
+		const count = pathCounts.get(mapping.newPath);
+		if (count !== undefined && count > 1) {
 			mapping.hasConflict = true;
 		}
 	}
@@ -119,7 +120,8 @@ export function detectSplitConflicts(mappings: MemoSplitMapping[]): void {
 	//! 競合フラグを設定。
 	for (const mapping of mappings) {
 		for (const newPath of mapping.newPathToMemos.keys()) {
-			if (pathCounts.get(newPath)! > 1) {
+			const count = pathCounts.get(newPath);
+			if (count !== undefined && count > 1) {
 				mapping.hasConflict = true;
 				break;
 			}

@@ -275,11 +275,21 @@ export class MemologSidebar extends ItemView {
 
 			//! ボタンバーを初期化（ハンバーガー、日付範囲フィルター、検索、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsArea, {
-				onSortOrderChange: (order) => this.handleSortOrderChange(order),
-				onCalendarClick: () => this.toggleCalendar(),
-				onSearchClick: () => this.toggleSearch(),
-				onSettingsClick: () => this.openSettings(),
-				onDateRangeChange: (filter) => this.handleDateRangeChange(filter),
+				onSortOrderChange: (order) => {
+					void this.handleSortOrderChange(order);
+				},
+				onCalendarClick: () => {
+					void this.toggleCalendar();
+				},
+				onSearchClick: () => {
+					void this.toggleSearch();
+				},
+				onSettingsClick: () => {
+					this.openSettings();
+				},
+				onDateRangeChange: (filter) => {
+					void this.handleDateRangeChange(filter);
+				},
 			});
 			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, dateRangeFilters, searchBtn, settingsBtn, sortBtnWrapper);
 		}
@@ -1614,13 +1624,16 @@ export class MemologSidebar extends ItemView {
 	private openSettings(): void {
 		//! Obsidianの設定画面を開くコマンドを実行。
 		// @ts-expect-error - Obsidian internal API
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 		this.app.commands.executeCommandById("app:open-settings");
 
 		//! 設定画面が開くまで少し待ってから、プラグイン設定タブに移動。
 		setTimeout(() => {
 			// @ts-expect-error - Obsidian internal API
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 			const settingTab = this.app.setting;
 			if (settingTab) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				settingTab.openTabById(this.plugin.manifest.id);
 			}
 		}, 100);

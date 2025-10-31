@@ -250,7 +250,7 @@ export class BackupManager {
 	async listBackupsWithMetadata(
 		pattern = "backup-memolog-"
 	): Promise<Array<{ file: TFile; metadata: BackupMetadata | null }>> {
-		const backups = await this.listBackups(pattern);
+		const backups = this.listBackups(pattern);
 		const results: Array<{ file: TFile; metadata: BackupMetadata | null }> = [];
 
 		for (const backup of backups) {
@@ -260,10 +260,12 @@ export class BackupManager {
 
 		//! 日付でソート（新しい順）。
 		const sortedFiles = sortBackupsByDate(results.map((r) => r.file));
-		const sortedResults = sortedFiles.map((file) => {
-			const result = results.find((r) => r.file === file);
-			return result!;
-		});
+		const sortedResults = sortedFiles
+			.map((file) => {
+				const result = results.find((r) => r.file === file);
+				return result;
+			})
+			.filter((result): result is { file: TFile; metadata: BackupMetadata | null } => result !== undefined);
 
 		return sortedResults;
 	}

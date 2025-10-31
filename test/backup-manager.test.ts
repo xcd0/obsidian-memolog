@@ -2,6 +2,7 @@ import { BackupManager } from "../src/utils/backup-manager";
 import { App, TFile } from "obsidian";
 
 //! BackupManagerのテスト。
+/* eslint-disable @typescript-eslint/unbound-method */
 describe("BackupManager", () => {
 	let app: App;
 	let backupManager: BackupManager;

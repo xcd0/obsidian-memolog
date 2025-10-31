@@ -5,11 +5,19 @@ import { TFile } from "obsidian";
 
 //! PathMigratorのモックベーステスト。
 //! I/O操作に依存するため、App、VaultHandler、MemoManagerをモック化してテスト。
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/unbound-method */
 describe("PathMigrator", () => {
 	let pathMigrator: PathMigrator;
-	let mockApp: any;
-	let mockVaultHandler: any;
-	let mockMemoManager: any;
+	let mockApp: {
+		vault: {
+			getMarkdownFiles: jest.Mock;
+			getAbstractFileByPath: jest.Mock;
+			rename: jest.Mock;
+			delete: jest.Mock;
+		};
+	};
+	let mockVaultHandler: jest.Mocked<MemologVaultHandler>;
+	let mockMemoManager: jest.Mocked<MemoManager>;
 
 	beforeEach(() => {
 		//! Appのモック作成。
@@ -31,12 +39,12 @@ describe("PathMigrator", () => {
 			fileExists: jest.fn(),
 			folderExists: jest.fn(),
 			getAllCategories: jest.fn(),
-		} as unknown as MemologVaultHandler;
+		} as jest.Mocked<MemologVaultHandler>;
 
 		//! MemoManagerのモック作成。
 		mockMemoManager = {
 			getMemos: jest.fn(),
-		} as unknown as MemoManager;
+		} as jest.Mocked<MemoManager>;
 
 		pathMigrator = new PathMigrator(mockApp, mockVaultHandler, mockMemoManager);
 	});
@@ -163,7 +171,7 @@ describe("PathMigrator", () => {
 
 			//! モックの設定。
 			mockVaultHandler.readFile.mockResolvedValue("File content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined as any);
+			mockVaultHandler.createFile.mockResolvedValue(undefined);
 			mockVaultHandler.createFolder.mockResolvedValue(undefined);
 			mockVaultHandler.folderExists.mockReturnValue(true); //! フォルダが存在する場合はcreateFolder呼び出しをスキップ。
 
@@ -408,7 +416,7 @@ describe("PathMigrator", () => {
 
 			//! モックの設定。
 			mockVaultHandler.readFile.mockResolvedValue("Old content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined as any);
+			mockVaultHandler.createFile.mockResolvedValue(undefined);
 			mockVaultHandler.writeFile.mockResolvedValue(undefined);
 			mockVaultHandler.folderExists.mockReturnValue(true); //! フォルダは既に存在。
 			mockVaultHandler.fileExists.mockReturnValue(false); //! ファイルは存在しない。

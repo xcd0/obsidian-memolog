@@ -733,13 +733,15 @@ export class MemologSettingTab extends PluginSettingTab {
 		});
 
 		//! カスタムラジオボタンクリック時。
-		attachmentNameCustomRadio.addEventListener("change", async () => {
-			if (attachmentNameCustomRadio.checked) {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					attachmentNameFormat: attachmentNameCustomInput.value,
-				});
-				updateAttachmentNamePreview(attachmentNameCustomInput.value);
-			}
+		attachmentNameCustomRadio.addEventListener("change", () => {
+			void (async () => {
+				if (attachmentNameCustomRadio.checked) {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						attachmentNameFormat: attachmentNameCustomInput.value,
+					});
+					updateAttachmentNamePreview(attachmentNameCustomInput.value);
+				}
+			})();
 		});
 
 		//! カスタム入力欄の入力時。
@@ -788,13 +790,15 @@ export class MemologSettingTab extends PluginSettingTab {
 				cls: "memolog-path-format-radio-label"
 			});
 
-			radio.addEventListener("change", async () => {
-				if (radio.checked) {
-					updateAttachmentNamePreview(preset.value);
-					await this.plugin.settingsManager.updateGlobalSettings({
-						attachmentNameFormat: preset.value,
-					});
-				}
+			radio.addEventListener("change", () => {
+				void (async () => {
+					if (radio.checked) {
+						updateAttachmentNamePreview(preset.value);
+						await this.plugin.settingsManager.updateGlobalSettings({
+							attachmentNameFormat: preset.value,
+						});
+					}
+				})();
 			});
 		}
 
@@ -860,13 +864,15 @@ export class MemologSettingTab extends PluginSettingTab {
 		templateCustomInput.rows = 4;
 
 		//! カスタムラジオボタンクリック時。
-		templateCustomRadio.addEventListener("change", async () => {
-			if (templateCustomRadio.checked) {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					memoTemplate: templateCustomInput.value,
-				});
-				updatePreview(templateCustomInput.value);
-			}
+		templateCustomRadio.addEventListener("change", () => {
+			void (async () => {
+				if (templateCustomRadio.checked) {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						memoTemplate: templateCustomInput.value,
+					});
+					updatePreview(templateCustomInput.value);
+				}
+			})();
 		});
 
 		//! カスタム入力欄の入力時。
@@ -938,13 +944,15 @@ export class MemologSettingTab extends PluginSettingTab {
 				cls: "memolog-path-format-radio-label"
 			});
 
-			radio.addEventListener("change", async () => {
-				if (radio.checked) {
-					updatePreview(preset.value);
-					await this.plugin.settingsManager.updateGlobalSettings({
-						memoTemplate: preset.value,
-					});
-				}
+			radio.addEventListener("change", () => {
+				void (async () => {
+					if (radio.checked) {
+						updatePreview(preset.value);
+						await this.plugin.settingsManager.updateGlobalSettings({
+							memoTemplate: preset.value,
+						});
+					}
+				})();
 			});
 		}
 
@@ -1273,25 +1281,27 @@ export class MemologSettingTab extends PluginSettingTab {
 			colorBox.style.backgroundColor = category.color;
 
 			//! 行クリックで選択。
-			row.addEventListener("click", async () => {
-				//! 全ての行から選択状態を解除。
-				tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
-					r.removeClass("memolog-default-category-selected");
-					const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
-					if (radioInput) radioInput.checked = false;
-				});
+			row.addEventListener("click", () => {
+				void (async () => {
+					//! 全ての行から選択状態を解除。
+					tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
+						r.removeClass("memolog-default-category-selected");
+						const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
+						if (radioInput) radioInput.checked = false;
+					});
 
-				//! この行を選択。
-				row.addClass("memolog-default-category-selected");
-				radio.checked = true;
+					//! この行を選択。
+					row.addClass("memolog-default-category-selected");
+					radio.checked = true;
 
-				//! 設定を更新。
-				await this.plugin.settingsManager.updateGlobalSettings({
-					defaultCategory: category.directory,
-				});
+					//! 設定を更新。
+					await this.plugin.settingsManager.updateGlobalSettings({
+						defaultCategory: category.directory,
+					});
 
-				//! サイドバーを再描画。
-				this.refreshSidebar();
+					//! サイドバーを再描画。
+					this.refreshSidebar();
+				})();
 			});
 		}
 		//! カテゴリ一覧を表示。
@@ -1768,25 +1778,27 @@ export class MemologSettingTab extends PluginSettingTab {
 			colorBox.style.backgroundColor = category.color;
 
 			//! 行クリックで選択。
-			row.addEventListener("click", async () => {
-				//! 全ての行から選択状態を解除。
-				tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
-					r.removeClass("memolog-default-category-selected");
-					const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
-					if (radioInput) radioInput.checked = false;
-				});
+			row.addEventListener("click", () => {
+				void (async () => {
+					//! 全ての行から選択状態を解除。
+					tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
+						r.removeClass("memolog-default-category-selected");
+						const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
+						if (radioInput) radioInput.checked = false;
+					});
 
-				//! この行を選択。
-				row.addClass("memolog-default-category-selected");
-				radio.checked = true;
+					//! この行を選択。
+					row.addClass("memolog-default-category-selected");
+					radio.checked = true;
 
-				//! 設定を更新。
-				await this.plugin.settingsManager.updateGlobalSettings({
-					defaultCategory: category.directory,
-				});
+					//! 設定を更新。
+					await this.plugin.settingsManager.updateGlobalSettings({
+						defaultCategory: category.directory,
+					});
 
-				//! サイドバーを再描画。
-				this.refreshSidebar();
+					//! サイドバーを再描画。
+					this.refreshSidebar();
+				})();
 			});
 		}
 	}

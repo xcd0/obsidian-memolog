@@ -529,20 +529,25 @@ export class MemologSidebar extends ItemView {
 					//! 日付範囲を計算。
 					let startDate: Date;
 					const endDate: Date = new Date();
+					endDate.setHours(23, 59, 59, 999); //! 今日の終わり。
 
 					if (this.currentDateRange === "today") {
 						startDate = new Date();
+						startDate.setHours(0, 0, 0, 0); //! 今日の始まり。
 					} else if (this.currentDateRange === "week") {
 						startDate = new Date();
 						startDate.setDate(endDate.getDate() - 7);
+						startDate.setHours(0, 0, 0, 0); //! 7日前の始まり。
 					} else {
 						//! "all"の場合は、過去2年分のデータを読み込む（パフォーマンス考慮）。
 						startDate = new Date();
 						startDate.setFullYear(endDate.getFullYear() - 2);
+						startDate.setHours(0, 0, 0, 0);
 					}
 
 					//! 日付範囲内の各日付に対してファイルを読み込む。
 					const currentDate = new Date(startDate);
+					currentDate.setHours(0, 0, 0, 0);
 					while (currentDate <= endDate) {
 						const filePath = settings.pathFormat
 							? PathGenerator.generateCustomPath(
@@ -570,7 +575,11 @@ export class MemologSidebar extends ItemView {
 						currentDate.setDate(currentDate.getDate() + 1);
 					}
 
-					this.memos = allMemos;
+					//! メモのタイムスタンプで日付範囲フィルタリング。
+					this.memos = allMemos.filter((memo) => {
+						const memoDate = new Date(memo.timestamp);
+						return memoDate >= startDate && memoDate <= endDate;
+					});
 					this.sortMemos();
 				} else {
 					//! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。

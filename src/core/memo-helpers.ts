@@ -1,6 +1,5 @@
 import { MemoEntry } from "../types/memo";
 import { v7 as uuidv7 } from "uuid";
-import { Logger } from "../utils/logger";
 
 //! タイムスタンプをフォーマットする（Linuxのdateコマンド書式に対応）。
 export function formatTimestamp(timestamp: string, format: string): string {
@@ -284,7 +283,7 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 				template = JSON.parse(templateMatch[1].trim()) as string;
 			} catch (e) {
 				//! JSON.parseエラーは無視（後方互換性）。
-				Logger.debug("Failed to parse template from comment:", e);
+				//! ゴミ箱への移動処理などで不正なJSONが含まれる場合がある。
 			}
 		}
 	}

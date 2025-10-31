@@ -1,4 +1,4 @@
-# memolog 仕様書 v0.0.11 (プロトタイプ版)
+# memolog 仕様書 v0.0.13 (プロトタイプ版)
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
@@ -220,6 +220,17 @@ interface MemoTemplate {
 - テスト拡充（527件 → 723件、カバレッジ 88.4% → 91.89%）。
 - ドキュメント整備（TESTING_GUIDE.md新規作成）。
 
+### v0.12
+- UI/UX改善（ゴミ箱タブラベル削除、ログ出力抑制、Shift+Enter送信）。
+- コード品質向上（memo-search-operations.ts抽出、65テスト、100%カバレッジ）。
+- テスト拡充（785件、カバレッジ95.19%）。
+
+### v0.13
+- **タイムゾーン処理の改善**: ISO 8601形式（タイムゾーンオフセット付き）でタイムスタンプを保存。
+- **CI環境互換性の確保**: ローカル(GMT+9)とCI(GMT+0)の両環境で一貫した動作を実現。
+- **コード品質の大幅向上**: Lintエラー42個を完全解決、型安全性を大幅に向上。
+- **テスト品質の向上**: 環境依存テストの修正、全865テスト成功率100%達成。
+
 ---
 
 ## 10. ライセンス
@@ -376,5 +387,112 @@ I/O操作を含まない純粋関数を独立モジュールとして抽出し�
 **添付ファイル保存先プリセット追加:**
 - `./attachments/%Y-%m-%d`
 - `./attachments/%Y%m%d`
+
+---
+
+## 13. v0.0.13の主な変更点
+
+### 13.1 タイムゾーン処理の改善
+
+**問題**: UTC形式(`2025-10-29T01:59:42.689Z`)でタイムスタンプを保存していたため、異なるタイムゾーンのユーザー間で日付の解釈が異なる問題が発生。
+
+**解決策**: ISO 8601形式（タイムゾーンオフセット付き）でタイムスタンプを保存。
+
+**新しい形式:**
+```
+2025-10-31T16:31:43.113+09:00
+```
+
+**メリット:**
+- ユーザーのローカルタイムゾーンで投稿時刻を正確に記録
+- 異なるタイムゾーンのユーザー間でも投稿時刻の正確な共有が可能
+- 夏時間 (DST) の切り替えに対応
+
+**後方互換性:**
+- UTC形式(`Z`終端)のタイムスタンプも引き続きサポート
+- 既存のメモは自動的に新形式で再保存される
+
+### 13.2 CI環境互換性の確保
+
+**問題**: テストが環境依存で、ローカル環境(GMT+9)では成功するがCI環境(GMT+0)では失敗する問題が発生。
+
+**根本原因:**
+```typescript
+// ❌ 環境依存コード
+const date = new Date(targetDate);
+date.setHours(0, 0, 0, 0); // 実行環境のタイムゾーンに依存
+```
+
+**解決策:**
+```typescript
+// ✅ 環境非依存コード
+const date = new Date("2025-10-29T00:00:00.000+09:00"); // 明示的なタイムゾーン指定
+```
+
+**修正したモジュール:**
+- `src/core/memo-helpers.ts`: `createTemplateRegex()`関数を追加
+- `test/timezone-handling.test.ts`: 全18テストケースを環境非依存に修正
+- `test/date-range-filter-bug.test.ts`: 日付範囲フィルタテストを修正
+
+### 13.3 コード品質の大幅向上
+
+**Lintエラーの完全解決:**
+
+初期状態: 42個のエラー
+- テンプレートパース問題: 3テスト失敗
+- タイムゾーン問題: 7テスト失敗
+- Lintエラー: 32個
+
+修正後: 0個のエラー ✅
+
+**主な修正内容:**
+
+1. **型安全性の向上**
+   ```typescript
+   // ❌ 修正前
+   const value = obj!.property; // non-null assertion
+   const content = calls[0][1] as string; // 型キャスト
+
+   // ✅ 修正後
+   if (!obj) throw new Error("Not found");
+   const value = obj.property; // 型ガード
+   const mock = fn as jest.Mock<TReturn, TArgs>; // ジェネリック型指定
+   ```
+
+2. **コードの不変性**
+   ```typescript
+   // ❌ 修正前
+   let pattern = templatePart.replace(...);
+
+   // ✅ 修正後
+   const pattern = templatePart.replace(...);
+   ```
+
+3. **意図の明確化**
+   ```typescript
+   // ❌ 修正前
+   it("テスト", async () => { ... }); // awaitなし
+
+   // ✅ 修正後
+   it("テスト", () => { ... }); // asyncなし
+   ```
+
+### 13.4 テスト品質の向上
+
+**テスト統計:**
+- テスト数: 865件
+- 成功率: **100%** ✅
+- カバレッジ: 95.19%
+- Node.js 18.x & 20.x: 両方で成功 ✅
+
+**環境依存テストの修正:**
+- `setHours()`使用箇所を全てISO 8601形式に置換
+- テンプレートパース処理を正規表現ベースに改善
+- Mock型の厳密な指定でLintエラーを解決
+
+**技術的な改善:**
+- `createTemplateRegex()`: タイムゾーン非依存のパース処理
+- Optional chaining & Nullish coalescing: 安全なnullチェック
+- Jest Mock型のジェネリック指定: 型推論の改善
 
 ---

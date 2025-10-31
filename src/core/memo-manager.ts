@@ -15,6 +15,7 @@ import {
 	joinMemosToFileContent,
 } from "./memo-crud-operations";
 import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations";
+import { findDeletedMemoInFiles, extractCategoryFromMemo, filterMemologFiles } from "./memo-search-operations";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -154,36 +155,26 @@ export class MemoManager {
 			(async () => {
 				//! 全カテゴリのファイルから対象メモを検索。
 				const allFiles = this.vaultHandler.getMarkdownFiles();
-				const memologFiles = allFiles.filter((file) => file.path.startsWith(rootDirectory + "/"));
+				const fileContents = new Map<string, string>();
 
-				let targetFilePath: string | null = null;
-				let targetMemoIndex = -1;
-				let allMemos: string[] = [];
-
-				//! 対象メモを含むファイルを検索。
-				for (const file of memologFiles) {
-					const fileContent = await this.vaultHandler.readFile(file.path);
-					const memos = splitFileIntoMemos(fileContent);
-
-					for (let i = 0; i < memos.length; i++) {
-						if (memos[i].includes(`memo-id: ${memoId}`)) {
-							//! 削除フラグが存在するか確認。
-							if (memos[i].includes('deleted: "true"')) {
-								targetFilePath = file.path;
-								targetMemoIndex = i;
-								allMemos = memos;
-								break;
-							}
-						}
-					}
-
-					if (targetFilePath) break;
+				//! ファイル内容を読み込んでMapに格納。
+				for (const file of allFiles) {
+					const content = await this.vaultHandler.readFile(file.path);
+					fileContents.set(file.path, content);
 				}
 
-				if (!targetFilePath || targetMemoIndex === -1) {
+				//! memolog配下のファイルのみをフィルタリング。
+				const memologFileContents = filterMemologFiles(fileContents, rootDirectory);
+
+				//! 削除されたメモを検索。
+				const searchResult = findDeletedMemoInFiles(memologFileContents, memoId);
+
+				if (!searchResult) {
 					notify.warning("復活対象のメモが見つかりません");
 					return false;
 				}
+
+				const { filePath: targetFilePath, memoIndex: targetMemoIndex, allMemos } = searchResult;
 
 				//! ゴミ箱操作で復元する。
 				const { memos: updatedMemos, restored } = markMemoAsRestored(allMemos, memoId);
@@ -199,9 +190,8 @@ export class MemoManager {
 
 				//! categoryを抽出してキャッシュを無効化。
 				const restoredMemo = updatedMemos[targetMemoIndex];
-				const categoryMatch = restoredMemo.match(/category: "([^"]+)"/);
-				if (categoryMatch) {
-					const category = categoryMatch[1];
+				const category = extractCategoryFromMemo(restoredMemo);
+				if (category) {
 					const cacheKey = generateCacheKey(targetFilePath, category);
 					this.cacheManager.invalidateMemos(cacheKey);
 				}

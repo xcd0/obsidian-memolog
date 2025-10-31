@@ -97,11 +97,11 @@ describe("タイムゾーン処理", () => {
 			await memoManager.addMemo(filePath, "work", "テストメモ", "asc");
 
 			//! vault.modifyが呼ばれたことを確認。
-			const modifyCalls = (mockApp.vault.modify as jest.Mock).mock.calls;
-			expect(modifyCalls.length).toBeGreaterThan(0);
+			const modifyMock = mockApp.vault.modify as jest.Mock<Promise<void>, [unknown, string]>;
+			expect(modifyMock.mock.calls.length).toBeGreaterThan(0);
 
 			//! 保存されたコンテンツを取得。
-			const savedContent = String(modifyCalls[0]?.[1] ?? "");
+			const savedContent = modifyMock.mock.calls[0][1];
 			console.log("保存されたコンテンツ:", savedContent);
 
 			//! タイムスタンプを抽出。
@@ -153,11 +153,11 @@ describe("タイムゾーン処理", () => {
 			await memoManager.addMemo(filePath, "work", "テストメモ", "asc");
 
 			//! vault.modifyが呼ばれたことを確認。
-			const modifyCalls = (mockApp.vault.modify as jest.Mock).mock.calls;
-			expect(modifyCalls.length).toBeGreaterThan(0);
+			const modifyMock = mockApp.vault.modify as jest.Mock<Promise<void>, [unknown, string]>;
+			expect(modifyMock.mock.calls.length).toBeGreaterThan(0);
 
 			//! 保存されたコンテンツを取得。
-			const savedContent = String(modifyCalls[0]?.[1] ?? "");
+			const savedContent = modifyMock.mock.calls[0][1];
 
 			//! タイムスタンプを抽出。
 			const timestampMatch = savedContent.match(/timestamp: ([^,]+),/);

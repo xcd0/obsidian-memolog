@@ -1,7 +1,7 @@
 import { PathMigrator, PathMapping, MemoSplitMapping } from "../src/utils/path-migrator";
 import { MemologVaultHandler } from "../src/fs/vault-handler";
 import { MemoManager } from "../src/core/memo-manager";
-import { TFile } from "obsidian";
+import { App, TFile } from "obsidian";
 
 //! PathMigratorのモックベーステスト。
 //! I/O操作に依存するため、App、VaultHandler、MemoManagerをモック化してテスト。
@@ -16,8 +16,8 @@ describe("PathMigrator", () => {
 			delete: jest.Mock;
 		};
 	};
-	let mockVaultHandler: jest.Mocked<MemologVaultHandler>;
-	let mockMemoManager: jest.Mocked<MemoManager>;
+	let mockVaultHandler: Partial<MemologVaultHandler>;
+	let mockMemoManager: Partial<MemoManager>;
 
 	beforeEach(() => {
 		//! Appのモック作成。
@@ -39,14 +39,18 @@ describe("PathMigrator", () => {
 			fileExists: jest.fn(),
 			folderExists: jest.fn(),
 			getAllCategories: jest.fn(),
-		} as jest.Mocked<MemologVaultHandler>;
+		};
 
 		//! MemoManagerのモック作成。
 		mockMemoManager = {
 			getMemos: jest.fn(),
-		} as jest.Mocked<MemoManager>;
+		};
 
-		pathMigrator = new PathMigrator(mockApp, mockVaultHandler, mockMemoManager);
+		pathMigrator = new PathMigrator(
+			mockApp as unknown as App,
+			mockVaultHandler as MemologVaultHandler,
+			mockMemoManager as MemoManager
+		);
 	});
 
 	describe("planMigration", () => {
@@ -59,7 +63,7 @@ describe("PathMigrator", () => {
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
 			//! VaultHandlerのモックを設定。
-			mockVaultHandler.readFile.mockResolvedValue(
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue(
 				'<!-- memolog: start category="work" -->\nContent\n<!-- memolog: end -->'
 			);
 
@@ -94,7 +98,7 @@ describe("PathMigrator", () => {
 			];
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
-			mockVaultHandler.readFile.mockResolvedValue(
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue(
 				'<!-- memolog: start category="work" -->\nContent\n<!-- memolog: end -->'
 			);
 
@@ -137,7 +141,7 @@ describe("PathMigrator", () => {
 			];
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
-			mockVaultHandler.readFile.mockResolvedValue(
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue(
 				'<!-- memolog: start category="work" -->\nContent\n<!-- memolog: end -->'
 			);
 
@@ -170,10 +174,10 @@ describe("PathMigrator", () => {
 			];
 
 			//! モックの設定。
-			mockVaultHandler.readFile.mockResolvedValue("File content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined);
-			mockVaultHandler.createFolder.mockResolvedValue(undefined);
-			mockVaultHandler.folderExists.mockReturnValue(true); //! フォルダが存在する場合はcreateFolder呼び出しをスキップ。
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue("File content");
+			(mockVaultHandler.createFile as jest.Mock).mockResolvedValue({} as TFile);
+			(mockVaultHandler.createFolder as jest.Mock).mockResolvedValue(undefined);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true); //! フォルダが存在する場合はcreateFolder呼び出しをスキップ。
 
 			const mockFile = Object.create(TFile.prototype);
 			mockFile.path = "memolog/work/2025-10-01.md";
@@ -238,9 +242,9 @@ describe("PathMigrator", () => {
 				},
 			];
 
-			mockVaultHandler.readFile.mockResolvedValue("File content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined);
-			mockVaultHandler.folderExists.mockReturnValue(true);
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue("File content");
+			(mockVaultHandler.createFile as jest.Mock).mockResolvedValue({} as TFile);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true);
 
 			//! ファイルが見つからないエラーをシミュレート。
 			mockApp.vault.getAbstractFileByPath.mockReturnValue(null);
@@ -264,9 +268,9 @@ describe("PathMigrator", () => {
 				},
 			];
 
-			mockVaultHandler.readFile.mockResolvedValue("File content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined);
-			mockVaultHandler.folderExists.mockReturnValue(true);
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue("File content");
+			(mockVaultHandler.createFile as jest.Mock).mockResolvedValue({} as TFile);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true);
 
 			const mockFile = { path: "memolog/work/2025-10-01.md" } as TFile;
 			mockApp.vault.getAbstractFileByPath.mockReturnValue(mockFile);
@@ -276,7 +280,7 @@ describe("PathMigrator", () => {
 
 			//! バックアップファイルが作成される。
 			expect(mockVaultHandler.createFile).toHaveBeenCalledTimes(1);
-			expect(mockVaultHandler.createFile.mock.calls[0][0]).toContain(".backup-");
+			expect((mockVaultHandler.createFile as jest.Mock).mock.calls[0][0]).toContain(".backup-");
 		});
 
 		test("should not create backup when createBackup is false", async () => {
@@ -289,7 +293,7 @@ describe("PathMigrator", () => {
 				},
 			];
 
-			mockVaultHandler.folderExists.mockReturnValue(true);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true);
 
 			const mockFile = { path: "memolog/work/2025-10-01.md" } as TFile;
 			mockApp.vault.getAbstractFileByPath.mockReturnValue(mockFile);
@@ -309,7 +313,7 @@ describe("PathMigrator", () => {
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
 			//! メモマネージャーのモックを設定（複数カテゴリのメモ）。
-			mockMemoManager.getMemos.mockResolvedValue([
+			(mockMemoManager.getMemos as jest.Mock).mockResolvedValue([
 				{
 					id: "1",
 					category: "work",
@@ -344,7 +348,7 @@ describe("PathMigrator", () => {
 			];
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
-			mockMemoManager.getMemos.mockResolvedValue([
+			(mockMemoManager.getMemos as jest.Mock).mockResolvedValue([
 				{
 					id: "1",
 					category: "work",
@@ -370,7 +374,7 @@ describe("PathMigrator", () => {
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
 			//! メモが0件。
-			mockMemoManager.getMemos.mockResolvedValue([]);
+			(mockMemoManager.getMemos as jest.Mock).mockResolvedValue([]);
 
 			const mappings = await pathMigrator.planMemoSplitMigration(
 				"memolog",
@@ -415,11 +419,11 @@ describe("PathMigrator", () => {
 			];
 
 			//! モックの設定。
-			mockVaultHandler.readFile.mockResolvedValue("Old content");
-			mockVaultHandler.createFile.mockResolvedValue(undefined);
-			mockVaultHandler.writeFile.mockResolvedValue(undefined);
-			mockVaultHandler.folderExists.mockReturnValue(true); //! フォルダは既に存在。
-			mockVaultHandler.fileExists.mockReturnValue(false); //! ファイルは存在しない。
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue("Old content");
+			(mockVaultHandler.createFile as jest.Mock).mockResolvedValue({} as TFile);
+			(mockVaultHandler.writeFile as jest.Mock).mockResolvedValue(undefined);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true); //! フォルダは既に存在。
+			(mockVaultHandler.fileExists as jest.Mock).mockReturnValue(false); //! ファイルは存在しない。
 
 			const mockFile = Object.create(TFile.prototype);
 			mockFile.path = "memolog/daily/2025-10-01.md";
@@ -464,16 +468,16 @@ describe("PathMigrator", () => {
 			];
 
 			//! 既存ファイルがある場合。
-			mockVaultHandler.readFile.mockImplementation((path: string) => {
+			(mockVaultHandler.readFile as jest.Mock).mockImplementation((path: string) => {
 				if (path === "memolog/work/20251001.md") {
 					return Promise.resolve("Existing content");
 				}
 				return Promise.resolve("Old content");
 			});
-			mockVaultHandler.createFile.mockResolvedValue(undefined);
-			mockVaultHandler.writeFile.mockResolvedValue(undefined);
-			mockVaultHandler.folderExists.mockReturnValue(true);
-			mockVaultHandler.fileExists.mockReturnValue(true);
+			(mockVaultHandler.createFile as jest.Mock).mockResolvedValue({} as TFile);
+			(mockVaultHandler.writeFile as jest.Mock).mockResolvedValue(undefined);
+			(mockVaultHandler.folderExists as jest.Mock).mockReturnValue(true);
+			(mockVaultHandler.fileExists as jest.Mock).mockReturnValue(true);
 
 			const mockFile = { path: "memolog/daily/2025-10-01.md" } as TFile;
 			mockApp.vault.getAbstractFileByPath.mockReturnValue(mockFile);
@@ -483,7 +487,7 @@ describe("PathMigrator", () => {
 
 			//! 既存コンテンツに追記される。
 			expect(mockVaultHandler.writeFile).toHaveBeenCalledTimes(1);
-			const writtenContent = mockVaultHandler.writeFile.mock.calls[0][1];
+			const writtenContent = (mockVaultHandler.writeFile as jest.Mock).mock.calls[0][1];
 			expect(writtenContent).toContain("Existing content");
 			expect(writtenContent).toContain("New memo");
 		});
@@ -517,7 +521,7 @@ describe("PathMigrator", () => {
 			];
 
 			//! エラーをシミュレート。
-			mockVaultHandler.readFile.mockRejectedValue(new Error("Read error"));
+			(mockVaultHandler.readFile as jest.Mock).mockRejectedValue(new Error("Read error"));
 
 			const result = await pathMigrator.executeMemoSplitMigration(mappings, true);
 
@@ -531,8 +535,8 @@ describe("PathMigrator", () => {
 
 	describe("detectCategoryFromContent", () => {
 		test("should detect category from file content", async () => {
-			mockVaultHandler.getAllCategories.mockResolvedValue(
-				new Set(["work", "hobby"])
+			(mockVaultHandler.getAllCategories as jest.Mock).mockResolvedValue(
+				new Map([["work", "work"], ["hobby", "hobby"]])
 			);
 
 			const categories = [
@@ -549,7 +553,7 @@ describe("PathMigrator", () => {
 		});
 
 		test("should return null when no matching category", async () => {
-			mockVaultHandler.getAllCategories.mockResolvedValue(new Set(["unknown"]));
+			(mockVaultHandler.getAllCategories as jest.Mock).mockResolvedValue(new Map([["unknown", "unknown"]]));
 
 			const categories = [
 				{ name: "Work", directory: "work", icon: "💼", color: "#ff0000" },
@@ -565,7 +569,7 @@ describe("PathMigrator", () => {
 		});
 
 		test("should handle errors gracefully", async () => {
-			mockVaultHandler.getAllCategories.mockRejectedValue(
+			(mockVaultHandler.getAllCategories as jest.Mock).mockRejectedValue(
 				new Error("Read error")
 			);
 
@@ -587,7 +591,7 @@ describe("PathMigrator", () => {
 			const mockFiles = [{ path: "memolog/work/2025-10-01.md" } as TFile];
 			mockApp.vault.getMarkdownFiles.mockReturnValue(mockFiles);
 
-			mockVaultHandler.readFile.mockResolvedValue(
+			(mockVaultHandler.readFile as jest.Mock).mockResolvedValue(
 				'<!-- memolog: start category="work" -->\nContent\n<!-- memolog: end -->'
 			);
 

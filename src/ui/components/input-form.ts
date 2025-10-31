@@ -99,9 +99,9 @@ export class InputForm {
 			this.handleSubmit();
 		});
 
-		//! Shift+EnterまたはCtrl+Enterで送信。
+		//! Shift+Enterで送信（Ctrl+EnterはObsidian側の制約により動作しない）。
 		this.textarea.addEventListener("keydown", (e) => {
-			if ((e.shiftKey || e.ctrlKey) && e.key === "Enter") {
+			if (e.shiftKey && e.key === "Enter") {
 				this.handleSubmit();
 				e.preventDefault();
 			}

@@ -496,23 +496,17 @@ describe("MemoManager", () => {
 			expect(memos[0].category).toBe("invalid-json");
 		});
 
-		it("JSON.parseエラー時にtemplateを無視（Logger.debug）", async () => {
+		it("JSON.parseエラー時にtemplateを無視して処理を継続", async () => {
 			//! 不正なJSON形式のテンプレートを含むメモ。
 			const invalidTemplateMemo =
 				'<!-- memo-id: test-id, timestamp: 2025-10-28T15:30:00.000Z, template: invalid-json -->\n## 2025-10-28 15:30\nテスト';
 			await mockVaultHandler.writeFile(filePath, invalidTemplateMemo);
 
-			//! Logger.debugをモック。
-			const { Logger } = await import("../src/utils/logger");
-			const loggerDebugSpy = jest.spyOn(Logger, "debug").mockImplementation();
-
+			//! 不正なテンプレートがあっても処理が継続することを確認。
 			const memos = await memoManager.getMemos(filePath, "");
 			expect(memos).toHaveLength(1);
-			//! Logger.debugが呼び出されたことを確認（引数の詳細は問わない）。
-			expect(loggerDebugSpy).toHaveBeenCalled();
-			expect(loggerDebugSpy.mock.calls[0][0]).toContain("Failed to parse template from comment:");
-
-			loggerDebugSpy.mockRestore();
+			expect(memos[0].id).toBe("test-id");
+			expect(memos[0].template).toBeUndefined(); //! パースに失敗した場合はundefined。
 		});
 
 		it("添付ファイルを正しく抽出", async () => {

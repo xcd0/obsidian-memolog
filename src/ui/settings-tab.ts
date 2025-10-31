@@ -299,17 +299,20 @@ export class MemologSettingTab extends PluginSettingTab {
 			cls: "memolog-path-format-container"
 		});
 
-		//! プリセットオプション。
+		//! プリセットオプション（使用頻度順・論理的順序）。
 		const pathPresets = [
-			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
+			// シンプルな日付形式（カテゴリなし）。
 			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
+			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
 			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
-			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
+			// カテゴリを含む形式（カテゴリが先）。
 			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
 			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
-			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
+			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
+			// カテゴリを含む形式（日付が先）。
 			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
+			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
 		];
 
 		//! 現在の設定値がプリセットに含まれるか確認。

@@ -177,19 +177,21 @@ export class MemoCard {
 			attr: { "aria-label": "コピー" },
 		});
 		setIcon(copyBtn, "copy");
-		copyBtn.addEventListener("click", async () => {
-			try {
-				await navigator.clipboard.writeText(this.memo.content);
-				//! アイコンを一時的にチェックマークに変更。
-				copyBtn.empty();
-				setIcon(copyBtn, "check");
-				setTimeout(() => {
+		copyBtn.addEventListener("click", () => {
+			void (async () => {
+				try {
+					await navigator.clipboard.writeText(this.memo.content);
+					//! アイコンを一時的にチェックマークに変更。
 					copyBtn.empty();
-					setIcon(copyBtn, "copy");
-				}, 1500);
-			} catch (error) {
-				Logger.error("Failed to copy to clipboard:", error);
-			}
+					setIcon(copyBtn, "check");
+					setTimeout(() => {
+						copyBtn.empty();
+						setIcon(copyBtn, "copy");
+					}, 1500);
+				} catch (error) {
+					Logger.error("Failed to copy to clipboard:", error);
+				}
+			})();
 		});
 
 		//! 編集ボタン（ゴミ箱以外）。

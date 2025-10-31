@@ -43,7 +43,7 @@ export class MemologSettingTab extends PluginSettingTab {
 	}
 
 	//! debounce関数 - 連続入力時に過度な保存を防ぐ。
-	private debounce(key: string, callback: () => void, delay: number = 200): void {
+	private debounce(key: string, callback: () => void | Promise<void>, delay: number = 200): void {
 		//! 既存のタイマーをクリア。
 		const existingTimer = this.debounceTimers.get(key);
 		if (existingTimer) {
@@ -52,7 +52,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		//! 新しいタイマーをセット。
 		const timer = setTimeout(() => {
-			callback();
+			void callback();
 			this.debounceTimers.delete(key);
 		}, delay);
 
@@ -400,16 +400,18 @@ export class MemologSettingTab extends PluginSettingTab {
 				cls: "memolog-path-format-radio-label"
 			});
 
-			radio.addEventListener("change", async () => {
-				if (radio.checked) {
-					updatePathPreview(preset.value);
-					await this.plugin.settingsManager.updateGlobalSettings({
-						pathFormat: preset.value,
-					});
-					checkMigrationNeeded();
-					//! サイドバー(カード表示)を再描画。
-					this.refreshSidebar();
-				}
+			radio.addEventListener("change", () => {
+				void (async () => {
+					if (radio.checked) {
+						updatePathPreview(preset.value);
+						await this.plugin.settingsManager.updateGlobalSettings({
+							pathFormat: preset.value,
+						});
+						checkMigrationNeeded();
+						//! サイドバー(カード表示)を再描画。
+						this.refreshSidebar();
+					}
+				})();
 			});
 		}
 
@@ -442,7 +444,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			if (backups.length === 0) {
 				btn.setButtonText("元に戻す").setDisabled(true);
 			} else {
-				btn.setButtonText("元に戻す").onClick(async () => {
+				btn.setButtonText("元に戻す").onClick(() => {
 					const settings = this.plugin.settingsManager.getGlobalSettings();
 					const modal = new RestoreBackupModal(
 						this.app,
@@ -459,16 +461,18 @@ export class MemologSettingTab extends PluginSettingTab {
 		});
 
 		//! 各pathFormat変更時に変換ボタンをチェック。
-		pathCustomRadio.addEventListener("change", async () => {
-			if (pathCustomRadio.checked) {
-				await this.plugin.settingsManager.updateGlobalSettings({
-					pathFormat: pathCustomInput.value,
-				});
-				updatePathPreview(pathCustomInput.value);
-				checkMigrationNeeded();
-				//! サイドバー(カード表示)を再描画。
-				this.refreshSidebar();
-			}
+		pathCustomRadio.addEventListener("change", () => {
+			void (async () => {
+				if (pathCustomRadio.checked) {
+					await this.plugin.settingsManager.updateGlobalSettings({
+						pathFormat: pathCustomInput.value,
+					});
+					updatePathPreview(pathCustomInput.value);
+					checkMigrationNeeded();
+					//! サイドバー(カード表示)を再描画。
+					this.refreshSidebar();
+				}
+			})();
 		});
 
 		pathCustomInput.addEventListener("input", () => {

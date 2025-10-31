@@ -114,7 +114,7 @@ const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/;
 //! タイムゾーンに依存せずにテンプレート部分をマッチさせるため。
 function createTemplateRegex(templatePart: string): RegExp {
 	//! テンプレートのプレースホルダーを正規表現パターンに置換。
-	let pattern = templatePart
+	const pattern = templatePart
 		.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //! 正規表現の特殊文字をエスケープ。
 		.replace(/%Y/g, "\\d{4}") //! 年: 4桁の数字。
 		.replace(/%y/g, "\\d{2}") //! 年(2桁): 2桁の数字。

@@ -266,4 +266,110 @@ Unclosed duplicate
 			expect(result.warnings.length).toBeGreaterThan(0);
 		});
 	});
+
+	describe("parseCategoryAttribute", () => {
+		test("should parse category from start tag", () => {
+			const line = '<!-- memolog: start category="work" -->';
+			const category = TagManager.parseCategoryAttribute(line);
+			expect(category).toBe("work");
+		});
+
+		test("should return null for non-start tag", () => {
+			const line = "<!-- memolog: end -->";
+			const category = TagManager.parseCategoryAttribute(line);
+			expect(category).toBeNull();
+		});
+
+		test("should return null for plain text", () => {
+			const line = "Just some regular text";
+			const category = TagManager.parseCategoryAttribute(line);
+			expect(category).toBeNull();
+		});
+
+		test("should parse category with special characters", () => {
+			const line = '<!-- memolog: start category="work-project-2024" -->';
+			const category = TagManager.parseCategoryAttribute(line);
+			expect(category).toBe("work-project-2024");
+		});
+	});
+
+	describe("parseMetadata", () => {
+		test("should parse valid metadata", () => {
+			const line = '<!-- memolog: {"format":"template","order":"asc"} -->';
+			const metadata = TagManager.parseMetadata(line);
+			expect(metadata).not.toBeNull();
+			expect(metadata?.format).toBe("template");
+			expect(metadata?.order).toBe("asc");
+		});
+
+		test("should return null for non-metadata line", () => {
+			const line = '<!-- memolog: start category="work" -->';
+			const metadata = TagManager.parseMetadata(line);
+			expect(metadata).toBeNull();
+		});
+
+		test("should return null for invalid JSON", () => {
+			const line = "<!-- memolog: {invalid json} -->";
+			const metadata = TagManager.parseMetadata(line);
+			expect(metadata).toBeNull();
+		});
+
+		test("should parse metadata with timestamp", () => {
+			const line = '<!-- memolog: {"timestamp":"2025-10-31T10:00:00Z"} -->';
+			const metadata = TagManager.parseMetadata(line);
+			expect(metadata).not.toBeNull();
+			expect(metadata?.timestamp).toBe("2025-10-31T10:00:00Z");
+		});
+
+		test("should return null for plain text", () => {
+			const line = "Just some regular text";
+			const metadata = TagManager.parseMetadata(line);
+			expect(metadata).toBeNull();
+		});
+	});
+
+	describe("repairTagPairs - additional coverage", () => {
+		test("should handle content with only valid tag pairs", () => {
+			const content = `
+<!-- memolog: start category="work" -->
+Content 1
+<!-- memolog: end -->
+
+<!-- memolog: start category="hobby" -->
+Content 2
+<!-- memolog: end -->
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(false);
+			expect(result.fixes).toEqual([]);
+			expect(result.content).toBe(content);
+		});
+
+		test("should handle orphaned end tag removal", () => {
+			const content = `
+<!-- memolog: end -->
+Some content
+<!-- memolog: start category="work" -->
+Content
+<!-- memolog: end -->
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(true);
+			expect(result.fixes.length).toBeGreaterThan(0);
+			expect(result.fixes[0]).toContain("Removed orphaned end tag");
+		});
+
+		test("should handle mixed errors (orphaned end + unclosed start)", () => {
+			const content = `
+<!-- memolog: end -->
+<!-- memolog: start category="work" -->
+Content
+`;
+			const result = TagManager.repairTagPairs(content);
+			expect(result.repaired).toBe(true);
+			expect(result.fixes.length).toBe(2);
+			expect(result.fixes.some((f) => f.includes("Removed orphaned"))).toBe(true);
+			expect(result.fixes.some((f) => f.includes("Added missing end tag"))).toBe(true);
+		});
+	});
 });

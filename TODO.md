@@ -229,7 +229,7 @@
   - [x] tag-manager.ts のテスト拡充 (88.46% → 100%, +12テスト)
 
 - テスト拡充
-  - [x] 総テスト数: 527件 → 703件 (+176件, +33.4%)
+  - [x] 総テスト数: 527件 → 723件 (+196件, +37.2%)
   - [x] 全体カバレッジ: 88.4% → 91.89% (+3.49%)
   - [x] 100%カバレッジモジュール: 5個追加
     - [x] memo-crud-operations.ts
@@ -238,6 +238,7 @@
     - [x] memo-split-operations.ts
     - [x] cache/lru-cache.ts
     - [x] tag-manager.ts
+  - [x] path-migrator.ts のモックベーステスト追加 (20件)
 
 - ドキュメント整備
   - [x] README.md をv0.0.11に更新

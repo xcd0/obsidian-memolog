@@ -106,6 +106,10 @@ export function memoToText(memo: MemoEntry, template?: string, useTodoList = fal
 	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
 }
 
+//! JSON文字列全体をマッチする正規表現パターン。
+//! ダブルクォートで囲まれた文字列で、エスケープ文字(\")も考慮。
+const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/;
+
 //! メモテキストからメタデータを抽出する。
 export function parseMetadata(text: string): {
 	id: string | null;
@@ -133,16 +137,35 @@ export function parseMetadata(text: string): {
 	const comment = commentMatch[1];
 	const idMatch = comment.match(/memo-id: ([^,]+)/);
 	const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
-	const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
-	const templateMatch = comment.match(/template: ([^,]+?)(?:,|$)/);
+	//! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
+	//! ただし、後方互換性のため、JSON形式でない場合も処理する。
+	const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`));
+	const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`));
 	const deletedMatch = comment.match(/deleted: "([^"]+)"/);
 	const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/);
 	const pinnedAtMatch = comment.match(/pinnedAt: "([^"]+)"/);
 
+	//! categoryのパース処理（JSON形式と非JSON形式の両方に対応）。
+	let parsedCategory: string | null = null;
+	if (categoryMatch) {
+		const categoryValue = categoryMatch[1].trim();
+		if (categoryValue.startsWith('"')) {
+			//! JSON形式の場合はJSON.parse。
+			try {
+				parsedCategory = JSON.parse(categoryValue) as string;
+			} catch (e) {
+				parsedCategory = null;
+			}
+		} else {
+			//! 非JSON形式の場合はそのまま使用（後方互換性）。
+			parsedCategory = categoryValue;
+		}
+	}
+
 	return {
 		id: idMatch?.[1].trim() || null,
 		timestamp: timestampMatch?.[1].trim() || null,
-		category: categoryMatch ? (JSON.parse(categoryMatch[1].trim()) as string) : null,
+		category: parsedCategory,
 		template: templateMatch ? (JSON.parse(templateMatch[1].trim()) as string) : undefined,
 		deleted: deletedMatch?.[1] === "true",
 		trashedAt: trashedAtMatch?.[1] || null,
@@ -263,18 +286,26 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 		const comment = commentMatch[1];
 		const idMatch = comment.match(/memo-id: ([^,]+)/);
 		const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
-		const categoryMatch = comment.match(/category: ([^,]+?)(?:,|$)/);
-		const templateMatch = comment.match(/template: ([^,]+?)(?:,|$)/);
+		//! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
+		//! ただし、後方互換性のため、JSON形式でない場合も処理する。
+		const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`));
+		const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`));
 
 		id = idMatch?.[1].trim() || uuidv7();
 		timestamp = timestampMatch?.[1].trim() || null;
 
 		if (categoryMatch) {
-			try {
-				parsedCategory = JSON.parse(categoryMatch[1].trim()) as string;
-			} catch (e) {
-				//! JSON.parseエラーの場合は直接使用。
-				parsedCategory = categoryMatch[1].trim();
+			const categoryValue = categoryMatch[1].trim();
+			if (categoryValue.startsWith('"')) {
+				//! JSON形式の場合はJSON.parse。
+				try {
+					parsedCategory = JSON.parse(categoryValue) as string;
+				} catch (e) {
+					parsedCategory = null;
+				}
+			} else {
+				//! 非JSON形式の場合はそのまま使用（後方互換性）。
+				parsedCategory = categoryValue;
 			}
 		}
 
@@ -333,12 +364,18 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 
 		//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
 		let extracted = bodyText;
-		if (beforeContent && extracted.startsWith(beforeContent)) {
-			extracted = extracted.slice(beforeContent.length);
+		if (beforeContent) {
+			//! 改行を含む場合、trimせずに正確にマッチさせる。
+			if (extracted.startsWith(beforeContent)) {
+				extracted = extracted.slice(beforeContent.length);
+			}
 		}
-		if (afterContent && extracted.endsWith(afterContent)) {
-			extracted = extracted.slice(0, -afterContent.length);
+		if (afterContent) {
+			if (extracted.endsWith(afterContent)) {
+				extracted = extracted.slice(0, -afterContent.length);
+			}
 		}
+		//! 先頭と末尾の空白・改行のみをtrim。
 		content = extracted.trim();
 	} else {
 		//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。

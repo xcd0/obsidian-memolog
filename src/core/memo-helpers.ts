@@ -110,6 +110,28 @@ export function memoToText(memo: MemoEntry, template?: string, useTodoList = fal
 //! ダブルクォートで囲まれた文字列で、エスケープ文字(\")も考慮。
 const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/;
 
+//! テンプレート文字列を正規表現パターンに変換する。
+//! タイムゾーンに依存せずにテンプレート部分をマッチさせるため。
+function createTemplateRegex(templatePart: string): RegExp {
+	//! テンプレートのプレースホルダーを正規表現パターンに置換。
+	let pattern = templatePart
+		.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //! 正規表現の特殊文字をエスケープ。
+		.replace(/%Y/g, "\\d{4}") //! 年: 4桁の数字。
+		.replace(/%y/g, "\\d{2}") //! 年(2桁): 2桁の数字。
+		.replace(/%[Bb]/g, "\\S+月?") //! 月名: 文字列 + 任意の"月"。
+		.replace(/%m/g, "\\d{2}") //! 月: 2桁の数字。
+		.replace(/%d/g, "\\d{2}") //! 日: 2桁の数字。
+		.replace(/%[Aa]/g, "\\S+曜日?") //! 曜日名: 文字列 + 任意の"曜日"。
+		.replace(/%u/g, "\\d") //! 曜日(1-7): 1桁の数字。
+		.replace(/%H/g, "\\d{2}") //! 時(24時間): 2桁の数字。
+		.replace(/%I/g, "\\d{2}") //! 時(12時間): 2桁の数字。
+		.replace(/%M/g, "\\d{2}") //! 分: 2桁の数字。
+		.replace(/%S/g, "\\d{2}") //! 秒: 2桁の数字。
+		.replace(/%s/g, "\\d+"); //! Unixタイムスタンプ: 数字列。
+
+	return new RegExp(pattern);
+}
+
 //! メモテキストからメタデータを抽出する。
 export function parseMetadata(text: string): {
 	id: string | null;
@@ -364,19 +386,45 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 
 		//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
 		let extracted = bodyText;
+		let extractionSucceeded = true;
+
 		if (beforeContent) {
 			//! 改行を含む場合、trimせずに正確にマッチさせる。
 			if (extracted.startsWith(beforeContent)) {
 				extracted = extracted.slice(beforeContent.length);
+			} else {
+				//! タイムゾーンの違いで逆算に失敗する場合、正規表現でマッチを試みる。
+				const beforePattern = createTemplateRegex(parts[0]);
+				const match = bodyText.match(beforePattern);
+				if (match && match[0]) {
+					extracted = bodyText.slice(match[0].length);
+				} else {
+					extractionSucceeded = false;
+				}
 			}
 		}
-		if (afterContent) {
+		if (extractionSucceeded && afterContent) {
 			if (extracted.endsWith(afterContent)) {
 				extracted = extracted.slice(0, -afterContent.length);
+			} else {
+				//! 後方一致も正規表現で試みる。
+				const afterPattern = createTemplateRegex(parts[1]);
+				const match = extracted.match(new RegExp(afterPattern.source + "$"));
+				if (match && match[0]) {
+					extracted = extracted.slice(0, -match[0].length);
+				} else {
+					extractionSucceeded = false;
+				}
 			}
 		}
-		//! 先頭と末尾の空白・改行のみをtrim。
-		content = extracted.trim();
+
+		if (extractionSucceeded) {
+			//! 先頭と末尾の空白・改行のみをtrim。
+			content = extracted.trim();
+		} else {
+			//! 逆算に失敗した場合は、bodyText全体をcontentとする。
+			content = bodyText;
+		}
 	} else {
 		//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
 		const actualContentStartIndex = contentStartIndex + 1;

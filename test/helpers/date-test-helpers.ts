@@ -87,3 +87,20 @@ export function createWeekDateRange(baseDate: Date): DateRange {
 export function isInDateRange(date: Date, range: DateRange): boolean {
 	return date >= range.start && date <= range.end;
 }
+
+//! ローカル日付ベースで日付範囲を作成(タイムゾーンを考慮)。
+//! baseDateのローカル日付(年月日)を基準に、その日の00:00〜23:59をUTC時刻で返す。
+export function createLocalDateRange(baseDate: Date | string): DateRange {
+	const date = typeof baseDate === "string" ? new Date(baseDate) : baseDate;
+
+	//! ローカル日付の年月日を取得。
+	const year = date.getFullYear();
+	const month = date.getMonth();
+	const day = date.getDate();
+
+	//! ローカル日付の00:00と23:59:59.999を作成。
+	const start = new Date(year, month, day, 0, 0, 0, 0);
+	const end = new Date(year, month, day, 23, 59, 59, 999);
+
+	return { start, end };
+}

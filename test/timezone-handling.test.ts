@@ -249,11 +249,9 @@ describe("タイムゾーン処理", () => {
 			console.log("メモのローカル時刻 (GMT+9):", memoLocalTime);
 
 			//! ユーザーBが「10/29のメモ」を見る場合のフィルター範囲。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00"); //! GMT+9の10/29正午。
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0); //! ローカルタイムゾーンの0時。
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999); //! ローカルタイムゾーンの23:59。
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00"); //! GMT+9の10/29 00:00 = UTC 10/28 15:00。
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00"); //! GMT+9の10/29 23:59 = UTC 10/29 14:59。
 
 			console.log("フィルター範囲 (ローカル):");
 			console.log("  開始:", startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
@@ -494,11 +492,9 @@ describe("タイムゾーン処理", () => {
 			expect(memoDate.getTime()).toBe(new Date("2025-10-28T23:45:37.050Z").getTime());
 
 			//! 10/29の「今日」フィルターで表示されることを確認。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999);
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			const isInRange = memoDate >= startDate && memoDate <= endDate;
 			console.log("10/29の「今日」フィルターで表示されるか:", isInRange);
@@ -716,11 +712,9 @@ describe("タイムゾーン処理", () => {
 			expect(allMemos).toHaveLength(2);
 
 			//! 11/1の「今日」フィルター（JST基準）。
-			const targetDate = new Date("2025-11-01T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0); //! 2025-11-01 00:00:00 JST = 2025-10-31 15:00:00 UTC。
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999); //! 2025-11-01 23:59:59 JST = 2025-11-01 14:59:59 UTC。
+			//! GMT+9での11/1 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-11-01T00:00:00.000+09:00"); //! 2025-11-01 00:00:00 JST = 2025-10-31 15:00:00 UTC。
+			const endDate = new Date("2025-11-01T23:59:59.999+09:00"); //! 2025-11-01 23:59:59 JST = 2025-11-01 14:59:59 UTC。
 
 			console.log("フィルター範囲 (JST):");
 			console.log("  開始:", startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
@@ -771,11 +765,9 @@ JSTメモ
 			console.log("JST時刻:", memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
 
 			//! 10/29の「今日」フィルター（JST基準）。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999);
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			const isInRange = memoDate >= startDate && memoDate <= endDate;
 			console.log("10/29の「今日」フィルターで表示されるか:", isInRange);
@@ -810,11 +802,9 @@ PSTメモ
 			console.log("JST時刻:", memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
 
 			//! 10/29の「今日」フィルター（JST基準）。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999);
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			const isInRange = memoDate >= startDate && memoDate <= endDate;
 			console.log("10/29の「今日」フィルターで表示されるか:", isInRange);
@@ -849,11 +839,9 @@ GMTメモ
 			console.log("JST時刻:", memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));
 
 			//! 10/29の「今日」フィルター（JST基準）。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999);
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			const isInRange = memoDate >= startDate && memoDate <= endDate;
 			console.log("10/29の「今日」フィルターで表示されるか:", isInRange);
@@ -899,11 +887,9 @@ UTCメモ(23:00) = JST 2025-10-29 08:00
 			});
 
 			//! 10/29の「今日」フィルター（JST基準）。
-			const targetDate = new Date("2025-10-29T12:00:00+09:00");
-			const startDate = new Date(targetDate);
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(targetDate);
-			endDate.setHours(23, 59, 59, 999);
+			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
 
 			console.log("フィルター範囲 (JST):");
 			console.log("  開始:", startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }));

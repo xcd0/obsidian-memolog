@@ -5,9 +5,9 @@ memologプロジェクトのテスト戦略とガイドラインを説明しま�
 ## 📊 テスト統計 (v0.0.11)
 
 ### 全体統計
-- **テスト数**: 703件
+- **テスト数**: 723件
 - **全体カバレッジ**: 91.89%
-- **テストスイート**: 27個
+- **テストスイート**: 28個
 - **テストフレームワーク**: Jest + ts-jest
 
 ### モジュール別カバレッジ
@@ -43,6 +43,7 @@ memologプロジェクトのテスト戦略とガイドラインを説明しま�
 | notification-manager.ts | 100% | 100% |
 | path-migration-helpers.ts | 100% | 95.45% |
 | path-generator.ts | 98.46% | 100% |
+| path-migrator.ts | 0% | 0% |
 | sanitizer.ts | 90.32% | 100% |
 | performance.ts | 82.6% | 75% |
 
@@ -90,7 +91,7 @@ describe("createMemoEntry", () => {
 ### I/O依存クラスのテスト
 ObsidianのApp、Vault APIに依存するクラスは、モック/スタブを使用してテストします。
 
-**例**: `vault-handler.ts`, `cache-manager.ts`
+**例**: `vault-handler.ts`, `cache-manager.ts`, `path-migrator.ts`
 
 ```typescript
 // I/O依存クラスのテスト例
@@ -118,6 +119,10 @@ describe("CacheManager", () => {
   });
 });
 ```
+
+**重要な注意点**:
+- `TFile`や`TFolder`のインスタンスチェック (`instanceof`) が必要な場合は、`Object.create(TFile.prototype)`を使用してモックオブジェクトを作成する
+- 例: `const mockFile = Object.create(TFile.prototype); mockFile.path = "test.md";`
 
 ### エッジケースのテスト
 各関数のエッジケースを必ずテストします。
@@ -263,8 +268,8 @@ expect(fn).not.toThrow();               // 例外を投げない
 ## 🚀 継続的改善
 
 ### v0.0.12での改善計画
-- path-migrator.ts のカバレッジ向上 (0% → 30-40%)
-- memo-manager.ts の直接テスト追加
+- memo-manager.ts の直接テスト追加 (50.27% → 70%+)
+- path-migrator.ts の追加テスト (モックベース20件作成済み、統合テストは今後検討)
 - パフォーマンステストの追加
 - E2Eテストの検討
 

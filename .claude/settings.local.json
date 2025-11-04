@@ -29,7 +29,8 @@
       "Bash(awk:*)",
       "Bash(find:*)",
       "Bash(git restore:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []

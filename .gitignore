@@ -43,3 +43,4 @@ coverage/
 
 # Sample plugin (reference only)
 obsidian-sample-plugin/
+*.bak

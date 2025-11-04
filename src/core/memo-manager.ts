@@ -626,6 +626,7 @@ export class MemoManager {
 		filePath: string,
 		category: string,
 		memoId: string,
+		moveToTrash = false,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -663,16 +664,39 @@ export class MemoManager {
 					}
 				}
 
-				// ! 削除対象以外のメモだけを残す。
-				const remainingMemos = memoTexts.filter(text => {
-					const memo = parseTextToMemo(text, category, filePath)
-					if (!memo) return true // パース失敗したメモは残す（別カテゴリなど）
-					return !idsToDelete.has(memo.id)
-				})
+				if (moveToTrash) {
+					// ! ゴミ箱に移動する場合は、すべての削除対象メモにtrashedAtフラグを付ける。
+					const trashedAt = toLocalISOString()
+					const updatedMemoTexts = memoTexts.map(text => {
+						const memo = parseTextToMemo(text, category, filePath)
+						if (!memo || !idsToDelete.has(memo.id)) {
+							return text // 削除対象外のメモはそのまま
+						}
 
-				// ! ファイルを更新。
-				const newContent = joinMemosToFileContent(remainingMemos)
-				await this.vaultHandler.writeFile(filePath, newContent)
+						// ! 削除対象のメモにtrashedAtフラグを付ける。
+						const { memos: updated } = markMemoAsDeleted([text], memo.id, trashedAt)
+						return updated[0]
+					})
+
+					// ! ファイルを更新。
+					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					await this.vaultHandler.writeFile(filePath, newContent)
+
+					notify.success(`メモと子孫${idsToDelete.size - 1}件をゴミ箱に移動しました`)
+				} else {
+					// ! 完全削除の場合は、削除対象以外のメモだけを残す。
+					const remainingMemos = memoTexts.filter(text => {
+						const memo = parseTextToMemo(text, category, filePath)
+						if (!memo) return true // パース失敗したメモは残す（別カテゴリなど）
+						return !idsToDelete.has(memo.id)
+					})
+
+					// ! ファイルを更新。
+					const newContent = joinMemosToFileContent(remainingMemos)
+					await this.vaultHandler.writeFile(filePath, newContent)
+
+					notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`)
+				}
 
 				// ! キャッシュを無効化。
 				const cacheKey = generateCacheKey(filePath, category)
@@ -681,10 +705,9 @@ export class MemoManager {
 				// ! スレッドインデックスを無効化。
 				this.threadIndexManager.clear()
 
-				notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`)
 				return true
 			})(),
-			{ filePath, category, memoId, context: "MemoManager.deleteMemoWithDescendants" },
+			{ filePath, category, memoId, moveToTrash, context: "MemoManager.deleteMemoWithDescendants" },
 		)
 
 		return result.success && result.data ? result.data : false
@@ -695,6 +718,7 @@ export class MemoManager {
 		filePath: string,
 		category: string,
 		memoId: string,
+		moveToTrash = false,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -720,15 +744,17 @@ export class MemoManager {
 				// ! 直接の子メモを取得。
 				const directChildren = index.childrenMap.get(memoId) || []
 
-				// ! 削除対象のメモを除外し、直接の子メモのparentIdをundefinedに更新。
-				const updatedMemoTexts = memoTexts
-					.map(text => {
+				if (moveToTrash) {
+					// ! ゴミ箱に移動する場合は、対象メモのみにtrashedAtフラグを付け、子はparentIdを削除。
+					const trashedAt = toLocalISOString()
+					const updatedMemoTexts = memoTexts.map(text => {
 						const memo = parseTextToMemo(text, category, filePath)
 						if (!memo) return text // パース失敗したメモはそのまま残す
 
-						// ! 削除対象のメモは除外。
+						// ! 削除対象のメモにtrashedAtフラグを付ける。
 						if (memo.id === memoId) {
-							return null
+							const { memos: updated } = markMemoAsDeleted([text], memo.id, trashedAt)
+							return updated[0]
 						}
 
 						// ! 直接の子メモのparentIdを削除。
@@ -739,11 +765,48 @@ export class MemoManager {
 
 						return text
 					})
-					.filter((text): text is string => text !== null)
 
-				// ! ファイルを更新。
-				const newContent = joinMemosToFileContent(updatedMemoTexts)
-				await this.vaultHandler.writeFile(filePath, newContent)
+					// ! ファイルを更新。
+					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					await this.vaultHandler.writeFile(filePath, newContent)
+
+					notify.success(
+						directChildren.length > 0
+							? `メモをゴミ箱に移動し、${directChildren.length}件の子メモを親なしに変換しました`
+							: "メモをゴミ箱に移動しました",
+					)
+				} else {
+					// ! 完全削除の場合は、削除対象のメモを除外し、直接の子メモのparentIdをundefinedに更新。
+					const updatedMemoTexts = memoTexts
+						.map(text => {
+							const memo = parseTextToMemo(text, category, filePath)
+							if (!memo) return text // パース失敗したメモはそのまま残す
+
+							// ! 削除対象のメモは除外。
+							if (memo.id === memoId) {
+								return null
+							}
+
+							// ! 直接の子メモのparentIdを削除。
+							if (directChildren.includes(memo.id)) {
+								delete memo.parentId
+								return memoToText(memo, memo.template, false)
+							}
+
+							return text
+						})
+						.filter((text): text is string => text !== null)
+
+					// ! ファイルを更新。
+					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					await this.vaultHandler.writeFile(filePath, newContent)
+
+					notify.success(
+						directChildren.length > 0
+							? `メモを削除し、${directChildren.length}件の子メモを親なしに変換しました`
+							: "メモを削除しました",
+					)
+				}
 
 				// ! キャッシュを無効化。
 				const cacheKey = generateCacheKey(filePath, category)

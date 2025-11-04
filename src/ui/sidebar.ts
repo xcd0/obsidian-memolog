@@ -1129,41 +1129,24 @@ export class MemologSidebar extends ItemView {
 						return
 					}
 
-					// ! 選択されたオプションに応じて削除を実行。
-					if (option === "cascade") {
-						// ! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合はカスケード削除。
-						if (settings.enableTrash) {
-							deleted = await this.memoManager.moveToTrash(
-								filePath,
-								memo.category,
-								memoId,
-								settings.rootDirectory,
-							)
-						} else {
-							deleted = await this.memoManager.deleteMemoWithDescendants(
-								filePath,
-								memo.category,
-								memoId,
-							)
-						}
-					} else {
-						// ! メモのみを削除し、子を親なしに。
-						// ! ゴミ箱機能が有効な場合はゴミ箱に移動。
-						if (settings.enableTrash) {
-							deleted = await this.memoManager.moveToTrash(
-								filePath,
-								memo.category,
-								memoId,
-								settings.rootDirectory,
-							)
-						} else {
-							deleted = await this.memoManager.deleteOnlyMemoAndOrphanChildren(
-								filePath,
-								memo.category,
-								memoId,
-							)
-						}
-					}
+				// ! 選択されたオプションに応じて削除を実行。
+				if (option === "cascade") {
+					// ! カスケード削除（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
+					deleted = await this.memoManager.deleteMemoWithDescendants(
+						filePath,
+						memo.category,
+						memoId,
+						settings.enableTrash, // ! ゴミ箱に移動するかどうか。
+					)
+				} else {
+					// ! メモのみを削除し、子を親なしに（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
+					deleted = await this.memoManager.deleteOnlyMemoAndOrphanChildren(
+						filePath,
+						memo.category,
+						memoId,
+						settings.enableTrash, // ! ゴミ箱に移動するかどうか。
+					)
+				}
 				} else {
 					// ! 返信がない場合は通常の削除。
 					if (settings.enableTrash) {

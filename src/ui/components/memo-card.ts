@@ -100,7 +100,7 @@ export class MemoCard {
 
 		// ! カードクリックでスレッド表示に遷移。v0.0.15で追加。
 		if (this.handlers.onThreadClick) {
-			card.addEventListener("click", (e) => {
+			card.addEventListener("click", e => {
 				// ! ボタンクリックやチェックボックスクリックは除外。
 				if ((e.target as HTMLElement).closest("button")) {
 					return
@@ -138,6 +138,27 @@ export class MemoCard {
 		// ! アクションボタン。
 		const actions = header.createDiv({ cls: "memolog-card-actions" })
 
+		// ! スレッドボタン（返信が存在する場合のみ、ゴミ箱以外）。
+		if (!this.isTrash && this.replyCount > 0 && this.handlers.onThreadClick) {
+			const threadBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-thread",
+				attr: { "aria-label": "スレッドを表示" },
+			})
+			setIcon(threadBtn, "message-circle")
+			threadBtn.addEventListener("click", e => {
+				e.stopPropagation() // ! カードクリックイベントと区別。
+				if (this.handlers.onThreadClick) {
+					this.handlers.onThreadClick(this.memo.id)
+				}
+			})
+
+			// ! 返信数バッジをスレッドボタンに表示。
+			threadBtn.createSpan({
+				cls: "memolog-thread-count-badge",
+				text: String(this.replyCount),
+			})
+		}
+
 		// ! カテゴリ変更ボタン。
 		if (this.categories.length > 0 && this.handlers.onCategoryChange) {
 			const categoryBtn = actions.createEl("button", {
@@ -160,27 +181,6 @@ export class MemoCard {
 			// ! カテゴリ変更メニューを表示。
 			categoryBtn.addEventListener("click", e => {
 				this.showCategoryMenu(categoryBtn, e)
-			})
-		}
-
-		// ! スレッドボタン（返信が存在する場合のみ、ゴミ箱以外）。
-		if (!this.isTrash && this.replyCount > 0 && this.handlers.onThreadClick) {
-			const threadBtn = actions.createEl("button", {
-				cls: "memolog-btn memolog-btn-thread",
-				attr: { "aria-label": "スレッドを表示" },
-			})
-			setIcon(threadBtn, "message-circle")
-			threadBtn.addEventListener("click", e => {
-				e.stopPropagation() // ! カードクリックイベントと区別。
-				if (this.handlers.onThreadClick) {
-					this.handlers.onThreadClick(this.memo.id)
-				}
-			})
-
-			// ! 返信数バッジをスレッドボタンに表示。
-			threadBtn.createSpan({
-				cls: "memolog-thread-count-badge",
-				text: String(this.replyCount),
 			})
 		}
 
@@ -242,7 +242,6 @@ export class MemoCard {
 				this.toggleEditMode()
 			})
 		}
-
 
 		// ! 復活ボタン（ゴミ箱のみ）。
 		if (this.isTrash && this.handlers.onRestore) {

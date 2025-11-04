@@ -531,6 +531,17 @@ export class MemoManager {
 		return this.threadIndexManager.getDescendantCount(memoId, index)
 	}
 
+	// ! 直接の子メモの数を取得する。
+	async getDirectChildrenCount(
+		filePath: string,
+		category: string,
+		memoId: string,
+	): Promise<number> {
+		const index = await this.getThreadIndex(filePath, category)
+		const children = index.childrenMap.get(memoId) || []
+		return children.length
+	}
+
 	// ! 返信メモを作成する。
 	async addReply(
 		filePath: string,
@@ -674,6 +685,86 @@ export class MemoManager {
 				return true
 			})(),
 			{ filePath, category, memoId, context: "MemoManager.deleteMemoWithDescendants" },
+		)
+
+		return result.success && result.data ? result.data : false
+	}
+
+	// ! メモを削除し、直接の子メモを親なしに変換する。
+	async deleteOnlyMemoAndOrphanChildren(
+		filePath: string,
+		category: string,
+		memoId: string,
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				// ! ファイルを読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
+
+				// ! メモをパース。
+				const memos = memoTexts
+					.map(text => parseTextToMemo(text, category, filePath))
+					.filter((memo): memo is MemoEntry => memo !== null)
+					.filter(memo => memo.category === category)
+
+				// ! 削除対象のメモが存在するか確認。
+				const targetMemo = memos.find(memo => memo.id === memoId)
+				if (!targetMemo) {
+					throw new Error(`削除対象のメモが見つかりません: ${memoId}`)
+				}
+
+				// ! スレッドインデックスを構築。
+				const index = this.threadIndexManager.getIndex(memos)
+
+				// ! 直接の子メモを取得。
+				const directChildren = index.childrenMap.get(memoId) || []
+
+				// ! 削除対象のメモを除外し、直接の子メモのparentIdをundefinedに更新。
+				const updatedMemoTexts = memoTexts
+					.map(text => {
+						const memo = parseTextToMemo(text, category, filePath)
+						if (!memo) return text // パース失敗したメモはそのまま残す
+
+						// ! 削除対象のメモは除外。
+						if (memo.id === memoId) {
+							return null
+						}
+
+						// ! 直接の子メモのparentIdを削除。
+						if (directChildren.includes(memo.id)) {
+							delete memo.parentId
+							return memoToText(memo, memo.template, false)
+						}
+
+						return text
+					})
+					.filter((text): text is string => text !== null)
+
+				// ! ファイルを更新。
+				const newContent = joinMemosToFileContent(updatedMemoTexts)
+				await this.vaultHandler.writeFile(filePath, newContent)
+
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
+
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
+
+				notify.success(
+					directChildren.length > 0
+						? `メモを削除し、${directChildren.length}件の子メモを親なしに変換しました`
+						: "メモを削除しました",
+				)
+				return true
+			})(),
+			{
+				filePath,
+				category,
+				memoId,
+				context: "MemoManager.deleteOnlyMemoAndOrphanChildren",
+			},
 		)
 
 		return result.success && result.data ? result.data : false

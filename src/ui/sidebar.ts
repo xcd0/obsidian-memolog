@@ -9,6 +9,7 @@ import { PathGenerator } from "../utils/path-generator"
 import { ButtonBar } from "./components/button-bar"
 import { CalendarView } from "./components/calendar-view"
 import { CategoryTabs } from "./components/category-tabs"
+import { DeleteOptionsModal } from "./components/delete-options-modal"
 import { InputForm } from "./components/input-form"
 import { MemoList } from "./components/memo-list"
 import { SearchBar } from "./components/search-bar"
@@ -1070,62 +1071,100 @@ export class MemologSidebar extends ItemView {
 			// ! 設定を取得。
 			const settings = this.plugin.settingsManager.getGlobalSettings()
 
+			// ! メモのタイムスタンプから日付とファイルパスを取得。
+			const memoDate = new Date(memo.timestamp)
+			const filePath = settings.pathFormat
+				? PathGenerator.generateCustomPath(
+					settings.rootDirectory,
+					memo.category,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
+				: PathGenerator.generateFilePath(
+					settings.rootDirectory,
+					memo.category,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
+
 			let deleted = false
 
 			// ! ゴミ箱タブからの削除の場合は完全削除（元ファイルから削除）。
 			if (this.currentCategory === "trash") {
-				// ! メモのタイムスタンプから日付とファイルパスを取得。
-				const memoDate = new Date(memo.timestamp)
-				const filePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						memo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate,
-					)
-					: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						memo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate,
-					)
 				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId)
 			} else {
 				// ! 通常のカテゴリからの削除。
-				// ! メモのタイムスタンプから日付を取得。
-				const memoDate = new Date(memo.timestamp)
+				// ! 返信数を確認。
+				const childrenCount = await this.memoManager.getDirectChildrenCount(
+					filePath,
+					memo.category,
+					memoId,
+				)
 
-				// ! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
-				const filePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						memo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate,
-					)
-					: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						memo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate,
-					)
+				// ! 返信がある場合は削除オプションを選択。
+				if (childrenCount > 0) {
+					// ! ダイアログを表示して削除方法を選択。
+					const option = await new Promise<"cascade" | "orphan" | null>(resolve => {
+						const modal = new DeleteOptionsModal(this.app, childrenCount, result => {
+							resolve(result)
+						})
+						modal.open()
+					})
 
-				// ! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
-				if (settings.enableTrash) {
-					// ! ゴミ箱に移動（削除フラグを追加）。
-					deleted = await this.memoManager.moveToTrash(
-						filePath,
-						memo.category,
-						memoId,
-						settings.rootDirectory,
-					)
+					// ! キャンセルされた場合は何もしない。
+					if (!option) {
+						return
+					}
+
+					// ! 選択されたオプションに応じて削除を実行。
+					if (option === "cascade") {
+						// ! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合はカスケード削除。
+						if (settings.enableTrash) {
+							deleted = await this.memoManager.moveToTrash(
+								filePath,
+								memo.category,
+								memoId,
+								settings.rootDirectory,
+							)
+						} else {
+							deleted = await this.memoManager.deleteMemoWithDescendants(
+								filePath,
+								memo.category,
+								memoId,
+							)
+						}
+					} else {
+						// ! メモのみを削除し、子を親なしに。
+						// ! ゴミ箱機能が有効な場合はゴミ箱に移動。
+						if (settings.enableTrash) {
+							deleted = await this.memoManager.moveToTrash(
+								filePath,
+								memo.category,
+								memoId,
+								settings.rootDirectory,
+							)
+						} else {
+							deleted = await this.memoManager.deleteOnlyMemoAndOrphanChildren(
+								filePath,
+								memo.category,
+								memoId,
+							)
+						}
+					}
 				} else {
-					// ! 完全削除。
-					deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId)
+					// ! 返信がない場合は通常の削除。
+					if (settings.enableTrash) {
+						deleted = await this.memoManager.moveToTrash(
+							filePath,
+							memo.category,
+							memoId,
+							settings.rootDirectory,
+						)
+					} else {
+						deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId)
+					}
 				}
 			}
 

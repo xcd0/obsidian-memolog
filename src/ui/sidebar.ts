@@ -8,6 +8,7 @@ import { ButtonBar } from "./components/button-bar";
 import { CategoryTabs } from "./components/category-tabs";
 import { CalendarView } from "./components/calendar-view";
 import { SearchBar } from "./components/search-bar";
+import { ThreadView } from "./components/thread-view";
 import { SearchEngine, SearchQuery } from "../core/search-engine";
 import { PathGenerator } from "../utils/path-generator";
 import { parseTextToMemo } from "../core/memo-helpers";
@@ -30,6 +31,7 @@ export class MemologSidebar extends ItemView {
 	private calendarAreaEl: HTMLElement | null = null;
 	private searchBar: SearchBar | null = null;
 	private memoList: MemoList | null = null;
+	private threadView: ThreadView | null = null; //! スレッドビュー。v0.0.14で追加。
 	private inputForm: InputForm | null = null;
 	private buttonBar: ButtonBar | null = null;
 
@@ -356,12 +358,14 @@ export class MemologSidebar extends ItemView {
 				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
 				onReply: (parentMemoId) => this.handleReply(parentMemoId),
 				onThreadToggle: (memoId, isCollapsed) => void this.handleThreadToggle(memoId, isCollapsed),
+				onThreadClick: (memoId) => this.showThreadView(memoId), //! スレッドビューに遷移。v0.0.14で追加。
 			},
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
 			false, //! 初期状態ではゴミ箱表示ではない。
 			settings.pinnedMemoIds,
-			settings.collapsedThreads
+			settings.collapsedThreads,
+			"main" //! 初期状態はメインビュー。v0.0.14で追加。
 		);
 		this.memoList.render();
 
@@ -1690,17 +1694,106 @@ export class MemologSidebar extends ItemView {
 		}, 100);
 	}
 
-	//! スレッドビューに遷移する。v0.0.15で追加。
+	//! スレッドビューに遷移する。v0.0.14で追加。
 	private showThreadView(memoId: string): void {
+		//! 既にスレッドビューで同じメモが表示されている場合は何もしない。
+		if (this.viewMode === "thread" && this.focusedThreadId === memoId) {
+			return;
+		}
+
 		this.viewMode = "thread";
 		this.focusedThreadId = memoId;
-		//! TODO: ThreadViewコンポーネントの表示処理を実装。
+
+		//! MemoListを非表示にし、ThreadViewを表示。
+		if (this.listAreaEl) {
+			this.listAreaEl.style.display = "none";
+		}
+
+		//! ThreadViewを作成または更新。
+		this.renderThreadView();
 	}
 
-	//! メインビューに遷移する。v0.0.15で追加。
+	//! メインビューに遷移する。v0.0.14で追加。
 	private showMainView(): void {
 		this.viewMode = "main";
 		this.focusedThreadId = null;
-		//! TODO: メインビューの表示処理を実装。
+
+		//! ThreadViewを破棄。
+		if (this.threadView) {
+			this.threadView.destroy();
+			this.threadView = null;
+		}
+
+		//! MemoListを表示。
+		if (this.listAreaEl) {
+			this.listAreaEl.style.display = "";
+		}
+
+		//! メモをリロードして表示を更新。
+		void this.loadMemos();
+	}
+
+	//! ThreadViewを描画する。v0.0.14で追加。
+	private renderThreadView(): void {
+		if (!this.listAreaEl || !this.focusedThreadId) return;
+
+		//! 設定を取得。
+		const settings = this.plugin.settingsManager.getGlobalSettings();
+
+		//! ThreadViewコンテナを作成（既存の場合はクリア）。
+		let threadViewContainer = this.containerEl.querySelector(
+			".memolog-thread-view-container"
+		) as HTMLElement;
+
+		if (!threadViewContainer) {
+			threadViewContainer = this.containerEl.createDiv({
+				cls: "memolog-thread-view-container",
+			});
+			//! listAreaElの後に挿入。
+			if (this.listAreaEl.nextSibling) {
+				this.containerEl.insertBefore(threadViewContainer, this.listAreaEl.nextSibling);
+			} else {
+				this.containerEl.appendChild(threadViewContainer);
+			}
+		}
+
+		//! ThreadViewハンドラーを構築。
+		const threadViewHandlers = {
+			onDelete: (memoId: string) => void this.handleDelete(memoId),
+			onSaveEdit: (memoId: string, newContent: string) => void this.handleSaveEdit(memoId, newContent),
+			onImagePaste: (file: File) => this.handleImagePaste(file),
+			onCategoryChange: (memoId: string, newCategory: string) =>
+				void this.handleCategoryChange(memoId, newCategory),
+			onTodoToggle: (memoId: string, completed: boolean) => void this.handleTodoToggle(memoId, completed),
+			onReply: (parentMemoId: string) => this.handleReply(parentMemoId),
+			onThreadToggle: (memoId: string, isCollapsed: boolean) =>
+				void this.handleThreadToggle(memoId, isCollapsed),
+			onBack: () => {
+				this.showMainView();
+			},
+			onThreadCardClick: (memoId: string) => {
+				this.showThreadView(memoId);
+			},
+			onNavigateToParent: (parentId: string) => {
+				this.showThreadView(parentId);
+			},
+		};
+
+		//! ThreadViewを作成。
+		const sourcePath = ""; //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
+		const collapsedThreads = settings.collapsedThreads || [];
+
+		this.threadView = new ThreadView(
+			this.app,
+			threadViewContainer,
+			this.memos,
+			this.focusedThreadId,
+			threadViewHandlers,
+			sourcePath,
+			settings.categories,
+			collapsedThreads
+		);
+
+		this.threadView.render();
 	}
 }

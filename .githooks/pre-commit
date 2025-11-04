@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# ! Git pre-commitフック。
+# ! コミット前にdprintでコードフォーマットを実行する。
+
+echo "Running dprint format..."
+
+# ! dprintがインストールされているか確認。
+if ! command -v dprint &> /dev/null && ! command -v npx &> /dev/null; then
+    echo "Error: dprint or npx not found. Please install dprint or Node.js."
+    exit 1
+fi
+
+# ! ステージングされたファイルを取得。
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx|json|md)$')
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "No files to format."
+    exit 0
+fi
+
+# ! dprintでフォーマット。
+if command -v dprint &> /dev/null; then
+    dprint fmt $STAGED_FILES
+else
+    npx dprint fmt $STAGED_FILES
+fi
+
+FORMAT_EXIT_CODE=$?
+
+if [ $FORMAT_EXIT_CODE -ne 0 ]; then
+    echo "dprint formatting failed."
+    exit 1
+fi
+
+# ! フォーマット後のファイルを再度ステージング。
+git add $STAGED_FILES
+
+echo "dprint formatting completed."
+exit 0

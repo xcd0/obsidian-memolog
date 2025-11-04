@@ -28,6 +28,23 @@ memologはObsidianでのメモ記録を効率化するための非公式プラ�
 - テストの実行方法は [TESTING_GUIDE.md](./TESTING_GUIDE.md) にまとめています。
 - コントリビューションの手順は [CONTRIBUTING.md](./CONTRIBUTING.md) をご覧ください。
 
+### Git Hooks
+
+プロジェクトではコミット前に自動的にコードフォーマットを実行するpre-commitフックを使用しています。
+
+```bash
+# npm installを実行すると自動的にインストールされます
+npm install
+
+# 手動でインストールする場合
+bash .githooks/install.sh
+```
+
+pre-commitフックは以下を実行します:
+
+- dprintによるコードフォーマット（TypeScript、JSON、Markdown）
+- フォーマット済みファイルの自動ステージング
+
 より詳細な情報は以下のドキュメントを参照してください。
 
 - [docs/changelog.md](./docs/changelog.md): 詳細な変更履歴

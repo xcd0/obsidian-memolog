@@ -13,7 +13,8 @@
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"format": "dprint fmt",
-		"format:check": "dprint check"
+		"format:check": "dprint check",
+		"prepare": "bash .githooks/install.sh"
 	},
 	"keywords": [
 		"obsidian",

@@ -1990,3 +1990,50 @@
 		transparent 100%
 	);
 }
+
+/* 返信コンテキストエリア */
+.memolog-reply-context {
+	background-color: rgba(var(--interactive-accent-rgb), 0.1);
+	border-left: 3px solid var(--interactive-accent);
+	padding: 0.75rem;
+	margin-bottom: 0.5rem;
+	border-radius: 4px;
+}
+
+.memolog-reply-context-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+
+.memolog-reply-context-label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--interactive-accent);
+}
+
+.memolog-reply-cancel-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0.25rem;
+	color: var(--text-muted);
+	transition: color 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.memolog-reply-cancel-btn:hover {
+	color: var(--text-error);
+}
+
+.memolog-reply-context-content {
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	font-style: italic;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

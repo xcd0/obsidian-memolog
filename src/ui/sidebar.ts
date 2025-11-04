@@ -352,6 +352,7 @@ export class MemologSidebar extends ItemView {
 				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
 				onRestore: (memoId) => void this.handleRestore(memoId),
 				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
+				onReply: (parentMemoId) => this.handleReply(parentMemoId),
 			},
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
@@ -364,6 +365,9 @@ export class MemologSidebar extends ItemView {
 		this.inputForm = new InputForm(inputAreaEl, {
 			onSubmit: (content, attachments) => void this.handleSubmit(content, attachments),
 			onImagePaste: (file) => this.handleImagePaste(file),
+			onCancelReply: () => {
+				//! 返信モードキャンセル時は何もしない（フォーム側で状態リセット済み）。
+			},
 		});
 		this.inputForm.render();
 	}
@@ -898,6 +902,26 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
+	//! 返信ボタン処理。
+	private handleReply(parentMemoId: string): void {
+		try {
+			//! 親メモを検索。
+			const parentMemo = this.memos.find((m) => m.id === parentMemoId);
+			if (!parentMemo) {
+				new Notice("親メモが見つかりませんでした");
+				return;
+			}
+
+			//! InputFormを返信モードにする。
+			if (this.inputForm) {
+				this.inputForm.enterReplyMode(parentMemoId, parentMemo.content);
+			}
+		} catch (error) {
+			Logger.error("返信モード開始エラー:", error);
+			new Notice("返信モードの開始に失敗しました");
+		}
+	}
+
 	//! メモ送信処理。
 	private async handleSubmit(content: string, attachmentNames: string[]): Promise<void> {
 		try {
@@ -960,23 +984,73 @@ export class MemologSidebar extends ItemView {
 			const categoryConfig = settings.categories.find((c) => c.directory === categoryDirectory);
 			const useTodoList = categoryConfig?.useTodoList ?? false;
 
-			//! メモを追加（categoryDirectoryをカテゴリとして保存）。
-			await this.memoManager.addMemo(
-				filePath,
-				categoryDirectory,
-				content,
-				this.currentOrder,
-				settings.memoTemplate,
-				copiedAttachments,
-				undefined,
-				undefined,
-				useTodoList
-			);
+			//! 返信モードかチェック。
+			if (this.inputForm && this.inputForm.isInReplyMode()) {
+				//! 返信モードの場合はaddReply APIを呼び出す。
+				const parentMemoId = this.inputForm.getReplyToMemoId();
+				if (!parentMemoId) {
+					new Notice("親メモIDが取得できませんでした");
+					return;
+				}
+
+				//! 親メモを検索してカテゴリを確認。
+				const parentMemo = this.memos.find((m) => m.id === parentMemoId);
+				if (!parentMemo) {
+					new Notice("親メモが見つかりませんでした");
+					return;
+				}
+
+				//! 親メモと同じカテゴリに返信を作成。
+				const parentMemoDate = new Date(parentMemo.timestamp);
+				const parentFilePath = settings.pathFormat
+					? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							parentMemo.category,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							parentMemoDate
+						)
+					: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							parentMemo.category,
+							settings.saveUnit,
+							settings.useDirectoryCategory,
+							parentMemoDate
+						);
+
+				await this.memoManager.addReply(
+					parentFilePath,
+					parentMemo.category,
+					parentMemoId,
+					content,
+					this.currentOrder,
+					settings.memoTemplate,
+					copiedAttachments
+				);
+
+				//! 返信モードを終了。
+				this.inputForm.exitReplyMode();
+
+				new Notice("返信を追加しました");
+			} else {
+				//! 通常のメモ追加。
+				await this.memoManager.addMemo(
+					filePath,
+					categoryDirectory,
+					content,
+					this.currentOrder,
+					settings.memoTemplate,
+					copiedAttachments,
+					undefined,
+					undefined,
+					useTodoList
+				);
+
+				new Notice("メモを追加しました");
+			}
 
 			//! メモリストを再読み込み。
 			await this.loadMemos();
-
-			new Notice("メモを追加しました");
 		} catch (error) {
 			Logger.error("メモ追加エラー:", error);
 			if (error instanceof Error) {

@@ -13,6 +13,9 @@ export interface InputFormHandlers {
 
 	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
 	onImagePaste?: (file: File) => Promise<string | null>;
+
+	//! 返信モードキャンセル時のハンドラー。
+	onCancelReply?: () => void;
 }
 
 //! 入力フォームコンポーネント。
@@ -24,6 +27,10 @@ export class InputForm {
 	private selectedFiles: File[] = [];
 	private errorHandler = getErrorHandler();
 	private debouncedOnChange: ((content: string) => void) | null = null;
+	private replyContext: HTMLElement | null = null;
+	private isReplyMode = false;
+	private replyToMemoId: string | null = null;
+	private replyToContent: string | null = null;
 
 	constructor(container: HTMLElement, handlers: InputFormHandlers = {}) {
 		this.container = container;
@@ -40,11 +47,41 @@ export class InputForm {
 		//! コンテナをクリア。
 		this.container.empty();
 
+		//! 返信コンテキストエリア（返信モード時のみ表示）。
+		if (this.isReplyMode && this.replyToContent) {
+			this.replyContext = this.container.createDiv({ cls: "memolog-reply-context" });
+
+			const contextHeader = this.replyContext.createDiv({ cls: "memolog-reply-context-header" });
+			contextHeader.createSpan({
+				cls: "memolog-reply-context-label",
+				text: "返信先:",
+			});
+
+			const cancelBtn = contextHeader.createEl("button", {
+				cls: "memolog-reply-cancel-btn",
+				attr: { "aria-label": "返信をキャンセル" },
+			});
+			setIcon(cancelBtn, "x");
+			cancelBtn.addEventListener("click", () => {
+				this.exitReplyMode();
+			});
+
+			//! 親メモの内容を表示（最初の50文字）。
+			const truncatedContent =
+				this.replyToContent.length > 50
+					? this.replyToContent.substring(0, 50) + "..."
+					: this.replyToContent;
+			this.replyContext.createDiv({
+				cls: "memolog-reply-context-content",
+				text: truncatedContent,
+			});
+		}
+
 		//! テキストエリア。
 		this.textarea = this.container.createEl("textarea", {
 			cls: "memolog-input",
 			attr: {
-				placeholder: "メモを入力...",
+				placeholder: this.isReplyMode ? "返信を入力..." : "メモを入力...",
 				rows: "3",
 			},
 		});
@@ -315,5 +352,39 @@ export class InputForm {
 		if (this.textarea) {
 			this.textarea.value = value;
 		}
+	}
+
+	//! 返信モードを開始する。
+	enterReplyMode(memoId: string, content: string): void {
+		this.isReplyMode = true;
+		this.replyToMemoId = memoId;
+		this.replyToContent = content;
+		this.render();
+		//! テキストエリアにフォーカス。
+		if (this.textarea) {
+			this.textarea.focus();
+		}
+	}
+
+	//! 返信モードを終了する。
+	exitReplyMode(): void {
+		this.isReplyMode = false;
+		this.replyToMemoId = null;
+		this.replyToContent = null;
+		this.render();
+		//! ハンドラーを呼び出す。
+		if (this.handlers.onCancelReply) {
+			this.handlers.onCancelReply();
+		}
+	}
+
+	//! 返信モードかどうかを取得する。
+	isInReplyMode(): boolean {
+		return this.isReplyMode;
+	}
+
+	//! 返信先のメモIDを取得する。
+	getReplyToMemoId(): string | null {
+		return this.replyToMemoId;
 	}
 }

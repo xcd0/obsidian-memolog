@@ -540,6 +540,7 @@ export class MemoManager {
 		order: SortOrder = "asc",
 		template?: string,
 		attachments?: string[],
+		useTodoList = false,
 	): Promise<MemoEntry> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
@@ -577,7 +578,7 @@ export class MemoManager {
 				memo.parentId = parentId
 
 				// ! メモをテキスト形式に変換。
-				const memoText = memoToText(memo, template, false)
+				const memoText = memoToText(memo, template, useTodoList)
 
 				// ! 挿入位置を決定（昇順: bottom、降順: top）。
 				const insertAtTop = order === "desc"

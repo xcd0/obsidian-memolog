@@ -27,10 +27,8 @@ export class InputForm {
 	private selectedFiles: File[] = []
 	private errorHandler = getErrorHandler()
 	private debouncedOnChange: ((content: string) => void) | null = null
-	private replyContext: HTMLElement | null = null
 	private isReplyMode = false
 	private replyToMemoId: string | null = null
-	private replyToContent: string | null = null
 
 	constructor(container: HTMLElement, handlers: InputFormHandlers = {}) {
 		this.container = container
@@ -47,34 +45,6 @@ export class InputForm {
 		// ! コンテナをクリア。
 		this.container.empty()
 
-		// ! 返信コンテキストエリア（返信モード時のみ表示）。
-		if (this.isReplyMode && this.replyToContent) {
-			this.replyContext = this.container.createDiv({ cls: "memolog-reply-context" })
-
-			const contextHeader = this.replyContext.createDiv({ cls: "memolog-reply-context-header" })
-			contextHeader.createSpan({
-				cls: "memolog-reply-context-label",
-				text: "返信先:",
-			})
-
-			const cancelBtn = contextHeader.createEl("button", {
-				cls: "memolog-reply-cancel-btn",
-				attr: { "aria-label": "返信をキャンセル" },
-			})
-			setIcon(cancelBtn, "x")
-			cancelBtn.addEventListener("click", () => {
-				this.exitReplyMode()
-			})
-
-			// ! 親メモの内容を表示（最初の50文字）。
-			const truncatedContent = this.replyToContent.length > 50
-				? this.replyToContent.substring(0, 50) + "..."
-				: this.replyToContent
-			this.replyContext.createDiv({
-				cls: "memolog-reply-context-content",
-				text: truncatedContent,
-			})
-		}
 
 		// ! テキストエリア。
 		this.textarea = this.container.createEl("textarea", {
@@ -352,10 +322,9 @@ export class InputForm {
 	}
 
 	// ! 返信モードを開始する。
-	enterReplyMode(memoId: string, content: string): void {
+	enterReplyMode(memoId: string): void {
 		this.isReplyMode = true
 		this.replyToMemoId = memoId
-		this.replyToContent = content
 		this.render()
 		// ! テキストエリアにフォーカス。
 		if (this.textarea) {
@@ -367,7 +336,6 @@ export class InputForm {
 	exitReplyMode(): void {
 		this.isReplyMode = false
 		this.replyToMemoId = null
-		this.replyToContent = null
 		this.render()
 		// ! ハンドラーを呼び出す。
 		if (this.handlers.onCancelReply) {

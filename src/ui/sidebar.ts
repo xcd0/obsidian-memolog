@@ -126,7 +126,7 @@ export class MemologSidebar extends ItemView {
 		const listArea = this.createMemoListArea(container)
 		this.listAreaEl = listArea
 
-		// ! 入力欄を作成。
+		// ! 入力欄を作成（listAreaの後に配置して下部に表示）。
 		const inputArea = this.createInputArea(container)
 		this.inputAreaEl = inputArea
 
@@ -1009,6 +1009,10 @@ export class MemologSidebar extends ItemView {
 						parentMemoDate,
 					)
 
+				// ! 親メモのカテゴリ設定を取得してTODOリスト機能を確認。
+				const parentCategoryConfig = settings.categories.find(c => c.directory === parentMemo.category)
+				const parentUseTodoList = parentCategoryConfig?.useTodoList ?? false
+
 				await this.memoManager.addReply(
 					parentFilePath,
 					parentMemo.category,
@@ -1017,6 +1021,7 @@ export class MemologSidebar extends ItemView {
 					this.currentOrder,
 					settings.memoTemplate,
 					copiedAttachments,
+					parentUseTodoList,
 				)
 
 				// ! 返信モードを終了。
@@ -1661,11 +1666,7 @@ export class MemologSidebar extends ItemView {
 			this.inputAreaEl.style.display = ""
 		}
 		if (this.inputForm) {
-			// ! 返信対象のメモを取得。
-			const focusedMemo = this.memos.find(m => m.id === memoId)
-			if (focusedMemo) {
-				this.inputForm.enterReplyMode(memoId, focusedMemo.content)
-			}
+			this.inputForm.enterReplyMode(memoId)
 		}
 
 		// ! ThreadViewを作成または更新。

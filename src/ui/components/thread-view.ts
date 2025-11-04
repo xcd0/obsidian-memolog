@@ -72,10 +72,9 @@ export class ThreadView {
 	private renderHeader(): void {
 		this.headerEl = this.container.createDiv({ cls: "memolog-thread-header" })
 
-		// ! 戻るボタン。
+		// ! 戻るボタン（アイコンのみ）。
 		const backBtn = this.headerEl.createDiv({ cls: "memolog-thread-back-btn" })
 		setIcon(backBtn, "arrow-left")
-		backBtn.createSpan({ text: "戻る" })
 		backBtn.addEventListener("click", () => {
 			if (this.handlers.onBack) {
 				this.handlers.onBack()

@@ -724,6 +724,11 @@ export class MemologSidebar extends ItemView {
 				const timestamps = await this.getAllMemoTimestamps()
 				this.calendarView.updateMemoCounts(timestamps)
 			}
+
+			// ! スレッド表示モードの場合はThreadViewを更新。
+			if (this.viewMode === "thread" && this.threadView) {
+				this.threadView.updateMemos(this.memos)
+			}
 		} catch (error) {
 			Logger.error("メモ読み込みエラー:", error)
 			new Notice("メモの読み込みに失敗しました")
@@ -1030,10 +1035,13 @@ export class MemologSidebar extends ItemView {
 					parentUseTodoList,
 				)
 
-				// ! 返信モードを終了。
-				this.inputForm.exitReplyMode()
-
-				new Notice("返信を追加しました")
+				// ! スレッド表示モード以外の場合は返信モードを終了。
+				if (this.viewMode !== "thread") {
+					this.inputForm.exitReplyMode()
+				} else {
+					// ! スレッド表示モードの場合は入力欄のみクリア（返信モードは継続）。
+					this.inputForm.clear()
+				}
 			} else {
 				// ! 通常のメモ追加。
 				await this.memoManager.addMemo(
@@ -1047,8 +1055,6 @@ export class MemologSidebar extends ItemView {
 					undefined,
 					useTodoList,
 				)
-
-				new Notice("メモを追加しました")
 			}
 
 			// ! メモリストを再読み込み。

@@ -1,5 +1,5 @@
 import { App } from "obsidian";
-import { MemoEntry, SortOrder, SaveUnit } from "../types";
+import { MemoEntry, SortOrder, SaveUnit, ThreadIndex, ThreadTree } from "../types";
 import { MemologVaultHandler } from "../fs/vault-handler";
 import { CacheManager } from "./cache-manager";
 import { getErrorHandler, FileIOError } from "./error-handler";
@@ -22,6 +22,7 @@ import {
 	filterMemologFiles,
 	findMemoIndexById,
 } from "./memo-search-operations";
+import { ThreadIndexManager } from "./thread-operations";
 
 //! メモを管理するクラス。
 export class MemoManager {
@@ -31,12 +32,16 @@ export class MemoManager {
 	//! CacheManagerインスタンス。
 	private cacheManager: CacheManager;
 
+	//! ThreadIndexManagerインスタンス（publicアクセス可能）。
+	public threadIndexManager: ThreadIndexManager;
+
 	//! ErrorHandlerインスタンス。
 	private errorHandler = getErrorHandler();
 
 	constructor(app: App) {
 		this.vaultHandler = new MemologVaultHandler(app);
 		this.cacheManager = new CacheManager(app);
+		this.threadIndexManager = new ThreadIndexManager();
 	}
 
 	//! メモを追加する。
@@ -86,6 +91,9 @@ export class MemoManager {
 				//! キャッシュを無効化。
 				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
+
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
 
 				notify.success("メモを追加しました");
 				return memo;
@@ -139,6 +147,9 @@ export class MemoManager {
 				//! キャッシュを無効化。
 				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
+
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
 
 				notify.success("メモをゴミ箱に移動しました");
 				return true;
@@ -202,6 +213,9 @@ export class MemoManager {
 					this.cacheManager.invalidateMemos(cacheKey);
 				}
 
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
+
 				notify.success("メモを復活しました");
 				return true;
 			})(),
@@ -242,6 +256,9 @@ export class MemoManager {
 				//! キャッシュを無効化。
 				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
+
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
 
 				notify.success("メモを削除しました");
 				return true;
@@ -363,6 +380,9 @@ export class MemoManager {
 				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
+
 				notify.success("メモを更新しました");
 				return true;
 			})(),
@@ -419,6 +439,9 @@ export class MemoManager {
 				const cacheKey = generateCacheKey(filePath, category);
 				this.cacheManager.invalidateMemos(cacheKey);
 
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
+
 				return true;
 			})(),
 			{ filePath, category, memoId, context: "MemoManager.updateTodoCompleted" }
@@ -434,5 +457,77 @@ export class MemoManager {
 		order: SortOrder = "asc"
 	): Promise<void> {
 		await this.vaultHandler.initializeTagPair(filePath, category, { order });
+	}
+
+	//! スレッドインデックスを取得する。
+	async getThreadIndex(filePath: string, category: string): Promise<ThreadIndex> {
+		//! ファイルからメモを読み込む。
+		const fileContent = await this.vaultHandler.readFile(filePath);
+		const memoTexts = splitFileIntoMemos(fileContent);
+		const memos = memoTexts
+			.map((text) => parseTextToMemo(text, category))
+			.filter((memo): memo is MemoEntry => memo !== null)
+			.filter((memo) => memo.category === category); // カテゴリでフィルタリング
+
+		//! ThreadIndexManagerを使ってインデックスを取得。
+		return this.threadIndexManager.getIndex(memos);
+	}
+
+	//! スレッドツリーを取得する。
+	async getThreadTree(
+		filePath: string,
+		category: string,
+		rootId: string
+	): Promise<ThreadTree> {
+		const index = await this.getThreadIndex(filePath, category);
+		const fileContent = await this.vaultHandler.readFile(filePath);
+		const memoTexts = splitFileIntoMemos(fileContent);
+		const memos = memoTexts
+			.map((text) => parseTextToMemo(text, category))
+			.filter((memo): memo is MemoEntry => memo !== null)
+			.filter((memo) => memo.category === category); // カテゴリでフィルタリング
+
+		const memoMap = new Map(memos.map((m) => [m.id, m]));
+		return this.threadIndexManager.getThreadTree(rootId, index, memoMap);
+	}
+
+	//! 子メモIDリストを取得する。
+	async getThreadChildren(
+		filePath: string,
+		category: string,
+		parentId: string
+	): Promise<string[]> {
+		const index = await this.getThreadIndex(filePath, category);
+		return this.threadIndexManager.getChildren(parentId, index);
+	}
+
+	//! 親メモIDを取得する。
+	async getThreadParent(
+		filePath: string,
+		category: string,
+		childId: string
+	): Promise<string | undefined> {
+		const index = await this.getThreadIndex(filePath, category);
+		return this.threadIndexManager.getParent(childId, index);
+	}
+
+	//! メモの深さを取得する。
+	async getThreadDepth(
+		filePath: string,
+		category: string,
+		memoId: string
+	): Promise<number> {
+		const index = await this.getThreadIndex(filePath, category);
+		return this.threadIndexManager.getDepth(memoId, index);
+	}
+
+	//! 子孫数を取得する。
+	async getThreadDescendantCount(
+		filePath: string,
+		category: string,
+		memoId: string
+	): Promise<number> {
+		const index = await this.getThreadIndex(filePath, category);
+		return this.threadIndexManager.getDescendantCount(memoId, index);
 	}
 }

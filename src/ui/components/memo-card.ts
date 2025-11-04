@@ -33,6 +33,9 @@ export interface MemoCardHandlers {
 
 	//! スレッド折りたたみトグル時のハンドラー。
 	onThreadToggle?: (memoId: string, isCollapsed: boolean) => void;
+
+	//! カードクリック時にスレッドビューに遷移するハンドラー。v0.0.14で追加。
+	onThreadClick?: (memoId: string) => void;
 }
 
 //! メモカードコンポーネント。

@@ -293,7 +293,12 @@ export function updateTodoStatus(content: string, completed: boolean): string {
 }
 
 // ! テキスト形式からメモエントリを解析する。
-export function parseTextToMemo(text: string, category: string): MemoEntry | null {
+export function parseTextToMemo(
+	text: string,
+	category: string,
+	filePath?: string,
+	startLine?: number,
+): MemoEntry | null {
 	// ! 簡易的なパース実装（タイムスタンプと内容を分離）。
 	const trimmed = text.trim()
 	if (!trimmed) {
@@ -330,6 +335,19 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 				try {
 					parsedCategory = JSON.parse(categoryValue) as string
 				} catch (e) {
+					// ! パースエラー詳細をログ出力。
+					const errorMessage = e instanceof Error ? e.message : String(e)
+					const locationInfo = filePath
+						? startLine
+							? `${filePath}:${startLine}`
+							: filePath
+						: "unknown location"
+					console.error(
+						`[memolog] Failed to parse category from comment: ${errorMessage}`,
+						`\nLocation: ${locationInfo}`,
+						`\nComment: ${comment}`,
+						`\nCategory value: ${categoryValue}`,
+					)
 					parsedCategory = null
 				}
 			} else {
@@ -342,8 +360,21 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 			try {
 				template = JSON.parse(templateMatch[1].trim()) as string
 			} catch (e) {
-				// ! JSON.parseエラーは無視（後方互換性）。
-				// ! ゴミ箱への移動処理などで不正なJSONが含まれる場合がある。
+				// ! JSON.parseエラー詳細をログ出力。
+				const errorMessage = e instanceof Error ? e.message : String(e)
+				const locationInfo = filePath
+					? startLine
+						? `${filePath}:${startLine}`
+						: filePath
+					: "unknown location"
+				const templateValue = templateMatch[1].trim()
+				console.error(
+					`[memolog] Failed to parse template from comment: ${errorMessage}`,
+					`\nLocation: ${locationInfo}`,
+					`\nComment: ${comment}`,
+					`\nTemplate value: ${templateValue}`,
+				)
+				// ! ゴミ箱への移動処理などで不正なJSONが含まれる場合がある（後方互換性）。
 			}
 		}
 	}

@@ -300,7 +300,7 @@ export class MemoManager {
 				// ! メモエントリに変換（categoryでフィルタリング）。
 				const memos: MemoEntry[] = []
 				for (const text of memoTexts) {
-					const memo = parseTextToMemo(text, category)
+					const memo = parseTextToMemo(text, category, filePath)
 					// ! categoryが空文字の場合はフィルタリングしない（全メモを取得）。
 					if (memo && (!category || memo.category === category)) {
 						memos.push(memo)
@@ -356,7 +356,7 @@ export class MemoManager {
 				}
 
 				// ! 対象メモを解析して内容を更新。
-				const memo = parseTextToMemo(memoTexts[memoIndex], category)
+				const memo = parseTextToMemo(memoTexts[memoIndex], category, filePath)
 				if (!memo) {
 					notify.warning("メモの解析に失敗しました")
 					return false
@@ -465,7 +465,7 @@ export class MemoManager {
 		const fileContent = await this.vaultHandler.readFile(filePath)
 		const memoTexts = splitFileIntoMemos(fileContent)
 		const memos = memoTexts
-			.map(text => parseTextToMemo(text, category))
+			.map(text => parseTextToMemo(text, category, filePath))
 			.filter((memo): memo is MemoEntry => memo !== null)
 			.filter(memo => memo.category === category) // カテゴリでフィルタリング
 
@@ -483,7 +483,7 @@ export class MemoManager {
 		const fileContent = await this.vaultHandler.readFile(filePath)
 		const memoTexts = splitFileIntoMemos(fileContent)
 		const memos = memoTexts
-			.map(text => parseTextToMemo(text, category))
+			.map(text => parseTextToMemo(text, category, filePath))
 			.filter((memo): memo is MemoEntry => memo !== null)
 			.filter(memo => memo.category === category) // カテゴリでフィルタリング
 
@@ -549,7 +549,7 @@ export class MemoManager {
 
 				// ! 親メモを検索。
 				const parentMemo = memoTexts
-					.map(text => parseTextToMemo(text, category))
+					.map(text => parseTextToMemo(text, category, filePath))
 					.filter((memo): memo is MemoEntry => memo !== null)
 					.find(memo => memo.id === parentId)
 
@@ -623,7 +623,7 @@ export class MemoManager {
 
 				// ! メモをパース。
 				const memos = memoTexts
-					.map(text => parseTextToMemo(text, category))
+					.map(text => parseTextToMemo(text, category, filePath))
 					.filter((memo): memo is MemoEntry => memo !== null)
 					.filter(memo => memo.category === category)
 
@@ -653,7 +653,7 @@ export class MemoManager {
 
 				// ! 削除対象以外のメモだけを残す。
 				const remainingMemos = memoTexts.filter(text => {
-					const memo = parseTextToMemo(text, category)
+					const memo = parseTextToMemo(text, category, filePath)
 					if (!memo) return true // パース失敗したメモは残す（別カテゴリなど）
 					return !idsToDelete.has(memo.id)
 				})

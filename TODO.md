@@ -16,7 +16,7 @@
 - TODOを新規追加する際は、「先に作成するテスト」と「テストを通す実装」の両方をセットで記述する。
 
 ## 現在の作業サマリー
-- **v0.0.14 スレッド対応機能**: データモデル、ThreadIndex管理、MemoManager統合、CRUD強化（返信作成・カスケード削除）、UI基本実装（MemoCard）が完了。残りは返信フォームUIと折りたたみ機能の実装段階。
+- **v0.0.14 スレッド対応機能**: データモデル、ThreadIndex管理、MemoManager統合、CRUD強化（返信作成・カスケード削除）、UI実装（MemoCard、InputForm返信モード、Sidebar統合）が完了。残りは折りたたみ機能と統合テストの実装段階。
 
 ## 現在中止中のTODO
 - 現在中止すべきタスクはありません。
@@ -63,8 +63,14 @@
   - 返信数バッジ（replyCount > 0の場合）を追加
   - スレッド深さに応じたインデント表示（20px × depth）
   - スレッド用CSSスタイルを追加（border-left、background、接続線）
-- [ ] 親メモコンテキスト付き返信フォームと reply API 連携の統合テストを先に作成
-- [ ] テスト駆動で返信フォームの UI/ロジックを実装し、API と連携
+- [x] InputFormに返信モード機能を実装
+  - enterReplyMode/exitReplyMode/isInReplyMode/getReplyToMemoIdメソッド追加
+  - 返信コンテキスト表示エリア（親メモ内容とキャンセルボタン）実装
+  - 返信コンテキスト用CSSスタイル追加
+- [x] Sidebarに返信処理を統合
+  - handleReply()メソッドで返信ボタン押下時にInputForm返信モードを起動
+  - handleSubmit()を返信モード時にaddReply() API呼び出しに分岐
+  - MemoListでcalculateThreadDepths()実装、threadDepthとreplyCountをMemoCardに渡す
 - [ ] サイドバー表示切り替え・折りたたみ永続化の期待動作を定義する UI テストを追加
 - [ ] 追加テストを通すサイドバーのトグル実装と状態永続化を行う
 - [ ] ツリー表示/折りたたみ/インデント用スタイルのビジュアルリグレッションまたはスナップショットテストを準備

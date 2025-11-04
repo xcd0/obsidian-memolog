@@ -12,6 +12,7 @@ export class MemoList {
 	private categories: CategoryConfig[];
 	private isTrash: boolean;
 	private pinnedMemoIds: string[];
+	private collapsedThreads: Set<string>;
 
 	constructor(
 		app: App,
@@ -21,7 +22,8 @@ export class MemoList {
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
 		isTrash = false,
-		pinnedMemoIds: string[] = []
+		pinnedMemoIds: string[] = [],
+		collapsedThreads: string[] = []
 	) {
 		this.app = app;
 		this.container = container;
@@ -31,6 +33,7 @@ export class MemoList {
 		this.categories = categories;
 		this.isTrash = isTrash;
 		this.pinnedMemoIds = pinnedMemoIds;
+		this.collapsedThreads = new Set(collapsedThreads);
 	}
 
 	//! メモリストを描画する。
@@ -47,8 +50,16 @@ export class MemoList {
 		//! parentIdからthreadDepthを計算するためのマップを作成。
 		const depthMap = this.calculateThreadDepths();
 
+		//! 折りたたまれたスレッドの子孫メモのIDセットを作成。
+		const hiddenMemoIds = this.calculateHiddenMemos();
+
 		//! 各メモをカードとして描画。
 		for (const memo of this.memos) {
+			//! 折りたたまれたスレッドの子孫は表示しない。
+			if (hiddenMemoIds.has(memo.id)) {
+				continue;
+			}
+
 			//! ピン留め状態を確認。
 			const isPinned = this.pinnedMemoIds.includes(memo.id);
 
@@ -57,6 +68,9 @@ export class MemoList {
 
 			//! 返信数を取得（MemoEntryのreplyCountプロパティを使用）。
 			const replyCount = memo.replyCount || 0;
+
+			//! 折りたたみ状態を確認。
+			const isCollapsed = this.collapsedThreads.has(memo.id);
 
 			const card = new MemoCard(
 				this.app,
@@ -68,10 +82,49 @@ export class MemoList {
 				this.isTrash,
 				isPinned,
 				threadDepth,
-				replyCount
+				replyCount,
+				isCollapsed
 			);
 			card.render();
 		}
+	}
+
+	//! 折りたたまれたスレッドの子孫メモのIDセットを計算する。
+	private calculateHiddenMemos(): Set<string> {
+		const hiddenIds = new Set<string>();
+
+		//! parentMapを構築。
+		const parentMap = new Map<string, string>();
+		const childrenMap = new Map<string, string[]>();
+
+		for (const memo of this.memos) {
+			if (memo.parentId) {
+				parentMap.set(memo.id, memo.parentId);
+
+				const siblings = childrenMap.get(memo.parentId) || [];
+				siblings.push(memo.id);
+				childrenMap.set(memo.parentId, siblings);
+			}
+		}
+
+		//! 折りたたまれたスレッドの全子孫を収集。
+		for (const collapsedId of this.collapsedThreads) {
+			//! BFSで子孫を探索。
+			const queue = [collapsedId];
+			let head = 0;
+
+			while (head < queue.length) {
+				const currentId = queue[head++];
+				const children = childrenMap.get(currentId) || [];
+
+				for (const childId of children) {
+					hiddenIds.add(childId);
+					queue.push(childId);
+				}
+			}
+		}
+
+		return hiddenIds;
 	}
 
 	//! parentIdからthreadDepthを計算する。
@@ -154,6 +207,25 @@ export class MemoList {
 	//! ピン留めIDリストを更新する。
 	updatePinnedMemoIds(pinnedMemoIds: string[]): void {
 		this.pinnedMemoIds = pinnedMemoIds;
+	}
+
+	//! 折りたたみ状態を更新する。
+	updateCollapsedThreads(collapsedThreads: string[]): void {
+		this.collapsedThreads = new Set(collapsedThreads);
+	}
+
+	//! 折りたたみ状態のトグル。
+	toggleCollapsed(memoId: string): void {
+		if (this.collapsedThreads.has(memoId)) {
+			this.collapsedThreads.delete(memoId);
+		} else {
+			this.collapsedThreads.add(memoId);
+		}
+	}
+
+	//! 折りたたみ状態を取得する。
+	getCollapsedThreads(): string[] {
+		return Array.from(this.collapsedThreads);
 	}
 
 	//! 最新のメモが表示される位置にスクロールする。

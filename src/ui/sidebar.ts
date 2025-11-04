@@ -353,11 +353,13 @@ export class MemologSidebar extends ItemView {
 				onRestore: (memoId) => void this.handleRestore(memoId),
 				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
 				onReply: (parentMemoId) => this.handleReply(parentMemoId),
+				onThreadToggle: (memoId, isCollapsed) => void this.handleThreadToggle(memoId, isCollapsed),
 			},
 			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
 			false, //! 初期状態ではゴミ箱表示ではない。
-			settings.pinnedMemoIds
+			settings.pinnedMemoIds,
+			settings.collapsedThreads
 		);
 		this.memoList.render();
 
@@ -702,6 +704,8 @@ export class MemologSidebar extends ItemView {
 				this.memoList.setIsTrash(this.currentCategory === "trash");
 				//! ピン留めIDリストを更新。
 				this.memoList.updatePinnedMemoIds(settings.pinnedMemoIds);
+				//! 折りたたみ状態を更新。
+				this.memoList.updateCollapsedThreads(settings.collapsedThreads);
 				this.memoList.updateMemos(displayMemos);
 				//! 最新メモが表示されるようにスクロール。
 				this.memoList.scrollToLatest(this.currentOrder);
@@ -919,6 +923,40 @@ export class MemologSidebar extends ItemView {
 		} catch (error) {
 			Logger.error("返信モード開始エラー:", error);
 			new Notice("返信モードの開始に失敗しました");
+		}
+	}
+
+	//! スレッド折りたたみトグル処理。
+	private async handleThreadToggle(memoId: string, isCollapsed: boolean): Promise<void> {
+		try {
+			//! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings();
+
+			//! 折りたたみ状態を更新。
+			let collapsedThreads = [...settings.collapsedThreads];
+			if (isCollapsed) {
+				//! 折りたたみ追加。
+				if (!collapsedThreads.includes(memoId)) {
+					collapsedThreads.push(memoId);
+				}
+			} else {
+				//! 折りたたみ解除。
+				collapsedThreads = collapsedThreads.filter((id) => id !== memoId);
+			}
+
+			//! 設定を保存。
+			await this.plugin.settingsManager.updateGlobalSettings({
+				collapsedThreads,
+			});
+
+			//! MemoListの折りたたみ状態を更新。
+			if (this.memoList) {
+				this.memoList.updateCollapsedThreads(collapsedThreads);
+				this.memoList.render();
+			}
+		} catch (error) {
+			Logger.error("折りたたみ状態変更エラー:", error);
+			new Notice("折りたたみ状態の変更に失敗しました");
 		}
 	}
 

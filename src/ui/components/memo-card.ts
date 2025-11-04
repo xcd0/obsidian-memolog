@@ -30,6 +30,9 @@ export interface MemoCardHandlers {
 
 	//! 返信ボタンクリック時のハンドラー。
 	onReply?: (parentMemoId: string) => void;
+
+	//! スレッド折りたたみトグル時のハンドラー。
+	onThreadToggle?: (memoId: string, isCollapsed: boolean) => void;
 }
 
 //! メモカードコンポーネント。
@@ -47,6 +50,7 @@ export class MemoCard {
 	private isPinned: boolean;
 	private threadDepth: number;
 	private replyCount: number;
+	private isCollapsed: boolean;
 
 	constructor(
 		app: App,
@@ -58,7 +62,8 @@ export class MemoCard {
 		isTrash = false,
 		isPinned = false,
 		threadDepth = 0,
-		replyCount = 0
+		replyCount = 0,
+		isCollapsed = false
 	) {
 		this.app = app;
 		this.container = container;
@@ -71,6 +76,7 @@ export class MemoCard {
 		this.isPinned = isPinned;
 		this.threadDepth = threadDepth;
 		this.replyCount = replyCount;
+		this.isCollapsed = isCollapsed;
 	}
 
 	//! カードを描画する。
@@ -199,6 +205,28 @@ export class MemoCard {
 			setIcon(editBtn, "pencil");
 			editBtn.addEventListener("click", () => {
 				this.toggleEditMode();
+			});
+		}
+
+		//! スレッド折りたたみボタン（返信がある場合のみ表示）。
+		if (this.replyCount > 0 && !this.isTrash && this.handlers.onThreadToggle) {
+			const toggleBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-thread-toggle",
+				attr: { "aria-label": this.isCollapsed ? "スレッドを展開" : "スレッドを折りたたむ" },
+			});
+			setIcon(toggleBtn, this.isCollapsed ? "chevron-right" : "chevron-down");
+			toggleBtn.addEventListener("click", () => {
+				this.isCollapsed = !this.isCollapsed;
+				if (this.handlers.onThreadToggle) {
+					this.handlers.onThreadToggle(this.memo.id, this.isCollapsed);
+				}
+				//! ボタンの表示を更新。
+				toggleBtn.empty();
+				setIcon(toggleBtn, this.isCollapsed ? "chevron-right" : "chevron-down");
+				toggleBtn.setAttribute(
+					"aria-label",
+					this.isCollapsed ? "スレッドを展開" : "スレッドを折りたたむ"
+				);
 			});
 		}
 

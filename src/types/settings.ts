@@ -79,6 +79,9 @@ export interface GlobalSettings {
 
 	//! ピン留めタブを表示するか。
 	showPinnedTab: boolean;
+
+	//! 折りたたまれたスレッドのメモID配列。
+	collapsedThreads: string[];
 }
 
 //! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -129,4 +132,5 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	pinnedMemoIds: [],
 	showPinnedTab: true,
 	logLevel: "info",
+	collapsedThreads: [],
 };

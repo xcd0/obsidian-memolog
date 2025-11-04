@@ -2182,3 +2182,62 @@
 	border-left-color: var(--interactive-accent);
 	border-left-width: 3px;
 }
+
+/* スレッド表示の投稿欄 v0.0.15で追加 */
+.memolog-thread-input-area {
+	padding: 1rem;
+	background-color: var(--background-primary);
+	border-top: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.memolog-thread-input-textarea {
+	width: 100%;
+	min-height: 60px;
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-interface);
+	font-size: 0.9rem;
+	resize: vertical;
+	transition: border-color 0.2s ease;
+}
+
+.memolog-thread-input-textarea:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+}
+
+.memolog-thread-input-textarea::placeholder {
+	color: var(--text-muted);
+}
+
+.memolog-thread-input-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.memolog-thread-input-submit {
+	padding: 0.5rem 1rem;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-thread-input-submit:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.memolog-thread-input-submit:active {
+	transform: scale(0.98);
+}

@@ -101,36 +101,49 @@ function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
 		}
 	}
 
-	//! 第2パス: 深さと子孫数を計算（BFS）。
-	const queue: Array<{ id: string; depth: number }> = [];
-	for (const rootId of rootIds) {
-		queue.push({ id: rootId, depth: 0 });
-	}
+        //! 第2パス: 深さと子孫数を計算（BFS）。
+        const queue: Array<{ id: string; depth: number }> = [];
+        for (const rootId of rootIds) {
+                queue.push({ id: rootId, depth: 0 });
+        }
 
-	while (queue.length > 0) {
-		const { id, depth } = queue.shift()!;
-		depthMap.set(id, depth);
+        //! 配列のshift()はO(N)になるため、ポインタで管理する。
+        let head = 0;
+        while (head < queue.length) {
+                const { id, depth } = queue[head++];
+                depthMap.set(id, depth);
 
-		const children = childrenMap.get(id) || [];
-		for (const childId of children) {
-			queue.push({ id: childId, depth: depth + 1 });
+                const children = childrenMap.get(id) || [];
+                for (const childId of children) {
+                        queue.push({ id: childId, depth: depth + 1 });
 		}
 	}
 
-	//! 第3パス: 子孫数を計算（DFS、後順）。
-	function countDescendants(memoId: string): number {
-		const children = childrenMap.get(memoId) || [];
-		let count = children.length;
-		for (const childId of children) {
-			count += countDescendants(childId);
-		}
-		descendantCountMap.set(memoId, count);
-		return count;
-	}
+        //! 第3パス: 子孫数を計算（反復処理）。
+        const postOrder: string[] = [];
+        const stack: string[] = [];
+        for (const rootId of rootIds) {
+                stack.push(rootId);
+                while (stack.length > 0) {
+                        const currentId = stack.pop()!;
+                        postOrder.push(currentId);
+                        const children = childrenMap.get(currentId) || [];
+                        for (const childId of children) {
+                                stack.push(childId);
+                        }
+                }
+        }
 
-	for (const rootId of rootIds) {
-		countDescendants(rootId);
-	}
+        //! 末尾から走査して子孫数を集計。
+        for (let i = postOrder.length - 1; i >= 0; i--) {
+                const memoId = postOrder[i];
+                const children = childrenMap.get(memoId) || [];
+                let count = 0;
+                for (const childId of children) {
+                        count += 1 + (descendantCountMap.get(childId) || 0);
+                }
+                descendantCountMap.set(memoId, count);
+        }
 
 	return {
 		childrenMap,
@@ -281,31 +294,28 @@ v0.0.14での拡張:
 ```typescript
 //! 返信メモを作成する。
 async function createReply(
-	parentMemo: MemoEntry,
-	content: string,
-	category: string,
-	threadIndex: ThreadIndex
+        parentMemo: MemoEntry,
+        content: string,
+        category: string,
+        threadIndex: ThreadIndex
 ): Promise<MemoEntry> {
-	//! 新しいメモを作成。
-	const replyMemo = createMemoEntry(category, content);
+        //! 新しいメモを作成。
+        const replyMemo = createMemoEntry(category, content);
 
-	//! 親メモIDを設定。
-	replyMemo.parentId = parentMemo.id;
+        //! 親メモIDを設定。
+        replyMemo.parentId = parentMemo.id;
 
-	//! 循環参照チェック。
-	if (detectCircularReference(replyMemo.id, parentMemo.id, threadIndex)) {
-		throw new Error("Circular reference detected");
-	}
+        //! 親メモと同じファイルに追加。
+        await addMemoToFile(replyMemo, parentMemo);
 
-	//! 親メモと同じファイルに追加。
-	await addMemoToFile(replyMemo, parentMemo);
+        //! スレッドインデックスを更新。
+        await updateThreadIndex(threadIndex, replyMemo);
 
-	//! スレッドインデックスを更新。
-	await updateThreadIndex(threadIndex, replyMemo);
-
-	return replyMemo;
+        return replyMemo;
 }
 ```
+
+> NOTE: 新規返信は既存ツリー外から挿入されるため循環参照は発生しない。親変更（リパレンティング）機能では `wouldIntroduceCycle()` を使用して検証する。
 
 #### 3.1.2 制約
 
@@ -436,29 +446,25 @@ function buildThreadTree(
 ```typescript
 //! スレッド全体を削除する。
 async function deleteThread(rootMemo: MemoEntry): Promise<void> {
-	//! スレッドツリーを構築。
-	const tree = buildThreadTree(rootMemo, allMemos);
+        //! スレッドツリーを構築。
+        const memoMap = buildMemoMap(); // MemoManagerが保持するID→MemoEntryのMapを再構築
+        const memoList = Array.from(memoMap.values());
+        const threadIndex = threadIndexManager.getIndex(memoList);
+        const tree = buildThreadTree(rootMemo.id, threadIndex, memoMap);
 
-	//! 削除確認。
-	const confirmed = await confirmDialog(
-		`このメモと返信${tree.totalCount - 1}件を削除しますか？`
-	);
-	if (!confirmed) return;
+        //! 削除確認。
+        const confirmed = await confirmDialog(
+                `このメモと返信${tree.totalCount - 1}件を削除しますか？`
+        );
+        if (!confirmed) return;
 
-	//! ツリー内の全メモを収集。
-	const memosToDelete: string[] = [];
-	function collectIds(node: ThreadNode): void {
-		memosToDelete.push(node.memo.id);
-		for (const child of node.children) {
-			collectIds(child);
-		}
-	}
-	collectIds(tree.root);
+        //! ツリー内の全メモを収集。
+        const memosToDelete = Array.from(tree.nodes.keys());
 
-	//! 一括削除。
-	for (const memoId of memosToDelete) {
-		await deleteMemo(memoId);
-	}
+        //! 一括削除。
+        for (const memoId of memosToDelete) {
+                await deleteMemo(memoId);
+        }
 }
 ```
 
@@ -555,20 +561,24 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 ```typescript
 //! スレッドインデックスマネージャー。
 export class ThreadIndexManager {
-	private index: ThreadIndex | null = null;
-	private treeCache: Map<string, ThreadTree> = new Map();
-	private lastBuildTime: number = 0;
+        private index: ThreadIndex | null = null;
+        private treeCache: Map<string, ThreadTree> = new Map();
+        private lastBuildTime: number = 0;
+        private lastSignature: string | null = null; // メモ集合の最新署名（構造変化検出用）
 
-	//! スレッドインデックスを取得（キャッシュ済みなら再利用）。
-	getIndex(memos: MemoEntry[]): ThreadIndex {
-		//! インデックスが未構築、またはメモ数が変わった場合は再構築。
-		if (!this.index || this.needsRebuild(memos)) {
-			this.index = buildThreadIndex(memos);
-			this.lastBuildTime = Date.now();
-			//! ツリーキャッシュもクリア。
-			this.treeCache.clear();
-		}
-		return this.index;
+        //! スレッドインデックスを取得（キャッシュ済みなら再利用）。
+        getIndex(memos: MemoEntry[]): ThreadIndex {
+                const signature = this.createSignature(memos);
+
+                //! インデックスが未構築、または構造が変わった場合は再構築。
+                if (!this.index || this.needsRebuild(signature)) {
+                        this.index = buildThreadIndex(memos);
+                        this.lastSignature = signature;
+                        this.lastBuildTime = Date.now();
+                        //! ツリーキャッシュもクリア。
+                        this.treeCache.clear();
+                }
+                return this.index;
 	}
 
 	//! スレッドツリーをキャッシュから取得（なければ構築）。
@@ -606,12 +616,13 @@ export class ThreadIndexManager {
 		return threadIndex.descendantCountMap.get(memoId) || 0;
 	}
 
-	//! インデックスを強制的に再構築。
-	rebuild(memos: MemoEntry[]): void {
-		this.index = buildThreadIndex(memos);
-		this.lastBuildTime = Date.now();
-		this.treeCache.clear();
-	}
+        //! インデックスを強制的に再構築。
+        rebuild(memos: MemoEntry[]): void {
+                this.index = buildThreadIndex(memos);
+                this.lastSignature = this.createSignature(memos);
+                this.lastBuildTime = Date.now();
+                this.treeCache.clear();
+        }
 
 	//! 特定のツリーキャッシュを無効化。
 	invalidateTree(rootId: string): void {
@@ -619,19 +630,27 @@ export class ThreadIndexManager {
 	}
 
 	//! 全キャッシュをクリア。
-	clear(): void {
-		this.index = null;
-		this.treeCache.clear();
-	}
+        clear(): void {
+                this.index = null;
+                this.treeCache.clear();
+                this.lastSignature = null;
+        }
 
-	private needsRebuild(memos: MemoEntry[]): boolean {
-		//! メモ数が変わった場合は再構築。
-		if (!this.index) return true;
+        private needsRebuild(signature: string): boolean {
+                if (!this.index) return true;
+                return signature !== this.lastSignature;
+        }
 
-		//! 簡易チェック: ルート数が変わったか。
-		const currentRootCount = memos.filter(m => !m.parentId).length;
-		return currentRootCount !== this.index.rootIds.size;
-	}
+        //! メモ集合の署名を生成し、構造変更を検出する。
+        private createSignature(memos: MemoEntry[]): string {
+                const parts = memos.map(memo => {
+                        const parent = memo.parentId ?? "";
+                        const updated = memo.updatedAt ? memo.updatedAt.toISOString() : memo.timestamp;
+                        return `${memo.id}:${parent}:${updated}`;
+                });
+                parts.sort();
+                return `${memos.length}|${parts.join("|")}`;
+        }
 }
 ```
 
@@ -666,19 +685,18 @@ function addMemoToIndex(memo: MemoEntry, index: ThreadIndex): void {
 	index.descendantCountMap.set(memo.id, 0);
 }
 
-//! 祖先の子孫数を更新（再帰）。
+//! 祖先の子孫数を更新（反復処理）。
 function updateAncestorDescendantCount(
-	memoId: string,
-	index: ThreadIndex,
-	delta: number
+        memoId: string,
+        index: ThreadIndex,
+        delta: number
 ): void {
-	const current = index.descendantCountMap.get(memoId) || 0;
-	index.descendantCountMap.set(memoId, current + delta);
-
-	const parentId = index.parentMap.get(memoId);
-	if (parentId) {
-		updateAncestorDescendantCount(parentId, index, delta);
-	}
+        let currentId: string | undefined = memoId;
+        while (currentId) {
+                const current = index.descendantCountMap.get(currentId) || 0;
+                index.descendantCountMap.set(currentId, current + delta);
+                currentId = index.parentMap.get(currentId);
+        }
 }
 ```
 
@@ -832,27 +850,27 @@ TypeScriptは必須だね。
 ### 9.1 循環参照の防止
 
 ```typescript
-//! 循環参照チェック（ThreadIndexを使用）。
-function detectCircularReference(
-	memoId: string,
-	parentId: string,
-	threadIndex: ThreadIndex
+//! 既存メモの親を変更する際に循環参照が生じないか検証する。
+function wouldIntroduceCycle(
+        childId: string,
+        candidateParentId: string,
+        threadIndex: ThreadIndex
 ): boolean {
-	const visited = new Set<string>();
-	let currentId: string | undefined = parentId;
+        if (childId === candidateParentId) return true;
 
-	while (currentId) {
-		if (currentId === memoId) return true; // 循環発見
-		if (visited.has(currentId)) return true; // 無限ループ防止
-		visited.add(currentId);
+        let currentId: string | undefined = candidateParentId;
+        while (currentId) {
+                if (currentId === childId) return true; // childの祖先に到達
+                currentId = threadIndex.parentMap.get(currentId);
+        }
 
-		//! O(1)で親を取得。
-		currentId = threadIndex.parentMap.get(currentId);
-	}
-
-	return false;
+        return false;
 }
 ```
+
+**利用上の注意:**
+- `childId` は既にThreadIndex上に存在している必要がある（新規返信では不要）。
+- UI上でドラッグ＆ドロップなどで親を変更する場合にのみ呼び出す。
 
 **計算量: O(D)** （Dは深さ）
 ThreadIndexを使用することでO(1)の親参照が可能。

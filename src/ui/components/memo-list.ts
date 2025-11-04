@@ -1,4 +1,4 @@
-import { MemoEntry, SortOrder, CategoryConfig } from "../../types";
+import { MemoEntry, SortOrder, CategoryConfig, ViewMode } from "../../types";
 import { MemoCard, MemoCardHandlers } from "./memo-card";
 import { App } from "obsidian";
 
@@ -13,6 +13,7 @@ export class MemoList {
 	private isTrash: boolean;
 	private pinnedMemoIds: string[];
 	private collapsedThreads: Set<string>;
+	private viewMode: ViewMode; //! ビューモード（メイン/スレッド表示）。v0.0.14で追加。
 
 	constructor(
 		app: App,
@@ -23,7 +24,8 @@ export class MemoList {
 		categories: CategoryConfig[] = [],
 		isTrash = false,
 		pinnedMemoIds: string[] = [],
-		collapsedThreads: string[] = []
+		collapsedThreads: string[] = [],
+		viewMode: ViewMode = "main" //! デフォルトはメインビュー。
 	) {
 		this.app = app;
 		this.container = container;
@@ -34,6 +36,7 @@ export class MemoList {
 		this.isTrash = isTrash;
 		this.pinnedMemoIds = pinnedMemoIds;
 		this.collapsedThreads = new Set(collapsedThreads);
+		this.viewMode = viewMode;
 	}
 
 	//! メモリストを描画する。
@@ -41,8 +44,12 @@ export class MemoList {
 		//! コンテナをクリア。
 		this.container.empty();
 
+		//! ビューモードに応じてメモをフィルタリング。
+		const displayMemos =
+			this.viewMode === "main" ? this.memos.filter((m) => !m.parentId) : this.memos;
+
 		//! メモが空の場合はプレースホルダーを表示。
-		if (this.memos.length === 0) {
+		if (displayMemos.length === 0) {
 			this.renderPlaceholder();
 			return;
 		}
@@ -54,7 +61,7 @@ export class MemoList {
 		const hiddenMemoIds = this.calculateHiddenMemos();
 
 		//! 各メモをカードとして描画。
-		for (const memo of this.memos) {
+		for (const memo of displayMemos) {
 			//! 折りたたまれたスレッドの子孫は表示しない。
 			if (hiddenMemoIds.has(memo.id)) {
 				continue;
@@ -240,5 +247,11 @@ export class MemoList {
 				this.container.scrollTop = 0;
 			}
 		}, 0);
+	}
+
+	//! ビューモードを設定する。v0.0.14で追加。
+	setViewMode(viewMode: ViewMode): void {
+		this.viewMode = viewMode;
+		this.render();
 	}
 }

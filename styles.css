@@ -1937,7 +1937,39 @@
 	color: var(--interactive-accent);
 }
 
-/* 返信数バッジ */
+/* スレッドボタン */
+.memolog-btn-thread {
+	position: relative;
+	color: var(--interactive-accent);
+	transition: all 0.2s ease;
+}
+
+.memolog-btn-thread:hover {
+	color: var(--interactive-accent-hover);
+	background-color: rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+/* スレッド数バッジ */
+.memolog-thread-count-badge {
+	position: absolute;
+	top: -6px;
+	right: -6px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 0.7rem;
+	font-weight: 700;
+	padding: 2px 6px;
+	border-radius: 12px;
+	min-width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 返信数バッジ（返信ボタン用・削除予定） */
 .memolog-reply-badge {
 	position: absolute;
 	top: -4px;

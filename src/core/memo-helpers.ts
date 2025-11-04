@@ -99,11 +99,12 @@ export function memoToText(memo: MemoEntry, template?: string, useTodoList = fal
 		body = "- [ ] " + body.replace(/\n/g, "\n  ");
 	}
 
-	//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントとして埋め込む。
-	//! テンプレートはJSON.stringifyでエンコード（改行等を含むため）。
+	//! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントとして埋め込む。
+	//! テンプレートとカテゴリはJSON.stringifyでエンコード（改行等を含むため）。
 	const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
 	const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded} -->\n${body}${attachments}\n`;
+	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : "";
+	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${parentIdEncoded} -->\n${body}${attachments}\n`;
 }
 
 //! JSON文字列全体をマッチする正規表現パターン。
@@ -141,6 +142,7 @@ export function parseMetadata(text: string): {
 	deleted: boolean;
 	trashedAt: string | null;
 	pinnedAt: string | null;
+	parentId: string | null;
 } {
 	const commentMatch = text.match(/<!-- (.+?) -->/);
 
@@ -153,6 +155,7 @@ export function parseMetadata(text: string): {
 			deleted: false,
 			trashedAt: null,
 			pinnedAt: null,
+			parentId: null,
 		};
 	}
 
@@ -166,6 +169,7 @@ export function parseMetadata(text: string): {
 	const deletedMatch = comment.match(/deleted: "([^"]+)"/);
 	const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/);
 	const pinnedAtMatch = comment.match(/pinnedAt: "([^"]+)"/);
+	const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/);
 
 	//! categoryのパース処理（JSON形式と非JSON形式の両方に対応）。
 	let parsedCategory: string | null = null;
@@ -192,6 +196,7 @@ export function parseMetadata(text: string): {
 		deleted: deletedMatch?.[1] === "true",
 		trashedAt: trashedAtMatch?.[1] || null,
 		pinnedAt: pinnedAtMatch?.[1] || null,
+		parentId: parentIdMatch?.[1].trim() || null,
 	};
 }
 
@@ -297,12 +302,13 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 	}
 	const lines = trimmed.split("\n");
 
-	//! ID、タイムスタンプ、カテゴリ、テンプレートをHTMLコメントから抽出。
+	//! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントから抽出。
 	const commentMatch = text.match(/<!-- (.+?) -->/);
 	let id = uuidv7();
 	let timestamp: string | null = null;
 	let parsedCategory: string | null = null;
 	let template: string | undefined = undefined;
+	let parentId: string | undefined = undefined;
 
 	if (commentMatch) {
 		const comment = commentMatch[1];
@@ -312,9 +318,11 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 		//! ただし、後方互換性のため、JSON形式でない場合も処理する。
 		const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`));
 		const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`));
+		const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/);
 
 		id = idMatch?.[1].trim() || uuidv7();
 		timestamp = timestampMatch?.[1].trim() || null;
+		parentId = parentIdMatch?.[1].trim() || undefined;
 
 		if (categoryMatch) {
 			const categoryValue = categoryMatch[1].trim();
@@ -452,5 +460,6 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 		attachments,
 		template,
 		trashedAt,
+		parentId,
 	};
 }

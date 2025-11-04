@@ -2037,3 +2037,116 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+
+/* ThreadView用スタイル (v0.0.15) */
+.memolog-thread-view-container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	background-color: var(--background-primary);
+}
+
+.memolog-thread-header {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	border-bottom: 2px solid var(--background-modifier-border);
+	background-color: var(--background-secondary);
+}
+
+.memolog-thread-back-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.memolog-thread-back-btn:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.memolog-thread-back-btn .svg-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.memolog-thread-title {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.memolog-thread-parent-nav {
+	padding: 0.75rem 1rem;
+	background-color: var(--background-secondary-alt);
+	border-bottom: 1px solid var(--background-modifier-border);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-thread-parent-nav:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-thread-parent-label {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	font-weight: 500;
+}
+
+.memolog-thread-parent-content {
+	font-size: 0.9rem;
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1;
+}
+
+.memolog-thread-content {
+	flex: 1;
+	overflow-y: auto;
+	padding: 1rem;
+}
+
+.memolog-thread-focused-card {
+	border: 2px solid var(--interactive-accent);
+	background-color: var(--background-primary-alt);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.memolog-thread-replies-section {
+	margin-top: 1rem;
+}
+
+.memolog-thread-replies-title {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	margin-bottom: 0.75rem;
+	padding-left: 0.5rem;
+}
+
+/* ThreadView内のメモカードインデント調整 */
+.memolog-thread-view-container .memolog-memo-card {
+	margin-bottom: 0.75rem;
+}
+
+/* ThreadView内のスレッドインデントを強調 */
+.memolog-thread-view-container .memolog-thread-indent {
+	border-left-color: var(--interactive-accent);
+	border-left-width: 3px;
+}

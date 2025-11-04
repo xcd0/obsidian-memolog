@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml/badge.svg)](https://github.com/xcd0/obsidian-memolog/actions/workflows/ci.yml)
 
-メモを素早く記録・整理・回顧する (v0.0.13 - 開発進行中)
+メモを素早く記録・整理・回顧する (v0.0.14 - 開発進行中)
 
 memologはObsidianでのメモ記録を効率化するための非公式プラグインです。素早い入力、柔軟な整理、あとからの振り返りを強力にサポートすることを目的としています。
 

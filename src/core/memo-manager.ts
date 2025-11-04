@@ -83,7 +83,7 @@ export class MemoManager {
 				const existingMemos = splitFileIntoMemos(fileContent)
 
 				// ! 常にファイル末尾に追加（ファイル内は常に古い順=タイムスタンプ昇順）。
-				let allMemos = insertMemoIntoList(memoText, existingMemos, false)
+				const allMemos = insertMemoIntoList(memoText, existingMemos, false)
 
 				// ! タイムスタンプ順にソート。
 				const memoTexts = splitFileIntoMemos(allMemos)
@@ -612,7 +612,7 @@ export class MemoManager {
 				const memoText = memoToText(memo, template, useTodoList)
 
 				// ! 常にファイル末尾に追加（ファイル内は常に古い順=タイムスタンプ昇順）。
-				let allMemos = insertMemoIntoList(memoText, memoTexts, false)
+				const allMemos = insertMemoIntoList(memoText, memoTexts, false)
 
 				// ! タイムスタンプ順にソート。
 				const allMemoTexts = splitFileIntoMemos(allMemos)

@@ -1656,6 +1656,18 @@ export class MemologSidebar extends ItemView {
 			this.listAreaEl.style.display = "none"
 		}
 
+		// ! 投稿欄を表示し、返信モードに設定。
+		if (this.inputAreaEl) {
+			this.inputAreaEl.style.display = ""
+		}
+		if (this.inputForm) {
+			// ! 返信対象のメモを取得。
+			const focusedMemo = this.memos.find(m => m.id === memoId)
+			if (focusedMemo) {
+				this.inputForm.enterReplyMode(memoId, focusedMemo.content)
+			}
+		}
+
 		// ! ThreadViewを作成または更新。
 		this.renderThreadView()
 	}
@@ -1674,6 +1686,16 @@ export class MemologSidebar extends ItemView {
 		// ! MemoListを表示。
 		if (this.listAreaEl) {
 			this.listAreaEl.style.display = ""
+		}
+
+		// ! 返信モードを解除。
+		if (this.inputForm) {
+			this.inputForm.exitReplyMode()
+		}
+
+		// ! 投稿欄の表示を復元（ゴミ箱・ピン留めタブでは非表示）。
+		if (this.inputAreaEl) {
+			this.inputAreaEl.style.display = this.currentCategory === "trash" || this.currentCategory === "pinned" ? "none" : ""
 		}
 
 		// ! メモをリロードして表示を更新。
@@ -1720,10 +1742,6 @@ export class MemologSidebar extends ItemView {
 			onNavigateToParent: (parentId: string) => {
 				this.showThreadView(parentId)
 			},
-			// ! スレッド表示での投稿(返信として投稿)。v0.0.15で追加。
-			onThreadSubmit: async (content: string, parentId: string) => {
-				await this.handleThreadSubmit(content, parentId)
-			},
 		}
 
 		// ! ThreadViewを作成。
@@ -1760,54 +1778,4 @@ export class MemologSidebar extends ItemView {
 		}
 	}
 
-	// ! スレッド表示での投稿を処理する(返信として投稿)。v0.0.15で追加。
-	private async handleThreadSubmit(content: string, parentId: string): Promise<void> {
-		if (!content.trim()) return
-
-		// ! 親メモを探す。
-		const parentMemo = this.memos.find(m => m.id === parentId)
-		if (!parentMemo) return
-
-		try {
-			// ! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings()
-
-			// ! "all"が選択されている場合はデフォルトカテゴリのディレクトリ名を取得。
-			let categoryDirectory = this.currentCategory
-			if (categoryDirectory === "all") {
-				const defaultCategoryConfig = settings.categories.find(
-					c => c.directory === settings.defaultCategory,
-				)
-				categoryDirectory = defaultCategoryConfig?.directory || settings.defaultCategory
-			}
-
-			// ! ファイルパスを生成（directoryを使用）。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					categoryDirectory,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					categoryDirectory,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-				)
-
-			// ! 返信として新しいメモを作成。
-			await this.memoManager.addReply(filePath, categoryDirectory, parentId, content, this.currentOrder)
-
-			// ! メモをリロードして表示を更新。
-			await this.loadMemos()
-
-			// ! ThreadViewを更新。
-			if (this.threadView) {
-				this.threadView.updateMemos(this.memos)
-			}
-		} catch (error) {
-			console.error("Failed to submit thread reply:", error)
-		}
-	}
 }

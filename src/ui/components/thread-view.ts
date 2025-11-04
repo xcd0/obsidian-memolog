@@ -12,9 +12,6 @@ export interface ThreadViewHandlers extends MemoCardHandlers {
 
 	// ! 親メモに遷移。
 	onNavigateToParent?: (parentId: string) => void
-
-	// ! スレッド表示での投稿(返信として投稿)。v0.0.15で追加。
-	onThreadSubmit?: (content: string, parentId: string) => Promise<void>
 }
 
 // ! スレッドビューコンポーネント。v0.0.14で追加。
@@ -30,7 +27,6 @@ export class ThreadView {
 	// ! UI要素への参照。
 	private headerEl: HTMLElement | null = null
 	private contentEl: HTMLElement | null = null
-	private inputAreaEl: HTMLElement | null = null // ! v0.0.15で追加。
 
 	constructor(
 		app: App,
@@ -70,9 +66,6 @@ export class ThreadView {
 
 		// ! スレッドツリーを描画。
 		this.renderThreadTree(focusedMemo)
-
-		// ! 投稿欄を最下部に描画。v0.0.15で追加。
-		this.renderInputArea()
 	}
 
 	// ! ヘッダーを描画する（戻るボタン + 親メモナビゲーション）。
@@ -205,53 +198,6 @@ export class ThreadView {
 		})
 	}
 
-	// ! 投稿欄を描画する。v0.0.15で追加。
-	private renderInputArea(): void {
-		this.inputAreaEl = this.container.createDiv({ cls: "memolog-thread-input-area" })
-
-		const textarea = this.inputAreaEl.createEl("textarea", {
-			cls: "memolog-thread-input-textarea",
-			attr: {
-				placeholder: "返信を入力...",
-				rows: "3",
-			},
-		})
-
-		const buttonContainer = this.inputAreaEl.createDiv({
-			cls: "memolog-thread-input-buttons",
-		})
-
-		const submitBtn = buttonContainer.createEl("button", {
-			cls: "memolog-thread-input-submit",
-			text: "投稿",
-		})
-
-		// ! 投稿ボタンのクリックイベント。
-		submitBtn.addEventListener("click", async () => {
-			const content = textarea.value.trim()
-			if (!content) return
-
-			if (this.handlers.onThreadSubmit) {
-				await this.handlers.onThreadSubmit(content, this.focusedMemoId)
-				textarea.value = "" // ! 投稿後にテキストエリアをクリア。
-
-				// ! スクロールを最下部に移動。
-				setTimeout(() => {
-					if (this.inputAreaEl) {
-						this.inputAreaEl.scrollIntoView({ behavior: "smooth", block: "end" })
-					}
-				}, 100)
-			}
-		})
-
-		// ! Ctrl+Enterで投稿。
-		textarea.addEventListener("keydown", (e: KeyboardEvent) => {
-			if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-				e.preventDefault()
-				submitBtn.click()
-			}
-		})
-	}
 
 	// ! クリーンアップ。
 	destroy(): void {

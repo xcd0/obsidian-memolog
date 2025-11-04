@@ -1683,6 +1683,14 @@ export class MemologSidebar extends ItemView {
 			this.threadView = null
 		}
 
+		// ! ThreadViewコンテナを削除。
+		const threadViewContainer = this.containerEl.querySelector(
+			".memolog-thread-view-container",
+		) as HTMLElement
+		if (threadViewContainer) {
+			threadViewContainer.remove()
+		}
+
 		// ! MemoListを表示。
 		if (this.listAreaEl) {
 			this.listAreaEl.style.display = ""

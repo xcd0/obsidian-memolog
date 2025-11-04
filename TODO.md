@@ -32,15 +32,15 @@
 - [x] テストを通す `buildThreadIndex` / `buildThreadTree` の実装で `childrenMap` `parentMap` `depthMap` `descendantCountMap` を生成
 - [x] ThreadIndexManager の再構築・キャッシュ更新動作を定義するテストを作成
 - [x] テスト駆動で ThreadIndexManager を実装し、メモデータ変更時にインデックス再構築とキャッシュ更新を行う
-- [ ] MemoManager / CacheManager と ThreadIndexManager の統合仕様をテストで先に定義
-- [ ] テストを通す形で MemoManager / CacheManager に ThreadIndexManager を統合し、必要なインターフェースを公開
+- [x] MemoManager / CacheManager と ThreadIndexManager の統合仕様をテストで先に定義
+- [x] テストを通す形で MemoManager / CacheManager に ThreadIndexManager を統合し、必要なインターフェースを公開
 - [x] スレッドインデックス計算とキャッシュ無効化のテストケースを追加し、既存テスト群に組み込む
 
 ### スレッド対応 CRUD 強化
-- [ ] 返信作成APIの期待挙動（親メモと同一カテゴリ保存・`parentId` 設定・インデックス更新）を定義するテストを作成
-- [ ] テストを満たす返信作成APIを実装
-- [ ] メモ削除時の子孫メモ再帰削除を検証するテストを先に用意
-- [ ] テスト駆動でカスケード削除ロジックを実装
+- [x] 返信作成APIの期待挙動（親メモと同一カテゴリ保存・`parentId` 設定・インデックス更新）を定義するテストを作成
+- [x] テストを満たす返信作成APIを実装
+- [x] メモ削除時の子孫メモ再帰削除を検証するテストを先に用意
+- [x] テスト駆動でカスケード削除ロジックを実装
 - [x] 親変更時に循環を検出しエラーを返す挙動を確認するテストを作成
 - [x] 上記テストを通す `wouldIntroduceCycle` 検出ロジックとエラー応答を実装
 - [x] 正常系・循環検出・カテゴリ不一致エラーなどの新規ロジックをカバーするテストケースを網羅的に追加

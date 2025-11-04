@@ -530,4 +530,151 @@ export class MemoManager {
 		const index = await this.getThreadIndex(filePath, category);
 		return this.threadIndexManager.getDescendantCount(memoId, index);
 	}
+
+	//! 返信メモを作成する。
+	async addReply(
+		filePath: string,
+		category: string,
+		parentId: string,
+		content: string,
+		order: SortOrder = "asc",
+		template?: string,
+		attachments?: string[]
+	): Promise<MemoEntry> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! ファイルを読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+				const memoTexts = splitFileIntoMemos(fileContent);
+
+				//! 親メモを検索。
+				const parentMemo = memoTexts
+					.map((text) => parseTextToMemo(text, category))
+					.filter((memo): memo is MemoEntry => memo !== null)
+					.find((memo) => memo.id === parentId);
+
+				//! 親メモが存在しない。
+				if (!parentMemo) {
+					throw new Error(`親メモが見つかりません: ${parentId}`);
+				}
+
+				//! 親メモのカテゴリと一致しない。
+				if (parentMemo.category !== category) {
+					throw new Error(
+						`親メモのカテゴリ(${parentMemo.category})と返信のカテゴリ(${category})が一致しません`
+					);
+				}
+
+				//! 返信メモエントリを作成（parentIdを設定）。
+				const memo = createMemoEntry(
+					category,
+					content,
+					undefined,
+					undefined,
+					attachments,
+					template
+				);
+				memo.parentId = parentId;
+
+				//! メモをテキスト形式に変換。
+				const memoText = memoToText(memo, template, false);
+
+				//! 挿入位置を決定（昇順: bottom、降順: top）。
+				const insertAtTop = order === "desc";
+				const newContent = insertMemoIntoList(memoText, memoTexts, insertAtTop);
+
+				//! ファイル全体を書き込む。
+				await this.vaultHandler.writeFile(filePath, newContent);
+
+				//! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category);
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
+
+				notify.success("返信を追加しました");
+				return memo;
+			})(),
+			{ filePath, category, parentId, context: "MemoManager.addReply" }
+		);
+
+		if (!result.success || !result.data) {
+			throw new FileIOError("返信の追加に失敗しました", {
+				filePath,
+				category,
+			});
+		}
+
+		return result.data;
+	}
+
+	//! メモを子孫と共に削除する（カスケード削除）。
+	async deleteMemoWithDescendants(
+		filePath: string,
+		category: string,
+		memoId: string
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				//! ファイルを読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath);
+				const memoTexts = splitFileIntoMemos(fileContent);
+
+				//! メモをパース。
+				const memos = memoTexts
+					.map((text) => parseTextToMemo(text, category))
+					.filter((memo): memo is MemoEntry => memo !== null)
+					.filter((memo) => memo.category === category);
+
+				//! 削除対象のメモが存在するか確認。
+				const targetMemo = memos.find((memo) => memo.id === memoId);
+				if (!targetMemo) {
+					throw new Error(`削除対象のメモが見つかりません: ${memoId}`);
+				}
+
+				//! スレッドインデックスを構築。
+				const index = this.threadIndexManager.getIndex(memos);
+
+				//! 削除対象のメモとその子孫をすべて収集。
+				const idsToDelete = new Set<string>([memoId]);
+				const queue: string[] = [memoId];
+				let head = 0;
+
+				while (head < queue.length) {
+					const currentId = queue[head++];
+					const children = index.childrenMap.get(currentId) || [];
+
+					for (const childId of children) {
+						idsToDelete.add(childId);
+						queue.push(childId);
+					}
+				}
+
+				//! 削除対象以外のメモだけを残す。
+				const remainingMemos = memoTexts.filter((text) => {
+					const memo = parseTextToMemo(text, category);
+					if (!memo) return true; // パース失敗したメモは残す（別カテゴリなど）
+					return !idsToDelete.has(memo.id);
+				});
+
+				//! ファイルを更新。
+				const newContent = joinMemosToFileContent(remainingMemos);
+				await this.vaultHandler.writeFile(filePath, newContent);
+
+				//! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category);
+				this.cacheManager.invalidateMemos(cacheKey);
+
+				//! スレッドインデックスを無効化。
+				this.threadIndexManager.clear();
+
+				notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`);
+				return true;
+			})(),
+			{ filePath, category, memoId, context: "MemoManager.deleteMemoWithDescendants" }
+		);
+
+		return result.success && result.data ? result.data : false;
+	}
 }

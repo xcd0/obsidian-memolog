@@ -1,7 +1,7 @@
 {
 	"id": "memolog",
 	"name": "memolog",
-	"version": "0.0.12",
+	"version": "0.0.14",
 	"minAppVersion": "1.6.0",
 	"description": "メモを素早く記録・整理・回顧する",
 	"author": "xcd0",

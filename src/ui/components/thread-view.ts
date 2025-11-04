@@ -68,31 +68,23 @@ export class ThreadView {
 		this.renderThreadTree(focusedMemo)
 	}
 
-	// ! ヘッダーを描画する（戻るボタン + 親メモナビゲーション）。
+	// ! ヘッダーを描画する（戻るボタンのみ）。v0.0.15で親メモへボタンを削除。
 	private renderHeader(): void {
 		this.headerEl = this.container.createDiv({ cls: "memolog-thread-header" })
 
-		// ! 戻るボタン（アイコンのみ）。
+		// ! 戻るボタン（アイコンのみ）。2世代以降の場合は親スレッド表示に戻る。
 		const backBtn = this.headerEl.createDiv({ cls: "memolog-thread-back-btn" })
 		setIcon(backBtn, "arrow-left")
 		backBtn.addEventListener("click", () => {
-			if (this.handlers.onBack) {
+			const focusedMemo = this.memos.find(m => m.id === this.focusedMemoId)
+			// ! フォーカスメモに親がいる場合、親のスレッド表示に遷移。
+			if (focusedMemo?.parentId && this.handlers.onNavigateToParent) {
+				this.handlers.onNavigateToParent(focusedMemo.parentId)
+			} else if (this.handlers.onBack) {
+				// ! 親がいない場合はメインビューに戻る。
 				this.handlers.onBack()
 			}
 		})
-
-		// ! フォーカスメモの親がいる場合、親へのナビゲーションを表示。
-		const focusedMemo = this.memos.find(m => m.id === this.focusedMemoId)
-		if (focusedMemo?.parentId) {
-			const parentNav = this.headerEl.createDiv({ cls: "memolog-thread-parent-nav" })
-			setIcon(parentNav, "arrow-up")
-			parentNav.createSpan({ text: "親メモへ" })
-			parentNav.addEventListener("click", () => {
-				if (this.handlers.onNavigateToParent && focusedMemo.parentId) {
-					this.handlers.onNavigateToParent(focusedMemo.parentId)
-				}
-			})
-		}
 	}
 
 	// ! スレッドツリーを描画する（フォーカスメモ + その返信）。
@@ -119,6 +111,9 @@ export class ThreadView {
 		delete (cardHandlers as ThreadViewHandlers).onThreadCardClick
 		delete (cardHandlers as ThreadViewHandlers).onNavigateToParent
 
+		// ! フォーカスメモが2世代以降（親がいる）場合、カテゴリ変更ボタンを非表示。v0.0.15で追加。
+		const hideCategoryButton = memo.parentId !== null && memo.parentId !== undefined
+
 		const card = new MemoCard(
 			this.app,
 			focusedContainer,
@@ -130,6 +125,7 @@ export class ThreadView {
 			false, // ! ピン留めなし。
 			0, // ! スレッド深さ0。
 			memo.replyCount || 0,
+			hideCategoryButton,
 		)
 		card.render()
 	}
@@ -168,6 +164,9 @@ export class ThreadView {
 			delete (cardHandlers as ThreadViewHandlers).onThreadCardClick
 			delete (cardHandlers as ThreadViewHandlers).onNavigateToParent
 
+			// ! スレッド表示では返信にカテゴリ変更ボタンを表示しない。v0.0.15で追加。
+			const hideCategoryButton = true
+
 			const card = new MemoCard(
 				this.app,
 				replyContainer,
@@ -179,6 +178,7 @@ export class ThreadView {
 				false, // ! ピン留めなし。
 				depth + 1, // ! インデント深さ。
 				child.replyCount || 0,
+				hideCategoryButton,
 			)
 			card.render()
 
@@ -197,7 +197,6 @@ export class ThreadView {
 		})
 	}
 
-
 	// ! クリーンアップ。
 	destroy(): void {
 		this.container.empty()
@@ -214,5 +213,4 @@ export class ThreadView {
 		this.focusedMemoId = memoId
 		this.render()
 	}
-
 }

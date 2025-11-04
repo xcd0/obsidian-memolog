@@ -47,6 +47,7 @@ export class MemoCard {
 	private isPinned: boolean
 	private threadDepth: number
 	private replyCount: number
+	private hideCategoryButton: boolean
 
 	constructor(
 		app: App,
@@ -59,6 +60,7 @@ export class MemoCard {
 		isPinned = false,
 		threadDepth = 0,
 		replyCount = 0,
+		hideCategoryButton = false,
 	) {
 		this.app = app
 		this.container = container
@@ -71,6 +73,7 @@ export class MemoCard {
 		this.isPinned = isPinned
 		this.threadDepth = threadDepth
 		this.replyCount = replyCount
+		this.hideCategoryButton = hideCategoryButton
 	}
 
 	// ! カードを描画する。
@@ -159,8 +162,8 @@ export class MemoCard {
 			})
 		}
 
-		// ! カテゴリ変更ボタン。
-		if (this.categories.length > 0 && this.handlers.onCategoryChange) {
+		// ! カテゴリ変更ボタン（スレッド表示では返信に表示しない）。
+		if (this.categories.length > 0 && this.handlers.onCategoryChange && !this.hideCategoryButton) {
 			const categoryBtn = actions.createEl("button", {
 				cls: "memolog-btn memolog-btn-category",
 				attr: { "aria-label": "カテゴリ変更" },

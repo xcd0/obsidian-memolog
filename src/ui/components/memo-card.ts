@@ -27,6 +27,9 @@ export interface MemoCardHandlers {
 
 	//! ピン留めボタンクリック時のハンドラー。
 	onPinToggle?: (memoId: string, isPinned: boolean) => void;
+
+	//! 返信ボタンクリック時のハンドラー。
+	onReply?: (parentMemoId: string) => void;
 }
 
 //! メモカードコンポーネント。
@@ -42,6 +45,8 @@ export class MemoCard {
 	private categories: CategoryConfig[];
 	private isTrash: boolean;
 	private isPinned: boolean;
+	private threadDepth: number;
+	private replyCount: number;
 
 	constructor(
 		app: App,
@@ -51,7 +56,9 @@ export class MemoCard {
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
 		isTrash = false,
-		isPinned = false
+		isPinned = false,
+		threadDepth = 0,
+		replyCount = 0
 	) {
 		this.app = app;
 		this.container = container;
@@ -62,12 +69,20 @@ export class MemoCard {
 		this.categories = categories;
 		this.isTrash = isTrash;
 		this.isPinned = isPinned;
+		this.threadDepth = threadDepth;
+		this.replyCount = replyCount;
 	}
 
 	//! カードを描画する。
 	render(): HTMLElement {
 		const card = this.container.createDiv({ cls: "memolog-card" });
 		this.cardElement = card;
+
+		//! スレッド深さに応じてインデントを適用。
+		if (this.threadDepth > 0) {
+			card.style.marginLeft = `${this.threadDepth * 20}px`;
+			card.classList.add(`thread-depth-${this.threadDepth}`);
+		}
 
 		//! ヘッダー（タイムスタンプとアクション）。
 		this.renderHeader(card);
@@ -185,6 +200,28 @@ export class MemoCard {
 			editBtn.addEventListener("click", () => {
 				this.toggleEditMode();
 			});
+		}
+
+		//! 返信ボタン（ゴミ箱以外）。
+		if (!this.isTrash && this.handlers.onReply) {
+			const replyBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-reply",
+				attr: { "aria-label": "返信" },
+			});
+			setIcon(replyBtn, "message-square");
+			replyBtn.addEventListener("click", () => {
+				if (this.handlers.onReply) {
+					this.handlers.onReply(this.memo.id);
+				}
+			});
+
+			//! 返信数バッジ（返信がある場合のみ）。
+			if (this.replyCount > 0) {
+				replyBtn.createSpan({
+					cls: "memolog-reply-badge",
+					text: String(this.replyCount),
+				});
+			}
 		}
 
 		//! 復活ボタン（ゴミ箱のみ）。

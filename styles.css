@@ -1923,3 +1923,70 @@
 	color: var(--text-error);
 	opacity: 1;
 }
+
+/* スレッド機能のスタイル */
+
+/* 返信ボタン */
+.memolog-btn-reply {
+	position: relative;
+	color: var(--text-muted);
+	transition: color 0.2s ease;
+}
+
+.memolog-btn-reply:hover {
+	color: var(--interactive-accent);
+}
+
+/* 返信数バッジ */
+.memolog-reply-badge {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 0.7rem;
+	font-weight: 600;
+	padding: 2px 5px;
+	border-radius: 10px;
+	min-width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+/* スレッド深さに応じたスタイル */
+.memolog-card.thread-depth-1 {
+	border-left: 2px solid var(--interactive-accent-hover);
+}
+
+.memolog-card.thread-depth-2 {
+	border-left: 2px solid var(--interactive-accent);
+}
+
+.memolog-card.thread-depth-3 {
+	border-left: 2px solid var(--text-accent);
+}
+
+.memolog-card[class*="thread-depth-"] {
+	padding-left: 0.5rem;
+	background-color: rgba(var(--interactive-accent-rgb), 0.02);
+}
+
+/* スレッド接続線（オプション） */
+.memolog-card[class*="thread-depth-"]::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: linear-gradient(
+		to bottom,
+		transparent 0%,
+		var(--background-modifier-border) 20%,
+		var(--background-modifier-border) 80%,
+		transparent 100%
+	);
+}

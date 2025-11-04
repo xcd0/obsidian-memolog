@@ -26,7 +26,6 @@ export class ThreadView {
 	private handlers: ThreadViewHandlers
 	private sourcePath: string
 	private categories: CategoryConfig[]
-	private collapsedThreads: Set<string>
 
 	// ! UI要素への参照。
 	private headerEl: HTMLElement | null = null
@@ -41,7 +40,6 @@ export class ThreadView {
 		handlers: ThreadViewHandlers = {},
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
-		collapsedThreads: string[] = [],
 	) {
 		this.app = app
 		this.container = container
@@ -50,7 +48,6 @@ export class ThreadView {
 		this.handlers = handlers
 		this.sourcePath = sourcePath
 		this.categories = categories
-		this.collapsedThreads = new Set(collapsedThreads)
 	}
 
 	// ! スレッドビューを描画する。
@@ -141,7 +138,6 @@ export class ThreadView {
 			false, // ! ピン留めなし。
 			0, // ! スレッド深さ0。
 			memo.replyCount || 0,
-			false, // ! 折りたたみなし。
 		)
 		card.render()
 	}
@@ -154,12 +150,6 @@ export class ThreadView {
 		const children = this.memos
 			.filter(m => m.parentId === parentId)
 			.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-
-		// ! 折りたたまれているかチェック。
-		const isCollapsed = this.collapsedThreads.has(parentId)
-		if (isCollapsed) {
-			return
-		}
 
 		for (const child of children) {
 			const replyContainer = this.contentEl.createDiv({
@@ -197,7 +187,6 @@ export class ThreadView {
 				false, // ! ピン留めなし。
 				depth + 1, // ! インデント深さ。
 				child.replyCount || 0,
-				this.collapsedThreads.has(child.id), // ! 折りたたみ状態。
 			)
 			card.render()
 
@@ -281,9 +270,4 @@ export class ThreadView {
 		this.render()
 	}
 
-	// ! 折りたたみ状態を更新する。
-	updateCollapsedThreads(collapsedThreads: string[]): void {
-		this.collapsedThreads = new Set(collapsedThreads)
-		this.render()
-	}
 }

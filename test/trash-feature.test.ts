@@ -2,16 +2,16 @@ import { DEFAULT_GLOBAL_SETTINGS } from "../src/types/settings"
 
 describe("ゴミ箱機能", () => {
 	describe("設定のデフォルト値", () => {
-		test("enableTrashがfalseで初期化される", () => {
-			expect(DEFAULT_GLOBAL_SETTINGS.enableTrash).toBe(false)
+		test("enableTrashがtrueで初期化される", () => {
+			expect(DEFAULT_GLOBAL_SETTINGS.enableTrash).toBe(true)
 		})
 
 		test("trashRetentionDaysが30で初期化される", () => {
 			expect(DEFAULT_GLOBAL_SETTINGS.trashRetentionDays).toBe(30)
 		})
 
-		test("showTrashTabがfalseで初期化される", () => {
-			expect(DEFAULT_GLOBAL_SETTINGS.showTrashTab).toBe(false)
+		test("showTrashTabがtrueで初期化される", () => {
+			expect(DEFAULT_GLOBAL_SETTINGS.showTrashTab).toBe(true)
 		})
 	})
 

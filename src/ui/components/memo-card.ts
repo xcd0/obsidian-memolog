@@ -28,12 +28,6 @@ export interface MemoCardHandlers {
 	// ! ピン留めボタンクリック時のハンドラー。
 	onPinToggle?: (memoId: string, isPinned: boolean) => void
 
-	// ! 返信ボタンクリック時のハンドラー。
-	onReply?: (parentMemoId: string) => void
-
-	// ! スレッド折りたたみトグル時のハンドラー。
-	onThreadToggle?: (memoId: string, isCollapsed: boolean) => void
-
 	// ! カードクリック時にスレッドビューに遷移するハンドラー。v0.0.14で追加。
 	onThreadClick?: (memoId: string) => void
 }
@@ -53,7 +47,6 @@ export class MemoCard {
 	private isPinned: boolean
 	private threadDepth: number
 	private replyCount: number
-	private isCollapsed: boolean
 
 	constructor(
 		app: App,
@@ -66,7 +59,6 @@ export class MemoCard {
 		isPinned = false,
 		threadDepth = 0,
 		replyCount = 0,
-		isCollapsed = false,
 	) {
 		this.app = app
 		this.container = container
@@ -79,7 +71,6 @@ export class MemoCard {
 		this.isPinned = isPinned
 		this.threadDepth = threadDepth
 		this.replyCount = replyCount
-		this.isCollapsed = isCollapsed
 	}
 
 	// ! カードを描画する。
@@ -105,6 +96,26 @@ export class MemoCard {
 		// ! 添付ファイル。
 		if (this.memo.attachments && this.memo.attachments.length > 0) {
 			this.renderAttachments(card)
+		}
+
+		// ! カードクリックでスレッド表示に遷移。v0.0.15で追加。
+		if (this.handlers.onThreadClick) {
+			card.addEventListener("click", (e) => {
+				// ! ボタンクリックやチェックボックスクリックは除外。
+				if ((e.target as HTMLElement).closest("button")) {
+					return
+				}
+				if (
+					(e.target as HTMLElement).closest("input[type=checkbox]")
+					|| (e.target as HTMLElement).classList.contains("task-list-item-checkbox")
+				) {
+					return
+				}
+				if (this.handlers.onThreadClick) {
+					this.handlers.onThreadClick(this.memo.id)
+				}
+			})
+			card.style.cursor = "pointer"
 		}
 
 		return card
@@ -208,42 +219,6 @@ export class MemoCard {
 			setIcon(editBtn, "pencil")
 			editBtn.addEventListener("click", () => {
 				this.toggleEditMode()
-			})
-		}
-
-		// ! スレッド折りたたみボタン（返信がある場合のみ表示）。
-		if (this.replyCount > 0 && !this.isTrash && this.handlers.onThreadToggle) {
-			const toggleBtn = actions.createEl("button", {
-				cls: "memolog-btn memolog-btn-thread-toggle",
-				attr: { "aria-label": this.isCollapsed ? "スレッドを展開" : "スレッドを折りたたむ" },
-			})
-			setIcon(toggleBtn, this.isCollapsed ? "chevron-right" : "chevron-down")
-			toggleBtn.addEventListener("click", () => {
-				this.isCollapsed = !this.isCollapsed
-				if (this.handlers.onThreadToggle) {
-					this.handlers.onThreadToggle(this.memo.id, this.isCollapsed)
-				}
-				// ! ボタンの表示を更新。
-				toggleBtn.empty()
-				setIcon(toggleBtn, this.isCollapsed ? "chevron-right" : "chevron-down")
-				toggleBtn.setAttribute(
-					"aria-label",
-					this.isCollapsed ? "スレッドを展開" : "スレッドを折りたたむ",
-				)
-			})
-		}
-
-		// ! 返信ボタン（ゴミ箱以外）。
-		if (!this.isTrash && this.handlers.onReply) {
-			const replyBtn = actions.createEl("button", {
-				cls: "memolog-btn memolog-btn-reply",
-				attr: { "aria-label": "返信" },
-			})
-			setIcon(replyBtn, "message-square")
-			replyBtn.addEventListener("click", () => {
-				if (this.handlers.onReply) {
-					this.handlers.onReply(this.memo.id)
-				}
 			})
 		}
 

@@ -198,10 +198,10 @@ describe("MemoManager", () => {
 			const content = await mockVaultHandler.readFile(filePath)
 			expect(content).toBeDefined()
 
-			// ! メモBが先、メモAが後（降順なのでtopに追加）。
+			// ! ファイル内は常にタイムスタンプ昇順なので、メモAが先、メモBが後。
 			const memoAIndex = content.indexOf("メモA")
 			const memoBIndex = content.indexOf("メモB")
-			expect(memoBIndex).toBeLessThan(memoAIndex)
+			expect(memoAIndex).toBeLessThan(memoBIndex)
 		})
 
 		it("添付ファイル付きメモを追加", async () => {

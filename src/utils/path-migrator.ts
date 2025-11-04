@@ -1,4 +1,5 @@
 import { App, TFile } from "obsidian"
+import { sortMemosByTimestamp, splitFileIntoMemos } from "../core/memo-crud-operations"
 import { memoToText } from "../core/memo-helpers"
 import { MemoManager } from "../core/memo-manager"
 import { MemologVaultHandler } from "../fs/vault-handler"
@@ -430,12 +431,17 @@ export class PathMigrator {
 					const memoTexts = memos.map(memo => memoToText(memo)).join("\n")
 
 					// ! ファイルに書き込み。
-					let newContent: string
+					let combinedContent: string
 					if (existingContent.trim()) {
-						newContent = `${existingContent.trim()}\n${memoTexts}`
+						combinedContent = `${existingContent.trim()}\n${memoTexts}`
 					} else {
-						newContent = memoTexts
+						combinedContent = memoTexts
 					}
+
+					// ! タイムスタンプ順にソート。
+					const allMemoTexts = splitFileIntoMemos(combinedContent)
+					const sortedMemos = sortMemosByTimestamp(allMemoTexts)
+					const newContent = sortedMemos.join("")
 
 					await this.vaultHandler.writeFile(newPath, newContent)
 				}

@@ -10,6 +10,7 @@ import {
 	insertMemoIntoList,
 	joinMemosToFileContent,
 	removeMemoFromList,
+	sortMemosByTimestamp,
 	splitFileIntoMemos,
 	toLocalISOString,
 	updateMemoInList,
@@ -49,7 +50,7 @@ export class MemoManager {
 		filePath: string,
 		category: string,
 		content: string,
-		order: SortOrder = "asc",
+		_order: SortOrder = "asc", // ! 互換性のため残すが、ファイル内は常に古い順にソート。
 		template?: string,
 		attachments?: string[],
 		existingId?: string,
@@ -81,9 +82,13 @@ export class MemoManager {
 				// ! 既存のメモを分割。
 				const existingMemos = splitFileIntoMemos(fileContent)
 
-				// ! 挿入位置を決定（昇順: bottom、降順: top）。
-				const insertAtTop = order === "desc"
-				const newContent = insertMemoIntoList(memoText, existingMemos, insertAtTop)
+				// ! 常にファイル末尾に追加（ファイル内は常に古い順=タイムスタンプ昇順）。
+				let allMemos = insertMemoIntoList(memoText, existingMemos, false)
+
+				// ! タイムスタンプ順にソート。
+				const memoTexts = splitFileIntoMemos(allMemos)
+				const sortedMemos = sortMemosByTimestamp(memoTexts)
+				const newContent = joinMemosToFileContent(sortedMemos)
 
 				// ! ファイル全体を書き込む。
 				await this.vaultHandler.writeFile(filePath, newContent)
@@ -140,8 +145,11 @@ export class MemoManager {
 					return false
 				}
 
+				// ! タイムスタンプ順にソート。
+				const sortedMemos = sortMemosByTimestamp(updatedMemos)
+
 				// ! ファイルを更新。
-				const newContent = joinMemosToFileContent(updatedMemos)
+				const newContent = joinMemosToFileContent(sortedMemos)
 				await this.vaultHandler.writeFile(filePath, newContent)
 
 				// ! キャッシュを無効化。
@@ -201,8 +209,11 @@ export class MemoManager {
 					return false
 				}
 
+				// ! タイムスタンプ順にソート。
+				const sortedMemos = sortMemosByTimestamp(updatedMemos)
+
 				// ! ファイルに書き込み。
-				const newContent = joinMemosToFileContent(updatedMemos)
+				const newContent = joinMemosToFileContent(sortedMemos)
 				await this.vaultHandler.writeFile(targetFilePath, newContent)
 
 				// ! categoryを抽出してキャッシュを無効化。
@@ -249,8 +260,11 @@ export class MemoManager {
 					return false
 				}
 
+				// ! タイムスタンプ順にソート。
+				const sortedFiltered = sortMemosByTimestamp(filtered)
+
 				// ! ファイル全体を書き込む。
-				const newContent = joinMemosToFileContent(filtered)
+				const newContent = joinMemosToFileContent(sortedFiltered)
 				await this.vaultHandler.writeFile(filePath, newContent)
 
 				// ! キャッシュを無効化。
@@ -372,8 +386,11 @@ export class MemoManager {
 					return false
 				}
 
+				// ! タイムスタンプ順にソート。
+				const sortedMemos = sortMemosByTimestamp(updatedMemos)
+
 				// ! ファイル全体を書き込む。
-				const newFileContent = joinMemosToFileContent(updatedMemos)
+				const newFileContent = joinMemosToFileContent(sortedMemos)
 				await this.vaultHandler.writeFile(filePath, newFileContent)
 
 				// ! キャッシュを無効化。
@@ -433,7 +450,10 @@ export class MemoManager {
 					return false
 				}
 
-				const newFileContent = joinMemosToFileContent(newMemoTexts)
+				// ! タイムスタンプ順にソート。
+				const sortedMemoTexts = sortMemosByTimestamp(newMemoTexts)
+
+				const newFileContent = joinMemosToFileContent(sortedMemoTexts)
 				await this.vaultHandler.writeFile(filePath, newFileContent)
 
 				const cacheKey = generateCacheKey(filePath, category)
@@ -548,7 +568,7 @@ export class MemoManager {
 		category: string,
 		parentId: string,
 		content: string,
-		order: SortOrder = "asc",
+		_order: SortOrder = "asc", // ! 互換性のため残すが、ファイル内は常に古い順にソート。
 		template?: string,
 		attachments?: string[],
 		useTodoList = false,
@@ -591,9 +611,13 @@ export class MemoManager {
 				// ! メモをテキスト形式に変換。
 				const memoText = memoToText(memo, template, useTodoList)
 
-				// ! 挿入位置を決定（昇順: bottom、降順: top）。
-				const insertAtTop = order === "desc"
-				const newContent = insertMemoIntoList(memoText, memoTexts, insertAtTop)
+				// ! 常にファイル末尾に追加（ファイル内は常に古い順=タイムスタンプ昇順）。
+				let allMemos = insertMemoIntoList(memoText, memoTexts, false)
+
+				// ! タイムスタンプ順にソート。
+				const allMemoTexts = splitFileIntoMemos(allMemos)
+				const sortedMemos = sortMemosByTimestamp(allMemoTexts)
+				const newContent = joinMemosToFileContent(sortedMemos)
 
 				// ! ファイル全体を書き込む。
 				await this.vaultHandler.writeFile(filePath, newContent)
@@ -679,7 +703,9 @@ export class MemoManager {
 					})
 
 					// ! ファイルを更新。
-					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					// ! タイムスタンプ順にソート。
+					const sortedMemoTexts1 = sortMemosByTimestamp(updatedMemoTexts)
+					const newContent = joinMemosToFileContent(sortedMemoTexts1)
 					await this.vaultHandler.writeFile(filePath, newContent)
 
 					notify.success(`メモと子孫${idsToDelete.size - 1}件をゴミ箱に移動しました`)
@@ -691,8 +717,11 @@ export class MemoManager {
 						return !idsToDelete.has(memo.id)
 					})
 
+					// ! タイムスタンプ順にソート。
+					const sortedRemaining = sortMemosByTimestamp(remainingMemos)
+
 					// ! ファイルを更新。
-					const newContent = joinMemosToFileContent(remainingMemos)
+					const newContent = joinMemosToFileContent(sortedRemaining)
 					await this.vaultHandler.writeFile(filePath, newContent)
 
 					notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`)
@@ -766,8 +795,11 @@ export class MemoManager {
 						return text
 					})
 
+					// ! タイムスタンプ順にソート。
+					const sortedMemoTexts1 = sortMemosByTimestamp(updatedMemoTexts)
+
 					// ! ファイルを更新。
-					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					const newContent = joinMemosToFileContent(sortedMemoTexts1)
 					await this.vaultHandler.writeFile(filePath, newContent)
 
 					notify.success(
@@ -797,8 +829,11 @@ export class MemoManager {
 						})
 						.filter((text): text is string => text !== null)
 
+					// ! タイムスタンプ順にソート。
+					const sortedMemoTexts1 = sortMemosByTimestamp(updatedMemoTexts)
+
 					// ! ファイルを更新。
-					const newContent = joinMemosToFileContent(updatedMemoTexts)
+					const newContent = joinMemosToFileContent(sortedMemoTexts1)
 					await this.vaultHandler.writeFile(filePath, newContent)
 
 					notify.success(

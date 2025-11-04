@@ -142,3 +142,33 @@ export function joinMemosToFileContent(memoTexts: string[]): string {
 export function generateCacheKey(filePath: string, category: string): string {
 	return `${filePath}::${category}`
 }
+// ! タイムスタンプを抽出してDateオブジェクトに変換する。
+// ! @param memoText メモのテキスト
+// ! @returns タイムスタンプのDateオブジェクト、抽出できない場合はnull
+function extractTimestampFromMemo(memoText: string): Date | null {
+	const match = memoText.match(/timestamp:\s*(\S+)/)
+	if (!match) return null
+	try {
+		return new Date(match[1])
+	} catch {
+		return null
+	}
+}
+
+// ! メモテキスト配列をタイムスタンプ順（昇順）にソートする。
+// ! @param memoTexts メモテキストの配列
+// ! @returns ソート済みのメモテキスト配列
+export function sortMemosByTimestamp(memoTexts: string[]): string[] {
+	return [...memoTexts].sort((a, b) => {
+		const dateA = extractTimestampFromMemo(a)
+		const dateB = extractTimestampFromMemo(b)
+		
+		// ! タイムスタンプが取得できない場合は末尾に配置。
+		if (!dateA && !dateB) return 0
+		if (!dateA) return 1
+		if (!dateB) return -1
+		
+		// ! 昇順（古い順）。
+		return dateA.getTime() - dateB.getTime()
+	})
+}

@@ -46,11 +46,13 @@ ln -s "$(pwd)" ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
 ```
 
 **利点:**
+
 - ビルド後のファイルコピーが不要
 - `npm run dev`で自動ビルド → Obsidianで即座に反映
 - 開発効率が大幅に向上
 
 **注意（Windows）:**
+
 - 管理者権限が必要
 - コマンドプロンプトを右クリック →「管理者として実行」
 

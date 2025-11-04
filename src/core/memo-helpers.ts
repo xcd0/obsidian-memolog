@@ -1,11 +1,11 @@
-import { MemoEntry } from "../types/memo";
-import { v7 as uuidv7 } from "uuid";
+import { v7 as uuidv7 } from "uuid"
+import { MemoEntry } from "../types/memo"
 
-//! タイムスタンプをフォーマットする（Linuxのdateコマンド書式に対応）。
+// ! タイムスタンプをフォーマットする（Linuxのdateコマンド書式に対応）。
 export function formatTimestamp(timestamp: string, format: string): string {
-	const date = new Date(timestamp);
+	const date = new Date(timestamp)
 
-	//! 月名（日本語）。
+	// ! 月名（日本語）。
 	const monthNames = [
 		"1月",
 		"2月",
@@ -19,7 +19,7 @@ export function formatTimestamp(timestamp: string, format: string): string {
 		"10月",
 		"11月",
 		"12月",
-	];
+	]
 	const monthNamesShort = [
 		"1月",
 		"2月",
@@ -33,20 +33,20 @@ export function formatTimestamp(timestamp: string, format: string): string {
 		"10月",
 		"11月",
 		"12月",
-	];
+	]
 
-	//! 曜日名（日本語）。
-	const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
-	const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"];
+	// ! 曜日名（日本語）。
+	const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"]
+	const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"]
 
-	//! 12時間形式の時。
-	const hours12 = date.getHours() % 12 || 12;
+	// ! 12時間形式の時。
+	const hours12 = date.getHours() % 12 || 12
 
-	//! 曜日（1-7、月曜日=1）。
-	const dayOfWeek = date.getDay();
-	const isoWeekday = dayOfWeek === 0 ? 7 : dayOfWeek;
+	// ! 曜日（1-7、月曜日=1）。
+	const dayOfWeek = date.getDay()
+	const isoWeekday = dayOfWeek === 0 ? 7 : dayOfWeek
 
-	//! 置換マップ（順序が重要: 長いパターンを先に置換）。
+	// ! 置換マップ（順序が重要: 長いパターンを先に置換）。
 	const replacements: Record<string, string> = {
 		"%Y": date.getFullYear().toString(),
 		"%y": date.getFullYear().toString().slice(-2),
@@ -62,89 +62,88 @@ export function formatTimestamp(timestamp: string, format: string): string {
 		"%M": date.getMinutes().toString().padStart(2, "0"),
 		"%S": date.getSeconds().toString().padStart(2, "0"),
 		"%s": Math.floor(date.getTime() / 1000).toString(),
-	};
+	}
 
-	let formatted = format;
-	//! %B, %A を先に置換（%b, %a と衝突しないように）。
+	let formatted = format
+	// ! %B, %A を先に置換（%b, %a と衝突しないように）。
 	for (const [key, value] of Object.entries(replacements)) {
-		formatted = formatted.replace(new RegExp(key, "g"), value);
+		formatted = formatted.replace(new RegExp(key, "g"), value)
 	}
 
-	return formatted;
+	return formatted
 }
 
-//! メモエントリをテキスト形式に変換する。
+// ! メモエントリをテキスト形式に変換する。
 export function memoToText(memo: MemoEntry, template?: string, useTodoList = false): string {
-	//! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
-	const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M";
-	const formattedTemplate = formatTimestamp(memo.timestamp, actualTemplate);
-	const content = memo.content;
-	const attachments =
-		memo.attachments && memo.attachments.length > 0
-			? `\n\n添付: ${memo.attachments.map((a) => `[[${a}]]`).join(", ")}`
-			: "";
+	// ! メモに保存されているテンプレートを優先、なければ引数のテンプレートを使用。
+	const actualTemplate = memo.template || template || "## %Y-%m-%d %H:%M"
+	const formattedTemplate = formatTimestamp(memo.timestamp, actualTemplate)
+	const content = memo.content
+	const attachments = memo.attachments && memo.attachments.length > 0
+		? `\n\n添付: ${memo.attachments.map(a => `[[${a}]]`).join(", ")}`
+		: ""
 
-	//! ボディを構築。
-	let body: string;
+	// ! ボディを構築。
+	let body: string
 	if (actualTemplate.includes("{{content}}")) {
-		//! テンプレート内の{{content}}を実際のメモ内容に置換。
-		body = formattedTemplate.replace(/\{\{content\}\}/g, content);
+		// ! テンプレート内の{{content}}を実際のメモ内容に置換。
+		body = formattedTemplate.replace(/\{\{content\}\}/g, content)
 	} else {
-		//! テンプレートに{{content}}がない場合は、タイムスタンプの後に改行してcontentを追加。
-		body = `${formattedTemplate}\n${content}`;
+		// ! テンプレートに{{content}}がない場合は、タイムスタンプの後に改行してcontentを追加。
+		body = `${formattedTemplate}\n${content}`
 	}
 
-	//! TODOリストの場合、チェックボックスを追加（contentに既にない場合のみ）。
+	// ! TODOリストの場合、チェックボックスを追加（contentに既にない場合のみ）。
 	if (useTodoList && !/^-\s*\[([x ])\]\s+/.test(content)) {
-		body = "- [ ] " + body.replace(/\n/g, "\n  ");
+		body = "- [ ] " + body.replace(/\n/g, "\n  ")
 	}
 
-	//! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントとして埋め込む。
-	//! テンプレートとカテゴリはJSON.stringifyでエンコード（改行等を含むため）。
-	const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : "";
-	const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : "";
-	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : "";
-	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${parentIdEncoded} -->\n${body}${attachments}\n`;
+	// ! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントとして埋め込む。
+	// ! テンプレートとカテゴリはJSON.stringifyでエンコード（改行等を含むため）。
+	const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : ""
+	const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : ""
+	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : ""
+	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${parentIdEncoded} -->\n${body}${attachments}\n`
 }
 
-//! JSON文字列全体をマッチする正規表現パターン。
-//! ダブルクォートで囲まれた文字列で、エスケープ文字(\")も考慮。
-const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/;
+// ! JSON文字列全体をマッチする正規表現パターン。
+// ! ダブルクォートで囲まれた文字列で、エスケープ文字(\")も考慮。
+const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/
 
-//! テンプレート文字列を正規表現パターンに変換する。
-//! タイムゾーンに依存せずにテンプレート部分をマッチさせるため。
+// ! テンプレート文字列を正規表現パターンに変換する。
+// ! タイムゾーンに依存せずにテンプレート部分をマッチさせるため。
 function createTemplateRegex(templatePart: string): RegExp {
-	//! テンプレートのプレースホルダーを正規表現パターンに置換。
+	// ! テンプレートのプレースホルダーを正規表現パターンに置換。
 	const pattern = templatePart
-		.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") //! 正規表現の特殊文字をエスケープ。
-		.replace(/%Y/g, "\\d{4}") //! 年: 4桁の数字。
-		.replace(/%y/g, "\\d{2}") //! 年(2桁): 2桁の数字。
-		.replace(/%[Bb]/g, "\\S+月?") //! 月名: 文字列 + 任意の"月"。
-		.replace(/%m/g, "\\d{2}") //! 月: 2桁の数字。
-		.replace(/%d/g, "\\d{2}") //! 日: 2桁の数字。
-		.replace(/%[Aa]/g, "\\S+曜日?") //! 曜日名: 文字列 + 任意の"曜日"。
-		.replace(/%u/g, "\\d") //! 曜日(1-7): 1桁の数字。
-		.replace(/%H/g, "\\d{2}") //! 時(24時間): 2桁の数字。
-		.replace(/%I/g, "\\d{2}") //! 時(12時間): 2桁の数字。
-		.replace(/%M/g, "\\d{2}") //! 分: 2桁の数字。
-		.replace(/%S/g, "\\d{2}") //! 秒: 2桁の数字。
-		.replace(/%s/g, "\\d+"); //! Unixタイムスタンプ: 数字列。
+		.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // ! 正規表現の特殊文字をエスケープ。
+		.replace(/%Y/g, "\\d{4}") // ! 年: 4桁の数字。
+		.replace(/%y/g, "\\d{2}") // ! 年(2桁): 2桁の数字。
+		.replace(/%[Bb]/g, "\\S+月?") // ! 月名: 文字列 + 任意の"月"。
+		.replace(/%m/g, "\\d{2}") // ! 月: 2桁の数字。
+		.replace(/%d/g, "\\d{2}") // ! 日: 2桁の数字。
+		.replace(/%[Aa]/g, "\\S+曜日?") // ! 曜日名: 文字列 + 任意の"曜日"。
+		.replace(/%u/g, "\\d") // ! 曜日(1-7): 1桁の数字。
+		.replace(/%H/g, "\\d{2}") // ! 時(24時間): 2桁の数字。
+		.replace(/%I/g, "\\d{2}") // ! 時(12時間): 2桁の数字。
+		.replace(/%M/g, "\\d{2}") // ! 分: 2桁の数字。
+		.replace(/%S/g, "\\d{2}") // ! 秒: 2桁の数字。
+		.replace(/%s/g, "\\d+") // ! Unixタイムスタンプ: 数字列。
 
-	return new RegExp(pattern);
+	return new RegExp(pattern)
 }
 
-//! メモテキストからメタデータを抽出する。
+// ! メモテキストからメタデータを抽出する。
 export function parseMetadata(text: string): {
-	id: string | null;
-	timestamp: string | null;
-	category: string | null;
-	template: string | undefined;
-	deleted: boolean;
-	trashedAt: string | null;
-	pinnedAt: string | null;
-	parentId: string | null;
+	id: string | null
+	timestamp: string | null
+	category: string | null
+	template: string | undefined
+	deleted: boolean
+	trashedAt: string | null
+	pinnedAt: string | null
+	parentId: string | null
 } {
-	const commentMatch = text.match(/<!-- (.+?) -->/);
+	const commentMatch = text.match(/<!-- (.+?) -->/)
 
 	if (!commentMatch) {
 		return {
@@ -156,35 +155,35 @@ export function parseMetadata(text: string): {
 			trashedAt: null,
 			pinnedAt: null,
 			parentId: null,
-		};
+		}
 	}
 
-	const comment = commentMatch[1];
-	const idMatch = comment.match(/memo-id: ([^,]+)/);
-	const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
-	//! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
-	//! ただし、後方互換性のため、JSON形式でない場合も処理する。
-	const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`));
-	const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`));
-	const deletedMatch = comment.match(/deleted: "([^"]+)"/);
-	const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/);
-	const pinnedAtMatch = comment.match(/pinnedAt: "([^"]+)"/);
-	const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/);
+	const comment = commentMatch[1]
+	const idMatch = comment.match(/memo-id: ([^,]+)/)
+	const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/)
+	// ! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
+	// ! ただし、後方互換性のため、JSON形式でない場合も処理する。
+	const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`))
+	const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`))
+	const deletedMatch = comment.match(/deleted: "([^"]+)"/)
+	const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/)
+	const pinnedAtMatch = comment.match(/pinnedAt: "([^"]+)"/)
+	const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/)
 
-	//! categoryのパース処理（JSON形式と非JSON形式の両方に対応）。
-	let parsedCategory: string | null = null;
+	// ! categoryのパース処理（JSON形式と非JSON形式の両方に対応）。
+	let parsedCategory: string | null = null
 	if (categoryMatch) {
-		const categoryValue = categoryMatch[1].trim();
-		if (categoryValue.startsWith('"')) {
-			//! JSON形式の場合はJSON.parse。
+		const categoryValue = categoryMatch[1].trim()
+		if (categoryValue.startsWith("\"")) {
+			// ! JSON形式の場合はJSON.parse。
 			try {
-				parsedCategory = JSON.parse(categoryValue) as string;
+				parsedCategory = JSON.parse(categoryValue) as string
 			} catch (e) {
-				parsedCategory = null;
+				parsedCategory = null
 			}
 		} else {
-			//! 非JSON形式の場合はそのまま使用（後方互換性）。
-			parsedCategory = categoryValue;
+			// ! 非JSON形式の場合はそのまま使用（後方互換性）。
+			parsedCategory = categoryValue
 		}
 	}
 
@@ -197,260 +196,259 @@ export function parseMetadata(text: string): {
 		trashedAt: trashedAtMatch?.[1] || null,
 		pinnedAt: pinnedAtMatch?.[1] || null,
 		parentId: parentIdMatch?.[1].trim() || null,
-	};
+	}
 }
 
-//! メモテキストから内容を抽出する（コメントヘッダーを除く）。
+// ! メモテキストから内容を抽出する（コメントヘッダーを除く）。
 export function extractContent(text: string): string {
-	//! コメント行を削除。
-	const withoutComment = text.replace(/^<!-- .+? -->\n?/m, "");
+	// ! コメント行を削除。
+	const withoutComment = text.replace(/^<!-- .+? -->\n?/m, "")
 
-	//! 添付ファイル行を削除。
-	const withoutAttachments = withoutComment.replace(/\n\n添付: .+$/m, "");
+	// ! 添付ファイル行を削除。
+	const withoutAttachments = withoutComment.replace(/\n\n添付: .+$/m, "")
 
-	return withoutAttachments.trim();
+	return withoutAttachments.trim()
 }
 
-//! 添付ファイルを抽出する。
+// ! 添付ファイルを抽出する。
 export function extractAttachments(text: string): string[] {
-	const attachmentMatch = text.match(/添付: (.+)$/m);
+	const attachmentMatch = text.match(/添付: (.+)$/m)
 	if (!attachmentMatch) {
-		return [];
+		return []
 	}
 
-	const attachmentText = attachmentMatch[1];
-	const attachmentLinks = attachmentText.match(/\[\[([^\]]+)\]\]/g);
+	const attachmentText = attachmentMatch[1]
+	const attachmentLinks = attachmentText.match(/\[\[([^\]]+)\]\]/g)
 
 	if (!attachmentLinks) {
-		return [];
+		return []
 	}
 
-	return attachmentLinks.map((link) => link.replace(/\[\[|\]\]/g, ""));
+	return attachmentLinks.map(link => link.replace(/\[\[|\]\]/g, ""))
 }
 
-//! メモをコメントアウトする（ゴミ箱用）。
+// ! メモをコメントアウトする（ゴミ箱用）。
 export function commentOutMemo(memoText: string): string {
-	const lines = memoText.split("\n");
-	const headerLine = lines[0]; //! 最初の行がヘッダー。
-	const contentLines = lines.slice(1); //! 残りがコンテンツ。
+	const lines = memoText.split("\n")
+	const headerLine = lines[0] // ! 最初の行がヘッダー。
+	const contentLines = lines.slice(1) // ! 残りがコンテンツ。
 
-	//! コンテンツをコメントアウト。
-	const content = contentLines.join("\n").trim();
-	const commentedContent = content ? `<!--\n${content}\n-->` : "";
+	// ! コンテンツをコメントアウト。
+	const content = contentLines.join("\n").trim()
+	const commentedContent = content ? `<!--\n${content}\n-->` : ""
 
-	//! 結合。
-	return headerLine + "\n" + commentedContent;
+	// ! 結合。
+	return headerLine + "\n" + commentedContent
 }
 
-//! メモのコメントアウトを解除する（復元用）。
+// ! メモのコメントアウトを解除する（復元用）。
 export function uncommentMemo(memoText: string): string {
-	const lines = memoText.split("\n");
-	const headerLine = lines[0];
+	const lines = memoText.split("\n")
+	const headerLine = lines[0]
 
-	//! コメントアウトされたコンテンツを抽出。
-	const commentMatch = memoText.match(/<!--\n([\s\S]*?)\n-->/);
+	// ! コメントアウトされたコンテンツを抽出。
+	const commentMatch = memoText.match(/<!--\n([\s\S]*?)\n-->/)
 
 	if (!commentMatch) {
-		//! コメントアウトされていない場合はそのまま返す。
-		return memoText;
+		// ! コメントアウトされていない場合はそのまま返す。
+		return memoText
 	}
 
-	const content = commentMatch[1];
-	return headerLine + "\n" + content + "\n";
+	const content = commentMatch[1]
+	return headerLine + "\n" + content + "\n"
 }
 
-//! メモヘッダーにフラグを追加する。
+// ! メモヘッダーにフラグを追加する。
 export function addFlagToHeader(
 	memoText: string,
 	flagName: string,
-	flagValue: string
+	flagValue: string,
 ): string {
 	return memoText.replace(
 		/(<!-- memo-id: [^>]+) -->/,
-		`$1, ${flagName}: "${flagValue}" -->`
-	);
+		`$1, ${flagName}: "${flagValue}" -->`,
+	)
 }
 
-//! メモヘッダーからフラグを削除する。
+// ! メモヘッダーからフラグを削除する。
 export function removeFlagFromHeader(memoText: string, flagName: string): string {
-	const pattern = new RegExp(`, ${flagName}: "[^"]*"`, "g");
-	return memoText.replace(pattern, "");
+	const pattern = new RegExp(`, ${flagName}: "[^"]*"`, "g")
+	return memoText.replace(pattern, "")
 }
 
-//! メモが削除されているかチェックする。
+// ! メモが削除されているかチェックする。
 export function isDeletedMemo(memoText: string): boolean {
-	return /deleted: "true"/.test(memoText);
+	return /deleted: "true"/.test(memoText)
 }
 
-//! メモがピン留めされているかチェックする。
+// ! メモがピン留めされているかチェックする。
 export function isPinnedMemo(memoText: string): boolean {
-	return /pinnedAt: "/.test(memoText);
+	return /pinnedAt: "/.test(memoText)
 }
 
-//! TODOの完了状態を更新する。
+// ! TODOの完了状態を更新する。
 export function updateTodoStatus(content: string, completed: boolean): string {
-	const checkbox = completed ? "[x]" : "[ ]";
-	return content.replace(/^-\s*\[([x ])\]\s+/m, `- ${checkbox} `);
+	const checkbox = completed ? "[x]" : "[ ]"
+	return content.replace(/^-\s*\[([x ])\]\s+/m, `- ${checkbox} `)
 }
 
-//! テキスト形式からメモエントリを解析する。
+// ! テキスト形式からメモエントリを解析する。
 export function parseTextToMemo(text: string, category: string): MemoEntry | null {
-	//! 簡易的なパース実装（タイムスタンプと内容を分離）。
-	const trimmed = text.trim();
+	// ! 簡易的なパース実装（タイムスタンプと内容を分離）。
+	const trimmed = text.trim()
 	if (!trimmed) {
-		return null;
+		return null
 	}
-	const lines = trimmed.split("\n");
+	const lines = trimmed.split("\n")
 
-	//! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントから抽出。
-	const commentMatch = text.match(/<!-- (.+?) -->/);
-	let id = uuidv7();
-	let timestamp: string | null = null;
-	let parsedCategory: string | null = null;
-	let template: string | undefined = undefined;
-	let parentId: string | undefined = undefined;
+	// ! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントから抽出。
+	const commentMatch = text.match(/<!-- (.+?) -->/)
+	let id = uuidv7()
+	let timestamp: string | null = null
+	let parsedCategory: string | null = null
+	let template: string | undefined = undefined
+	let parentId: string | undefined = undefined
 
 	if (commentMatch) {
-		const comment = commentMatch[1];
-		const idMatch = comment.match(/memo-id: ([^,]+)/);
-		const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/);
-		//! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
-		//! ただし、後方互換性のため、JSON形式でない場合も処理する。
-		const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`));
-		const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`));
-		const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/);
+		const comment = commentMatch[1]
+		const idMatch = comment.match(/memo-id: ([^,]+)/)
+		const timestampMatch = comment.match(/timestamp: ([^,]+?)(?:,|$)/)
+		// ! category と template は JSON.stringify されているため、JSON_STRING_PATTERN を使用。
+		// ! ただし、後方互換性のため、JSON形式でない場合も処理する。
+		const categoryMatch = comment.match(new RegExp(`category: (${JSON_STRING_PATTERN.source}|[^,]+?)(?:,|$)`))
+		const templateMatch = comment.match(new RegExp(`template: (${JSON_STRING_PATTERN.source})(?:,|$)`))
+		const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/)
 
-		id = idMatch?.[1].trim() || uuidv7();
-		timestamp = timestampMatch?.[1].trim() || null;
-		parentId = parentIdMatch?.[1].trim() || undefined;
+		id = idMatch?.[1].trim() || uuidv7()
+		timestamp = timestampMatch?.[1].trim() || null
+		parentId = parentIdMatch?.[1].trim() || undefined
 
 		if (categoryMatch) {
-			const categoryValue = categoryMatch[1].trim();
-			if (categoryValue.startsWith('"')) {
-				//! JSON形式の場合はJSON.parse。
+			const categoryValue = categoryMatch[1].trim()
+			if (categoryValue.startsWith("\"")) {
+				// ! JSON形式の場合はJSON.parse。
 				try {
-					parsedCategory = JSON.parse(categoryValue) as string;
+					parsedCategory = JSON.parse(categoryValue) as string
 				} catch (e) {
-					parsedCategory = null;
+					parsedCategory = null
 				}
 			} else {
-				//! 非JSON形式の場合はそのまま使用（後方互換性）。
-				parsedCategory = categoryValue;
+				// ! 非JSON形式の場合はそのまま使用（後方互換性）。
+				parsedCategory = categoryValue
 			}
 		}
 
 		if (templateMatch) {
 			try {
-				template = JSON.parse(templateMatch[1].trim()) as string;
+				template = JSON.parse(templateMatch[1].trim()) as string
 			} catch (e) {
-				//! JSON.parseエラーは無視（後方互換性）。
-				//! ゴミ箱への移動処理などで不正なJSONが含まれる場合がある。
+				// ! JSON.parseエラーは無視（後方互換性）。
+				// ! ゴミ箱への移動処理などで不正なJSONが含まれる場合がある。
 			}
 		}
 	}
 
-
-	//! 削除フラグとtrashedAtタイムスタンプをmemo-idヘッダーから抽出。
-	let trashedAt: string | undefined = undefined;
+	// ! 削除フラグとtrashedAtタイムスタンプをmemo-idヘッダーから抽出。
+	let trashedAt: string | undefined = undefined
 	if (commentMatch) {
-		const comment = commentMatch[1];
-		const deletedMatch = comment.match(/deleted: "([^"]+)"/);
-		const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/);
+		const comment = commentMatch[1]
+		const deletedMatch = comment.match(/deleted: "([^"]+)"/)
+		const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/)
 		if (deletedMatch && trashedAtMatch) {
-			const isDeleted = deletedMatch[1] === "true";
+			const isDeleted = deletedMatch[1] === "true"
 			if (isDeleted) {
-				trashedAt = trashedAtMatch[1];
+				trashedAt = trashedAtMatch[1]
 			}
 		}
 	}
 
-	//! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
-	const finalCategory = parsedCategory || category;
+	// ! コメントからパースしたカテゴリがあればそれを使用、なければ引数のcategoryを使用。
+	const finalCategory = parsedCategory || category
 
-	//! HTMLコメント行をスキップ。
-	const contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0;
+	// ! HTMLコメント行をスキップ。
+	const contentStartIndex = lines[0].startsWith("<!--") ? 1 : 0
 
-	//! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
+	// ! HTMLコメントにtimestampがない場合は、見出し行から抽出（後方互換性）。
 	if (!timestamp && contentStartIndex < lines.length) {
-		const timestampLine = lines[contentStartIndex];
-		const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/);
-		timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : new Date().toISOString();
+		const timestampLine = lines[contentStartIndex]
+		const timestampMatch = timestampLine.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2})/)
+		timestamp = timestampMatch ? timestampMatch[1].replace(" ", "T") : new Date().toISOString()
 	}
 
-	//! timestampがnullの場合はデフォルト値を設定。
-	const finalTimestamp = timestamp || new Date().toISOString();
+	// ! timestampがnullの場合はデフォルト値を設定。
+	const finalTimestamp = timestamp || new Date().toISOString()
 
-	//! 本文を抽出。
-	let content: string;
+	// ! 本文を抽出。
+	let content: string
 
-	//! テンプレートに{{content}}が含まれている場合、テンプレートから{{content}}部分のみを逆算。
+	// ! テンプレートに{{content}}が含まれている場合、テンプレートから{{content}}部分のみを逆算。
 	if (template && template.includes("{{content}}")) {
-		const bodyText = lines.slice(contentStartIndex).join("\n");
+		const bodyText = lines.slice(contentStartIndex).join("\n")
 
-		//! テンプレートを{{content}}で分割。
-		const parts = template.split("{{content}}");
-		const beforeContent = parts[0] ? formatTimestamp(finalTimestamp, parts[0]) : "";
-		const afterContent = parts[1] ? formatTimestamp(finalTimestamp, parts[1]) : "";
+		// ! テンプレートを{{content}}で分割。
+		const parts = template.split("{{content}}")
+		const beforeContent = parts[0] ? formatTimestamp(finalTimestamp, parts[0]) : ""
+		const afterContent = parts[1] ? formatTimestamp(finalTimestamp, parts[1]) : ""
 
-		//! 実際のテキストから前後の部分を削除してコンテンツを抽出。
-		let extracted = bodyText;
-		let extractionSucceeded = true;
+		// ! 実際のテキストから前後の部分を削除してコンテンツを抽出。
+		let extracted = bodyText
+		let extractionSucceeded = true
 
 		if (beforeContent) {
-			//! 改行を含む場合、trimせずに正確にマッチさせる。
+			// ! 改行を含む場合、trimせずに正確にマッチさせる。
 			if (extracted.startsWith(beforeContent)) {
-				extracted = extracted.slice(beforeContent.length);
+				extracted = extracted.slice(beforeContent.length)
 			} else {
-				//! タイムゾーンの違いで逆算に失敗する場合、正規表現でマッチを試みる。
-				const beforePattern = createTemplateRegex(parts[0]);
-				const match = bodyText.match(beforePattern);
+				// ! タイムゾーンの違いで逆算に失敗する場合、正規表現でマッチを試みる。
+				const beforePattern = createTemplateRegex(parts[0])
+				const match = bodyText.match(beforePattern)
 				if (match && match[0]) {
-					extracted = bodyText.slice(match[0].length);
+					extracted = bodyText.slice(match[0].length)
 				} else {
-					extractionSucceeded = false;
+					extractionSucceeded = false
 				}
 			}
 		}
 		if (extractionSucceeded && afterContent) {
 			if (extracted.endsWith(afterContent)) {
-				extracted = extracted.slice(0, -afterContent.length);
+				extracted = extracted.slice(0, -afterContent.length)
 			} else {
-				//! 後方一致も正規表現で試みる。
-				const afterPattern = createTemplateRegex(parts[1]);
-				const match = extracted.match(new RegExp(afterPattern.source + "$"));
+				// ! 後方一致も正規表現で試みる。
+				const afterPattern = createTemplateRegex(parts[1])
+				const match = extracted.match(new RegExp(afterPattern.source + "$"))
 				if (match && match[0]) {
-					extracted = extracted.slice(0, -match[0].length);
+					extracted = extracted.slice(0, -match[0].length)
 				} else {
-					extractionSucceeded = false;
+					extractionSucceeded = false
 				}
 			}
 		}
 
 		if (extractionSucceeded) {
-			//! 先頭と末尾の空白・改行のみをtrim。
-			content = extracted.trim();
+			// ! 先頭と末尾の空白・改行のみをtrim。
+			content = extracted.trim()
 		} else {
-			//! 逆算に失敗した場合は、bodyText全体をcontentとする。
-			content = bodyText;
+			// ! 逆算に失敗した場合は、bodyText全体をcontentとする。
+			content = bodyText
 		}
 	} else {
-		//! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
-		const actualContentStartIndex = contentStartIndex + 1;
-		content = lines.slice(actualContentStartIndex).join("\n").trim();
+		// ! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
+		const actualContentStartIndex = contentStartIndex + 1
+		content = lines.slice(actualContentStartIndex).join("\n").trim()
 	}
 
-	//! コメントアウトされたコンテンツ（<!--\nCONTENT\n-->）を展開。
+	// ! コメントアウトされたコンテンツ（<!--\nCONTENT\n-->）を展開。
 	if (content.startsWith("<!--") && content.endsWith("-->")) {
-		//! HTMLコメントを削除。
-		const uncommented = content.slice(4, -3).trim();
-		content = uncommented;
+		// ! HTMLコメントを削除。
+		const uncommented = content.slice(4, -3).trim()
+		content = uncommented
 	}
 
-	//! 添付ファイルを抽出（[[filename]]形式）。
-	const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g);
+	// ! 添付ファイルを抽出（[[filename]]形式）。
+	const attachmentMatches = content.match(/\[\[([^\]]+)\]\]/g)
 	const attachments = attachmentMatches
-		? attachmentMatches.map((m) => m.replace(/\[\[|\]\]/g, ""))
-		: undefined;
+		? attachmentMatches.map(m => m.replace(/\[\[|\]\]/g, ""))
+		: undefined
 
 	return {
 		id,
@@ -461,5 +459,5 @@ export function parseTextToMemo(text: string, category: string): MemoEntry | nul
 		template,
 		trashedAt,
 		parentId,
-	};
+	}
 }

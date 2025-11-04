@@ -1,18 +1,18 @@
-import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
-import { IconPicker } from "./components/icon-picker";
-import MemologPlugin from "../../main";
-import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types";
-import { TemplateManager } from "../core/template-manager";
-import { PathGenerator } from "../utils/path-generator";
-import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar";
-import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal";
-import { RestoreBackupModal } from "./restore-modal";
-import { PathMigrator } from "../utils/path-migrator";
-import { MemologVaultHandler } from "../fs/vault-handler";
-import { MemoManager } from "../core/memo-manager";
-import { BackupManager } from "../utils/backup-manager";
+import { App, Notice, PluginSettingTab, setIcon, Setting } from "obsidian"
+import MemologPlugin from "../../main"
+import { MemoManager } from "../core/memo-manager"
+import { TemplateManager } from "../core/template-manager"
+import { MemologVaultHandler } from "../fs/vault-handler"
+import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types"
+import { BackupManager } from "../utils/backup-manager"
+import { PathGenerator } from "../utils/path-generator"
+import { PathMigrator } from "../utils/path-migrator"
+import { IconPicker } from "./components/icon-picker"
+import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal"
+import { RestoreBackupModal } from "./restore-modal"
+import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar"
 
-//! プリセットカラー定義。
+// ! プリセットカラー定義。
 const PRESET_COLORS = [
 	{ name: "青", value: "#3b82f6" },
 	{ name: "緑", value: "#22c55e" },
@@ -24,192 +24,191 @@ const PRESET_COLORS = [
 	{ name: "青緑", value: "#14b8a6" },
 	{ name: "灰", value: "#6b7280" },
 	{ name: "茶", value: "#92400e" },
-];
+]
 
-//! memolog設定タブ。
+// ! memolog設定タブ。
 export class MemologSettingTab extends PluginSettingTab {
-	plugin: MemologPlugin;
-	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-	private initialPathFormat: string = "";
-	private initialUseDirectoryCategory: boolean = false;
-	private migrationButton: HTMLButtonElement | null = null;
-	private currentActiveTab: string = "basic"; //! 現在アクティブなタブ。
-	//! 設定画面表示時の初期設定値（JSON文字列）- 将来的な変更検出・比較機能用に保持。
-	private _initialSettings: string = "";
+	plugin: MemologPlugin
+	private debounceTimers: Map<string, NodeJS.Timeout> = new Map()
+	private initialPathFormat: string = ""
+	private initialUseDirectoryCategory: boolean = false
+	private migrationButton: HTMLButtonElement | null = null
+	private currentActiveTab: string = "basic" // ! 現在アクティブなタブ。
+	// ! 設定画面表示時の初期設定値（JSON文字列）- 将来的な変更検出・比較機能用に保持。
+	private _initialSettings: string = ""
 
 	constructor(app: App, plugin: MemologPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
+		super(app, plugin)
+		this.plugin = plugin
 	}
 
-	//! debounce関数 - 連続入力時に過度な保存を防ぐ。
+	// ! debounce関数 - 連続入力時に過度な保存を防ぐ。
 	private debounce(key: string, callback: () => void | Promise<void>, delay: number = 200): void {
-		//! 既存のタイマーをクリア。
-		const existingTimer = this.debounceTimers.get(key);
+		// ! 既存のタイマーをクリア。
+		const existingTimer = this.debounceTimers.get(key)
 		if (existingTimer) {
-			clearTimeout(existingTimer);
+			clearTimeout(existingTimer)
 		}
 
-		//! 新しいタイマーをセット。
+		// ! 新しいタイマーをセット。
 		const timer = setTimeout(() => {
-			void callback();
-			this.debounceTimers.delete(key);
-		}, delay);
+			void callback()
+			this.debounceTimers.delete(key)
+		}, delay)
 
-		this.debounceTimers.set(key, timer);
+		this.debounceTimers.set(key, timer)
 	}
 
-	//! 設定を保存する（再読み込みはしない）。
+	// ! 設定を保存する（再読み込みはしない）。
 	private async saveSettings(updates: Partial<import("../types").GlobalSettings>): Promise<void> {
-		await this.plugin.settingsManager.updateGlobalSettings(updates);
-		//! 再読み込みはしない（他の入力欄の編集中の値を保持するため）。
+		await this.plugin.settingsManager.updateGlobalSettings(updates)
+		// ! 再読み込みはしない（他の入力欄の編集中の値を保持するため）。
 	}
 
-	//! 初期設定値を取得する（変更検出用）。
+	// ! 初期設定値を取得する（変更検出用）。
 	getInitialSettings(): string {
-		return this._initialSettings;
+		return this._initialSettings
 	}
 
 	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
+		const { containerEl } = this
+		containerEl.empty()
 
-		containerEl.createEl("h2", { text: "memolog 設定" });
+		containerEl.createEl("h2", { text: "memolog 設定" })
 
-		//! 初期値を保存（変更検出用）。
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		this.initialPathFormat = settings.pathFormat;
-		this.initialUseDirectoryCategory = settings.useDirectoryCategory;
-		//! 設定画面表示時の全設定値をJSON文字列として保存。
-		this._initialSettings = JSON.stringify(settings);
+		// ! 初期値を保存（変更検出用）。
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		this.initialPathFormat = settings.pathFormat
+		this.initialUseDirectoryCategory = settings.useDirectoryCategory
+		// ! 設定画面表示時の全設定値をJSON文字列として保存。
+		this._initialSettings = JSON.stringify(settings)
 
-		//! タブUIを作成。
-		this.createTabUI(containerEl);
+		// ! タブUIを作成。
+		this.createTabUI(containerEl)
 	}
 
-	//! タブUIを作成する。
+	// ! タブUIを作成する。
 	private createTabUI(containerEl: HTMLElement): void {
-		//! タブコンテナ。
-		const tabContainer = containerEl.createDiv({ cls: "memolog-settings-tab-container" });
+		// ! タブコンテナ。
+		const tabContainer = containerEl.createDiv({ cls: "memolog-settings-tab-container" })
 
-		//! タブヘッダー（タブボタン）。
-		const tabHeader = tabContainer.createDiv({ cls: "memolog-settings-tab-header" });
+		// ! タブヘッダー（タブボタン）。
+		const tabHeader = tabContainer.createDiv({ cls: "memolog-settings-tab-header" })
 
-		//! タブコンテンツエリア。
-		const tabContent = tabContainer.createDiv({ cls: "memolog-settings-tab-content" });
+		// ! タブコンテンツエリア。
+		const tabContent = tabContainer.createDiv({ cls: "memolog-settings-tab-content" })
 
-		//! タブ定義。
+		// ! タブ定義。
 		const tabs = [
 			{ id: "basic", label: "基本", render: (el: HTMLElement) => this.addBasicSettings(el) },
 			{ id: "category", label: "カテゴリ", render: (el: HTMLElement) => this.addCategorySettings(el) },
 			{ id: "trash", label: "ゴミ箱", render: (el: HTMLElement) => this.addTrashSettings(el) },
 			{ id: "advanced", label: "高度な機能", render: (el: HTMLElement) => this.addAdvancedFeaturesWithActions(el) },
-		];
+		]
 
-		//! タブボタンを作成。
-		const tabButtons: HTMLElement[] = [];
-		const tabContents: HTMLElement[] = [];
+		// ! タブボタンを作成。
+		const tabButtons: HTMLElement[] = []
+		const tabContents: HTMLElement[] = []
 
 		for (const tab of tabs) {
-			//! タブボタン。
+			// ! タブボタン。
 			const tabBtn = tabHeader.createEl("button", {
 				cls: "memolog-settings-tab-button",
 				text: tab.label,
 				attr: { "data-tab": tab.id },
-			});
-			tabButtons.push(tabBtn);
+			})
+			tabButtons.push(tabBtn)
 
-			//! タブコンテンツ。
+			// ! タブコンテンツ。
 			const tabPane = tabContent.createDiv({
 				cls: "memolog-settings-tab-pane",
 				attr: { "data-tab": tab.id },
-			});
-			tabPane.style.display = "none";
-			tabContents.push(tabPane);
+			})
+			tabPane.style.display = "none"
+			tabContents.push(tabPane)
 
-			//! タブボタンクリックイベント。
+			// ! タブボタンクリックイベント。
 			tabBtn.addEventListener("click", () => {
-				//! 全てのタブを非アクティブ化。
-				tabButtons.forEach((btn) => btn.removeClass("memolog-settings-tab-button-active"));
-				tabContents.forEach((pane) => (pane.style.display = "none"));
+				// ! 全てのタブを非アクティブ化。
+				tabButtons.forEach(btn => btn.removeClass("memolog-settings-tab-button-active"))
+				tabContents.forEach(pane => (pane.style.display = "none"))
 
-				//! クリックされたタブをアクティブ化。
-				tabBtn.addClass("memolog-settings-tab-button-active");
-				tabPane.style.display = "block";
+				// ! クリックされたタブをアクティブ化。
+				tabBtn.addClass("memolog-settings-tab-button-active")
+				tabPane.style.display = "block"
 
-				//! 現在のアクティブなタブを保存。
-				this.currentActiveTab = tab.id;
-			});
+				// ! 現在のアクティブなタブを保存。
+				this.currentActiveTab = tab.id
+			})
 		}
 
-		//! 保存されているタブをアクティブ化（または最初のタブ）。
+		// ! 保存されているタブをアクティブ化（または最初のタブ）。
 		if (tabButtons.length > 0) {
-			const activeTabIndex = tabs.findIndex(tab => tab.id === this.currentActiveTab);
-			const indexToActivate = activeTabIndex >= 0 ? activeTabIndex : 0;
+			const activeTabIndex = tabs.findIndex(tab => tab.id === this.currentActiveTab)
+			const indexToActivate = activeTabIndex >= 0 ? activeTabIndex : 0
 
-			tabButtons[indexToActivate].addClass("memolog-settings-tab-button-active");
-			tabContents[indexToActivate].style.display = "block";
+			tabButtons[indexToActivate].addClass("memolog-settings-tab-button-active")
+			tabContents[indexToActivate].style.display = "block"
 		}
 
-		//! 各タブのコンテンツをレンダリング。
+		// ! 各タブのコンテンツをレンダリング。
 		tabs.forEach((tab, index) => {
-			tab.render(tabContents[index]);
-		});
+			tab.render(tabContents[index])
+		})
 	}
 
-	//! 高度な機能とアクションボタンを追加する。
+	// ! 高度な機能とアクションボタンを追加する。
 	private addAdvancedFeaturesWithActions(containerEl: HTMLElement): void {
-		this.addAdvancedFeatures(containerEl);
-		this.addActionButtons(containerEl);
+		this.addAdvancedFeatures(containerEl)
+		this.addActionButtons(containerEl)
 	}
 
-	//! 基本設定を追加する。
+	// ! 基本設定を追加する。
 	private addBasicSettings(containerEl: HTMLElement): void {
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-
-		//! ルートディレクトリ設定。
+		// ! ルートディレクトリ設定。
 		new Setting(containerEl)
 			.setName("ルートディレクトリ")
 			.setDesc("memologファイルを保存するルートディレクトリ")
-			.addText((text) => {
+			.addText(text => {
 				text
 					.setPlaceholder("memolog")
-					.setValue(settings.rootDirectory);
+					.setValue(settings.rootDirectory)
 
 				const saveRootDirectory = async (value: string) => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						rootDirectory: value,
-					});
-				};
+					})
+				}
 
-				//! リアルタイム保存 - input イベントを監視。
+				// ! リアルタイム保存 - input イベントを監視。
 				text.inputEl.addEventListener("input", () => {
-					const value = text.inputEl.value;
+					const value = text.inputEl.value
 					this.debounce("root-directory", () => {
-						void saveRootDirectory(value);
-					});
-				});
+						void saveRootDirectory(value)
+					})
+				})
 
-				//! フォーカスが外れた時も即座に保存。
+				// ! フォーカスが外れた時も即座に保存。
 				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value;
-					const existingTimer = this.debounceTimers.get("root-directory");
+					const value = text.inputEl.value
+					const existingTimer = this.debounceTimers.get("root-directory")
 					if (existingTimer) {
-						clearTimeout(existingTimer);
-						this.debounceTimers.delete("root-directory");
+						clearTimeout(existingTimer)
+						this.debounceTimers.delete("root-directory")
 					}
-					void saveRootDirectory(value);
-				});
+					void saveRootDirectory(value)
+				})
 
-				return text;
-			});
+				return text
+			})
 
-		//! 保存単位設定。
+		// ! 保存単位設定。
 		new Setting(containerEl)
 			.setName("保存単位")
 			.setDesc("メモを保存するファイルの単位（時間の長さ順）")
-			.addDropdown((dropdown) =>
+			.addDropdown(dropdown =>
 				dropdown
 					.addOption("all", "全て1ファイル")
 					.addOption("year", "年単位")
@@ -217,55 +216,57 @@ export class MemologSettingTab extends PluginSettingTab {
 					.addOption("week", "週単位")
 					.addOption("day", "日単位")
 					.setValue(settings.saveUnit)
-					.onChange(async (value) => {
+					.onChange(async value => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							saveUnit: value as typeof settings.saveUnit,
-						});
+						})
 					})
-			);
+			)
 
-		//! ソート順設定。
+		// ! ソート順設定。
 		new Setting(containerEl)
 			.setName("ソート順")
 			.setDesc("メモの表示順序")
-			.addDropdown((dropdown) =>
+			.addDropdown(dropdown =>
 				dropdown
 					.addOption("asc", "昇順（最新が下）")
 					.addOption("desc", "降順（最新が上）")
 					.setValue(settings.order)
-					.onChange(async (value) => {
+					.onChange(async value => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							order: value as typeof settings.order,
-						});
+						})
 					})
-			);
+			)
 
-		//! ファイルパス書式設定。
+		// ! ファイルパス書式設定。
 		const pathFormatSetting = new Setting(containerEl)
 			.setName("ファイルパスの書式")
-			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%C=カテゴリ名");
+			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%C=カテゴリ名")
 
-		//! プレビュー表示領域を説明側に追加。
+		// ! プレビュー表示領域を説明側に追加。
 		const pathPreviewContainer = pathFormatSetting.descEl.createDiv({
 			cls: "memolog-template-preview-container",
 			attr: {
-				style: "margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
-			}
-		});
+				style:
+					"margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);",
+			},
+		})
 		pathPreviewContainer.createDiv({
 			text: "出力例:",
 			attr: {
-				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;"
-			}
-		});
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;",
+			},
+		})
 		const pathPreviewContent = pathPreviewContainer.createDiv({
 			cls: "memolog-template-preview-content",
 			attr: {
-				style: "white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;"
-			}
-		});
+				style:
+					"white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;",
+			},
+		})
 
-		//! パスプレビュー更新関数。
+		// ! パスプレビュー更新関数。
 		const updatePathPreview = (format: string) => {
 			try {
 				const preview = PathGenerator.generateCustomPath(
@@ -273,19 +274,19 @@ export class MemologSettingTab extends PluginSettingTab {
 					settings.categories[0]?.directory || "default",
 					format,
 					settings.useDirectoryCategory,
-					new Date()
-				);
-				pathPreviewContent.setText(preview);
+					new Date(),
+				)
+				pathPreviewContent.setText(preview)
 			} catch (error) {
-				pathPreviewContent.setText(`エラー: ${(error as Error).message}`);
+				pathPreviewContent.setText(`エラー: ${(error as Error).message}`)
 			}
-		};
+		}
 
 		const pathFormatContainer = pathFormatSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container"
-		});
+			cls: "memolog-path-format-container",
+		})
 
-		//! プリセットオプション（構造的な優先度順: /の数 < %Cの有無 < 文字列長）。
+		// ! プリセットオプション（構造的な優先度順: /の数 < %Cの有無 < 文字列長）。
 		const pathPresets = [
 			// /なし - カテゴリなし。
 			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
@@ -302,218 +303,218 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
 			// /が2つ - カテゴリあり。
 			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
-		];
+		]
 
-		//! 現在の設定値がプリセットに含まれるか確認。
-		const isPathCustom = !pathPresets.some(preset => preset.value === settings.pathFormat);
+		// ! 現在の設定値がプリセットに含まれるか確認。
+		const isPathCustom = !pathPresets.some(preset => preset.value === settings.pathFormat)
 
-		//! カスタム入力欄の初期値（設定値または空文字）。
-		let pathCustomValue = isPathCustom ? settings.pathFormat : "";
+		// ! カスタム入力欄の初期値（設定値または空文字）。
+		let pathCustomValue = isPathCustom ? settings.pathFormat : ""
 
-		//! ラジオボタングループ。
+		// ! ラジオボタングループ。
 		const pathRadioGroup = pathFormatContainer.createDiv({
-			cls: "memolog-path-format-radio-group"
-		});
+			cls: "memolog-path-format-radio-group",
+		})
 
-		//! カスタムラジオボタンと入力欄。
+		// ! カスタムラジオボタンと入力欄。
 		const pathCustomRadioItem = pathRadioGroup.createDiv({
-			cls: "memolog-path-format-radio-item"
-		});
+			cls: "memolog-path-format-radio-item",
+		})
 
 		const pathCustomRadio = pathCustomRadioItem.createEl("input", {
 			type: "radio",
 			attr: {
 				name: "path-format",
 				value: "custom",
-				id: "path-format-custom"
-			}
-		});
+				id: "path-format-custom",
+			},
+		})
 
 		if (isPathCustom) {
-			pathCustomRadio.checked = true;
+			pathCustomRadio.checked = true
 		}
 
 		const pathCustomInput = pathCustomRadioItem.createEl("input", {
 			type: "text",
 			placeholder: "%Y-%m-%d/memo.md",
 			value: pathCustomValue,
-			cls: "memolog-setting-text-input-inline"
-		});
+			cls: "memolog-setting-text-input-inline",
+		})
 
-		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
+		// ! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		pathCustomInput.addEventListener("focus", () => {
-			pathCustomRadio.checked = true;
-			pathCustomRadio.dispatchEvent(new Event("change"));
-		});
+			pathCustomRadio.checked = true
+			pathCustomRadio.dispatchEvent(new Event("change"))
+		})
 
-		//! 初期プレビューを表示。
-		updatePathPreview(settings.pathFormat);
+		// ! 初期プレビューを表示。
+		updatePathPreview(settings.pathFormat)
 
-		//! 変換ボタンのチェック関数。
+		// ! 変換ボタンのチェック関数。
 		const checkMigrationNeeded = () => {
-			const currentSettings = this.plugin.settingsManager.getGlobalSettings();
-			const hasChanged =
-				currentSettings.pathFormat !== this.initialPathFormat ||
-				currentSettings.useDirectoryCategory !== this.initialUseDirectoryCategory;
+			const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+			const hasChanged = currentSettings.pathFormat !== this.initialPathFormat ||
+				currentSettings.useDirectoryCategory !== this.initialUseDirectoryCategory
 
 			if (this.migrationButton) {
-				this.migrationButton.disabled = !hasChanged;
-				this.migrationButton.toggleClass("mod-cta", hasChanged);
+				this.migrationButton.disabled = !hasChanged
+				this.migrationButton.toggleClass("mod-cta", hasChanged)
 			}
-		};
+		}
 
-		//! プリセットラジオボタン。
+		// ! プリセットラジオボタン。
 		for (const preset of pathPresets) {
 			const radioItem = pathRadioGroup.createDiv({
-				cls: "memolog-path-format-radio-item"
-			});
+				cls: "memolog-path-format-radio-item",
+			})
 
 			const radio = radioItem.createEl("input", {
 				type: "radio",
 				attr: {
 					name: "path-format",
 					value: preset.value,
-					id: `path-format-${preset.value}`
-				}
-			});
+					id: `path-format-${preset.value}`,
+				},
+			})
 
 			if (settings.pathFormat === preset.value) {
-				radio.checked = true;
+				radio.checked = true
 			}
 
 			radioItem.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `path-format-${preset.value}`
+					for: `path-format-${preset.value}`,
 				},
-				cls: "memolog-path-format-radio-label"
-			});
+				cls: "memolog-path-format-radio-label",
+			})
 
 			radio.addEventListener("change", () => {
 				void (async () => {
 					if (radio.checked) {
-						updatePathPreview(preset.value);
+						updatePathPreview(preset.value)
 						await this.plugin.settingsManager.updateGlobalSettings({
 							pathFormat: preset.value,
-						});
-						checkMigrationNeeded();
-						//! サイドバー(カード表示)を再描画。
-						this.refreshSidebar();
+						})
+						checkMigrationNeeded()
+						// ! サイドバー(カード表示)を再描画。
+						this.refreshSidebar()
 					}
-				})();
-			});
+				})()
+			})
 		}
 
-		//! 変換ボタンを追加。
+		// ! 変換ボタンを追加。
 		const migrationSetting = new Setting(containerEl)
 			.setName("既存ファイルの変換")
 			.setDesc(
-				"ファイルパス書式を変更した場合、このボタンで既存のファイルを新しい構造に変換できます。"
-			);
+				"ファイルパス書式を変更した場合、このボタンで既存のファイルを新しい構造に変換できます。",
+			)
 
-		migrationSetting.addButton((btn) => {
-			this.migrationButton = btn.buttonEl;
+		migrationSetting.addButton(btn => {
+			this.migrationButton = btn.buttonEl
 			btn.setButtonText("ファイルを変換").onClick(async () => {
-				await this.showMigrationDialog();
-			});
-			btn.buttonEl.disabled = true;
-		});
+				await this.showMigrationDialog()
+			})
+			btn.buttonEl.disabled = true
+		})
 
-		//! リストアボタンを追加。
+		// ! リストアボタンを追加。
 		const restoreSetting = new Setting(containerEl)
 			.setName("バックアップから元に戻す")
-			.setDesc("既存ファイルの変換処理時に作成されたバックアップからファイルを元の状態に戻します。");
+			.setDesc("既存ファイルの変換処理時に作成されたバックアップからファイルを元の状態に戻します。")
 
-		restoreSetting.addButton(async (btn) => {
-			//! バックアップの存在を確認。
-			const backupManager = new BackupManager(this.app);
-			const backups = await backupManager.listBackupsWithMetadata("backup-memolog-");
+		restoreSetting.addButton(async btn => {
+			// ! バックアップの存在を確認。
+			const backupManager = new BackupManager(this.app)
+			const backups = await backupManager.listBackupsWithMetadata("backup-memolog-")
 
-			//! バックアップがない場合はボタンを無効化。
+			// ! バックアップがない場合はボタンを無効化。
 			if (backups.length === 0) {
-				btn.setButtonText("元に戻す").setDisabled(true);
+				btn.setButtonText("元に戻す").setDisabled(true)
 			} else {
 				btn.setButtonText("元に戻す").onClick(() => {
-					const settings = this.plugin.settingsManager.getGlobalSettings();
+					const settings = this.plugin.settingsManager.getGlobalSettings()
 					const modal = new RestoreBackupModal(
 						this.app,
 						settings.rootDirectory,
 						() => {
-							//! リストア後に画面を再描画。
-							this.display();
-							this.refreshSidebar();
-						}
-					);
-					modal.open();
-				});
+							// ! リストア後に画面を再描画。
+							this.display()
+							this.refreshSidebar()
+						},
+					)
+					modal.open()
+				})
 			}
-		});
+		})
 
-		//! 各pathFormat変更時に変換ボタンをチェック。
+		// ! 各pathFormat変更時に変換ボタンをチェック。
 		pathCustomRadio.addEventListener("change", () => {
 			void (async () => {
 				if (pathCustomRadio.checked) {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						pathFormat: pathCustomInput.value,
-					});
-					updatePathPreview(pathCustomInput.value);
-					checkMigrationNeeded();
-					//! サイドバー(カード表示)を再描画。
-					this.refreshSidebar();
+					})
+					updatePathPreview(pathCustomInput.value)
+					checkMigrationNeeded()
+					// ! サイドバー(カード表示)を再描画。
+					this.refreshSidebar()
 				}
-			})();
-		});
+			})()
+		})
 
 		pathCustomInput.addEventListener("input", () => {
-			pathCustomValue = pathCustomInput.value;
+			pathCustomValue = pathCustomInput.value
 			if (pathCustomRadio.checked) {
-				updatePathPreview(pathCustomInput.value);
+				updatePathPreview(pathCustomInput.value)
 				this.debounce("path-format-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						pathFormat: pathCustomInput.value,
-					});
-					checkMigrationNeeded();
-					//! サイドバー(カード表示)を再描画。
-					this.refreshSidebar();
-				});
+					})
+					checkMigrationNeeded()
+					// ! サイドバー(カード表示)を再描画。
+					this.refreshSidebar()
+				})
 			}
-		});
+		})
 
-		//! 添付ファイル保存先設定。
+		// ! 添付ファイル保存先設定。
 		const attachmentPathSetting = new Setting(containerEl)
-			.setName("添付ファイルの保存先");
+			.setName("添付ファイルの保存先")
 
-		//! 説明をDescエリアに追加（表形式）。
-		const attachmentPathDesc = attachmentPathSetting.descEl;
-		attachmentPathDesc.empty();
+		// ! 説明をDescエリアに追加（表形式）。
+		const attachmentPathDesc = attachmentPathSetting.descEl
+		attachmentPathDesc.empty()
 		attachmentPathDesc.createDiv({
-			text: "画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。"
-		});
+			text:
+				"画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます。./で始まる場合は投稿ファイルのディレクトリからの相対パス、/で始まる場合はmemologルートディレクトリからの相対パスとなります。",
+		})
 
-		//! プリセットの説明を表形式で追加。
+		// ! プリセットの説明を表形式で追加。
 		const attachmentPresetsDescTable = attachmentPathDesc.createEl("table", {
-			cls: "memolog-format-table"
-		});
-		const attachmentPresetsDescTbody = attachmentPresetsDescTable.createEl("tbody");
+			cls: "memolog-format-table",
+		})
+		const attachmentPresetsDescTbody = attachmentPresetsDescTable.createEl("tbody")
 
 		const attachmentPresetDescriptions = [
 			{ format: "./attachments", desc: "投稿ファイルと同じディレクトリ内のattachmentsフォルダ" },
 			{ format: "/attachments", desc: "memologルート直下のattachmentsフォルダ" },
 			{ format: "/attachments/%Y/%m", desc: "年月ごとにフォルダ分け (例: /attachments/2025/10)" },
 			{ format: "/attachments/%Y", desc: "年ごとにフォルダ分け (例: /attachments/2025)" },
-		];
+		]
 
 		for (const item of attachmentPresetDescriptions) {
-			const row = attachmentPresetsDescTbody.createEl("tr");
-			row.createEl("td", { text: item.format, cls: "memolog-format-code" });
-			row.createEl("td", { text: item.desc });
+			const row = attachmentPresetsDescTbody.createEl("tr")
+			row.createEl("td", { text: item.format, cls: "memolog-format-code" })
+			row.createEl("td", { text: item.desc })
 		}
 
 		const attachmentPathContainer = attachmentPathSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container"
-		});
+			cls: "memolog-path-format-container",
+		})
 
-		//! プリセットオプション（構造的な優先度順: /の数 < 文字列長）。
+		// ! プリセットオプション（構造的な優先度順: /の数 < 文字列長）。
 		const attachmentPresets = [
 			// /なし。
 			{ label: "./attachments", value: "./attachments" },
@@ -524,480 +525,494 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ label: "./attachments/%Y-%m-%d", value: "./attachments/%Y-%m-%d" },
 			// /が3つ。
 			{ label: "/attachments/%Y/%m", value: "/attachments/%Y/%m" },
-		];
+		]
 
-		//! 現在の設定値がプリセットに含まれるか確認。
-		const isAttachmentCustom = !attachmentPresets.some(preset => preset.value === settings.attachmentPath);
+		// ! 現在の設定値がプリセットに含まれるか確認。
+		const isAttachmentCustom = !attachmentPresets.some(preset => preset.value === settings.attachmentPath)
 
-		//! カスタム入力欄の初期値。
-		let attachmentCustomValue = isAttachmentCustom ? settings.attachmentPath : "";
+		// ! カスタム入力欄の初期値。
+		let attachmentCustomValue = isAttachmentCustom ? settings.attachmentPath : ""
 
-		//! ラジオボタングループ。
+		// ! ラジオボタングループ。
 		const attachmentRadioGroup = attachmentPathContainer.createDiv({
-			cls: "memolog-path-format-radio-group"
-		});
+			cls: "memolog-path-format-radio-group",
+		})
 
-		//! カスタムラジオボタンと入力欄。
+		// ! カスタムラジオボタンと入力欄。
 		const attachmentCustomRadioItem = attachmentRadioGroup.createDiv({
-			cls: "memolog-path-format-radio-item"
-		});
+			cls: "memolog-path-format-radio-item",
+		})
 
 		const attachmentCustomRadio = attachmentCustomRadioItem.createEl("input", {
 			type: "radio",
 			attr: {
 				name: "attachment-path",
 				value: "custom",
-				id: "attachment-path-custom"
-			}
-		});
+				id: "attachment-path-custom",
+			},
+		})
 
 		if (isAttachmentCustom) {
-			attachmentCustomRadio.checked = true;
+			attachmentCustomRadio.checked = true
 		}
 
 		const attachmentCustomInput = attachmentCustomRadioItem.createEl("input", {
 			type: "text",
 			placeholder: "./attachments",
 			value: attachmentCustomValue,
-			cls: "memolog-setting-text-input-inline"
-		});
+			cls: "memolog-setting-text-input-inline",
+		})
 
-		//! カスタムラジオボタンクリック時。
+		// ! カスタムラジオボタンクリック時。
 		attachmentCustomRadio.addEventListener("change", () => {
 			void (async () => {
 				if (attachmentCustomRadio.checked) {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentPath: attachmentCustomInput.value,
-					});
+					})
 				}
-			})();
-		});
+			})()
+		})
 
-		//! カスタム入力欄の入力時。
+		// ! カスタム入力欄の入力時。
 		attachmentCustomInput.addEventListener("input", () => {
-			attachmentCustomValue = attachmentCustomInput.value;
+			attachmentCustomValue = attachmentCustomInput.value
 			if (attachmentCustomRadio.checked) {
 				this.debounce("attachment-path-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentPath: attachmentCustomInput.value,
-					});
-				});
+					})
+				})
 			}
-		});
+		})
 
-		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
+		// ! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		attachmentCustomInput.addEventListener("focus", () => {
-			attachmentCustomRadio.checked = true;
-			attachmentCustomRadio.dispatchEvent(new Event("change"));
-		});
+			attachmentCustomRadio.checked = true
+			attachmentCustomRadio.dispatchEvent(new Event("change"))
+		})
 
-		//! プリセットラジオボタン。
+		// ! プリセットラジオボタン。
 		for (const preset of attachmentPresets) {
 			const radioItem = attachmentRadioGroup.createDiv({
-				cls: "memolog-path-format-radio-item"
-			});
+				cls: "memolog-path-format-radio-item",
+			})
 
 			const radio = radioItem.createEl("input", {
 				type: "radio",
 				attr: {
 					name: "attachment-path",
 					value: preset.value,
-					id: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`
-				}
-			});
+					id: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`,
+				},
+			})
 
 			if (settings.attachmentPath === preset.value) {
-				radio.checked = true;
+				radio.checked = true
 			}
 
-			const labelContainer = radioItem.createDiv({ cls: "memolog-path-format-label-container" });
+			const labelContainer = radioItem.createDiv({ cls: "memolog-path-format-label-container" })
 
 			labelContainer.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`
+					for: `attachment-path-${preset.value.replace(/[/%]/g, "-")}`,
 				},
-				cls: "memolog-path-format-radio-label"
-			});
+				cls: "memolog-path-format-radio-label",
+			})
 
 			radio.addEventListener("change", () => {
 				void (async () => {
 					if (radio.checked) {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							attachmentPath: preset.value,
-						});
+						})
 					}
-				})();
-			});
+				})()
+			})
 		}
 
-		//! 添付ファイル名書式設定。
+		// ! 添付ファイル名書式設定。
 		const attachmentNameSetting = new Setting(containerEl)
 			.setName("添付ファイル名の書式")
-			.setDesc("添付ファイルの名前を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%S=秒、%s=タイムスタンプ、%f=元ファイル名、%e=拡張子");
+			.setDesc(
+				"添付ファイルの名前を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%S=秒、%s=タイムスタンプ、%f=元ファイル名、%e=拡張子",
+			)
 
-		//! プレビュー表示領域を説明側に追加。
+		// ! プレビュー表示領域を説明側に追加。
 		const attachmentNamePreviewContainer = attachmentNameSetting.descEl.createDiv({
 			cls: "memolog-template-preview-container",
 			attr: {
-				style: "margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
-			}
-		});
+				style:
+					"margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);",
+			},
+		})
 		attachmentNamePreviewContainer.createDiv({
 			text: "出力例:",
 			attr: {
-				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;"
-			}
-		});
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;",
+			},
+		})
 		const attachmentNamePreviewContent = attachmentNamePreviewContainer.createDiv({
 			cls: "memolog-template-preview-content",
 			attr: {
-				style: "white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;"
-			}
-		});
+				style:
+					"white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;",
+			},
+		})
 
-		//! プレビュー更新関数。
+		// ! プレビュー更新関数。
 		const updateAttachmentNamePreview = (format: string) => {
 			try {
-				const now = new Date();
+				const now = new Date()
 				const examples = [
 					{ label: "クリップボード貼り付け", fileName: "image.png" },
 					{ label: "動画ファイル", fileName: "video.mp4" },
 					{ label: "PDFファイル", fileName: "document.pdf" },
-				];
+				]
 
 				const previews = examples.map(example => {
-					const generated = PathGenerator.generateAttachmentName(format, example.fileName, now);
-					return `${example.label}: ${generated}`;
-				});
+					const generated = PathGenerator.generateAttachmentName(format, example.fileName, now)
+					return `${example.label}: ${generated}`
+				})
 
-				attachmentNamePreviewContent.setText(previews.join("\n"));
+				attachmentNamePreviewContent.setText(previews.join("\n"))
 			} catch (error) {
-				attachmentNamePreviewContent.setText(`エラー: ${(error as Error).message}`);
+				attachmentNamePreviewContent.setText(`エラー: ${(error as Error).message}`)
 			}
-		};
+		}
 
 		const attachmentNameContainer = attachmentNameSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container"
-		});
+			cls: "memolog-path-format-container",
+		})
 
-		//! プリセットオプション。
+		// ! プリセットオプション。
 		const attachmentNamePresets = [
 			{ label: "pasted-%s-%f%e", value: "pasted-%s-%f%e" },
 			{ label: "%Y%m%d-%H%M%S-%f%e", value: "%Y%m%d-%H%M%S-%f%e" },
 			{ label: "%f-%s%e", value: "%f-%s%e" },
-		];
+		]
 
-		//! 現在の設定値がプリセットに含まれるか確認。
-		const isAttachmentNameCustom = !attachmentNamePresets.some(preset => preset.value === settings.attachmentNameFormat);
+		// ! 現在の設定値がプリセットに含まれるか確認。
+		const isAttachmentNameCustom = !attachmentNamePresets.some(preset => preset.value === settings.attachmentNameFormat)
 
-		//! カスタム入力欄の初期値。
-		let attachmentNameCustomValue = isAttachmentNameCustom ? settings.attachmentNameFormat : "";
+		// ! カスタム入力欄の初期値。
+		let attachmentNameCustomValue = isAttachmentNameCustom ? settings.attachmentNameFormat : ""
 
-		//! ラジオボタングループ。
+		// ! ラジオボタングループ。
 		const attachmentNameRadioGroup = attachmentNameContainer.createDiv({
-			cls: "memolog-path-format-radio-group"
-		});
+			cls: "memolog-path-format-radio-group",
+		})
 
-		//! カスタムラジオボタンと入力欄。
+		// ! カスタムラジオボタンと入力欄。
 		const attachmentNameCustomRadioItem = attachmentNameRadioGroup.createDiv({
-			cls: "memolog-path-format-radio-item"
-		});
+			cls: "memolog-path-format-radio-item",
+		})
 
 		const attachmentNameCustomRadio = attachmentNameCustomRadioItem.createEl("input", {
 			type: "radio",
 			attr: {
 				name: "attachment-name-format",
 				value: "custom",
-				id: "attachment-name-format-custom"
-			}
-		});
+				id: "attachment-name-format-custom",
+			},
+		})
 
 		if (isAttachmentNameCustom) {
-			attachmentNameCustomRadio.checked = true;
+			attachmentNameCustomRadio.checked = true
 		}
 
 		const attachmentNameCustomInput = attachmentNameCustomRadioItem.createEl("input", {
 			type: "text",
 			placeholder: "pasted-%s-%f%e",
 			value: attachmentNameCustomValue,
-			cls: "memolog-setting-text-input-inline"
-		});
+			cls: "memolog-setting-text-input-inline",
+		})
 
-		//! カスタムラジオボタンクリック時。
+		// ! カスタムラジオボタンクリック時。
 		attachmentNameCustomRadio.addEventListener("change", () => {
 			void (async () => {
 				if (attachmentNameCustomRadio.checked) {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentNameFormat: attachmentNameCustomInput.value,
-					});
-					updateAttachmentNamePreview(attachmentNameCustomInput.value);
+					})
+					updateAttachmentNamePreview(attachmentNameCustomInput.value)
 				}
-			})();
-		});
+			})()
+		})
 
-		//! カスタム入力欄の入力時。
+		// ! カスタム入力欄の入力時。
 		attachmentNameCustomInput.addEventListener("input", () => {
-			attachmentNameCustomValue = attachmentNameCustomInput.value;
+			attachmentNameCustomValue = attachmentNameCustomInput.value
 			if (attachmentNameCustomRadio.checked) {
-				updateAttachmentNamePreview(attachmentNameCustomInput.value);
+				updateAttachmentNamePreview(attachmentNameCustomInput.value)
 				this.debounce("attachment-name-format-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentNameFormat: attachmentNameCustomInput.value,
-					});
-				});
+					})
+				})
 			}
-		});
+		})
 
-		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
+		// ! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		attachmentNameCustomInput.addEventListener("focus", () => {
-			attachmentNameCustomRadio.checked = true;
-			attachmentNameCustomRadio.dispatchEvent(new Event("change"));
-		});
+			attachmentNameCustomRadio.checked = true
+			attachmentNameCustomRadio.dispatchEvent(new Event("change"))
+		})
 
-		//! プリセットラジオボタン。
+		// ! プリセットラジオボタン。
 		for (const preset of attachmentNamePresets) {
 			const radioItem = attachmentNameRadioGroup.createDiv({
-				cls: "memolog-path-format-radio-item"
-			});
+				cls: "memolog-path-format-radio-item",
+			})
 
 			const radio = radioItem.createEl("input", {
 				type: "radio",
 				attr: {
 					name: "attachment-name-format",
 					value: preset.value,
-					id: `attachment-name-format-${preset.value}`
-				}
-			});
+					id: `attachment-name-format-${preset.value}`,
+				},
+			})
 
 			if (settings.attachmentNameFormat === preset.value) {
-				radio.checked = true;
+				radio.checked = true
 			}
 
 			radioItem.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `attachment-name-format-${preset.value}`
+					for: `attachment-name-format-${preset.value}`,
 				},
-				cls: "memolog-path-format-radio-label"
-			});
+				cls: "memolog-path-format-radio-label",
+			})
 
 			radio.addEventListener("change", () => {
 				void (async () => {
 					if (radio.checked) {
-						updateAttachmentNamePreview(preset.value);
+						updateAttachmentNamePreview(preset.value)
 						await this.plugin.settingsManager.updateGlobalSettings({
 							attachmentNameFormat: preset.value,
-						});
+						})
 					}
-				})();
-			});
+				})()
+			})
 		}
 
-		//! 初期プレビューを表示。
-		updateAttachmentNamePreview(settings.attachmentNameFormat);
+		// ! 初期プレビューを表示。
+		updateAttachmentNamePreview(settings.attachmentNameFormat)
 
-		//! メモのテンプレート設定。
+		// ! メモのテンプレート設定。
 		const templateSetting = new Setting(containerEl)
-			.setName("メモのテンプレート");
+			.setName("メモのテンプレート")
 
-		//! 説明文を追加。
-		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" });
+		// ! 説明文を追加。
+		templateSetting.descEl.createDiv({ text: "メモの書式を指定します。{{content}}が実際のメモ内容に置き換えられます。" })
 		templateSetting.descEl.createDiv({
 			text: "※この書式はファイルに保存される形式です。カード形式の表示では{{content}}の内容のみが表示されます。",
-			attr: { style: "margin-top: 4px; color: var(--text-muted); font-size: 0.9em;" }
-		});
+			attr: { style: "margin-top: 4px; color: var(--text-muted); font-size: 0.9em;" },
+		})
 
 		const templateContainer = templateSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container"
-		});
+			cls: "memolog-path-format-container",
+		})
 
-		//! プリセットオプション。
+		// ! プリセットオプション。
 		const templatePresets = [
 			{ label: "{{content}}", value: "{{content}}" },
 			{ label: "# %Y-%m-%d %H:%M:%S\\n{{content}}", value: "# %Y-%m-%d %H:%M:%S\n{{content}}" },
 			{ label: "%Y/%m/%d-%H:%M:%S {{content}}", value: "%Y/%m/%d-%H:%M:%S {{content}}" },
-		];
+		]
 
-		//! 現在の設定値がプリセットに含まれるか確認。
-		const isTemplateCustom = !templatePresets.some(preset => preset.value === settings.memoTemplate);
+		// ! 現在の設定値がプリセットに含まれるか確認。
+		const isTemplateCustom = !templatePresets.some(preset => preset.value === settings.memoTemplate)
 
-		//! カスタム入力欄の初期値。
-		let templateCustomValue = isTemplateCustom ? settings.memoTemplate : "";
+		// ! カスタム入力欄の初期値。
+		let templateCustomValue = isTemplateCustom ? settings.memoTemplate : ""
 
-		//! ラジオボタングループ。
+		// ! ラジオボタングループ。
 		const templateRadioGroup = templateContainer.createDiv({
-			cls: "memolog-path-format-radio-group"
-		});
+			cls: "memolog-path-format-radio-group",
+		})
 
-		//! カスタムラジオボタンと入力欄。
+		// ! カスタムラジオボタンと入力欄。
 		const templateCustomRadioItem = templateRadioGroup.createDiv({
-			cls: "memolog-path-format-radio-item-textarea"
-		});
+			cls: "memolog-path-format-radio-item-textarea",
+		})
 
 		const templateCustomRadio = templateCustomRadioItem.createEl("input", {
 			type: "radio",
 			attr: {
 				name: "memo-template",
 				value: "custom",
-				id: "memo-template-custom"
-			}
-		});
+				id: "memo-template-custom",
+			},
+		})
 
 		if (isTemplateCustom) {
-			templateCustomRadio.checked = true;
+			templateCustomRadio.checked = true
 		}
 
 		const templateCustomInput = templateCustomRadioItem.createEl("textarea", {
 			placeholder: "# %Y-%m-%d %H:%M:%S\n{{content}}",
 			value: templateCustomValue,
-			cls: "memolog-setting-textarea-input-inline"
-		});
-		templateCustomInput.rows = 4;
+			cls: "memolog-setting-textarea-input-inline",
+		})
+		templateCustomInput.rows = 4
 
-		//! カスタムラジオボタンクリック時。
+		// ! カスタムラジオボタンクリック時。
 		templateCustomRadio.addEventListener("change", () => {
 			void (async () => {
 				if (templateCustomRadio.checked) {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						memoTemplate: templateCustomInput.value,
-					});
-					updatePreview(templateCustomInput.value);
+					})
+					updatePreview(templateCustomInput.value)
 				}
-			})();
-		});
+			})()
+		})
 
-		//! カスタム入力欄の入力時。
+		// ! カスタム入力欄の入力時。
 		templateCustomInput.addEventListener("input", () => {
-			templateCustomValue = templateCustomInput.value;
+			templateCustomValue = templateCustomInput.value
 			if (templateCustomRadio.checked) {
-				updatePreview(templateCustomInput.value);
+				updatePreview(templateCustomInput.value)
 				this.debounce("template-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						memoTemplate: templateCustomInput.value,
-					});
-				});
+					})
+				})
 			}
-		});
+		})
 
-		//! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
+		// ! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
 		templateCustomInput.addEventListener("focus", () => {
-			templateCustomRadio.checked = true;
-			templateCustomRadio.dispatchEvent(new Event("change"));
-		});
+			templateCustomRadio.checked = true
+			templateCustomRadio.dispatchEvent(new Event("change"))
+		})
 
-		//! カスタム入力欄からフォーカスが外れた時、{{content}}が含まれているかチェック。
+		// ! カスタム入力欄からフォーカスが外れた時、{{content}}が含まれているかチェック。
 		templateCustomInput.addEventListener("blur", () => {
-			let value = templateCustomInput.value.trim();
+			let value = templateCustomInput.value.trim()
 			if (!value.includes("{{content}}")) {
-				//! {{content}}が含まれていない場合は追加。
+				// ! {{content}}が含まれていない場合は追加。
 				if (value) {
-					//! 値がある場合は改行を入れて追加。
-					value = value + "\n{{content}}";
+					// ! 値がある場合は改行を入れて追加。
+					value = value + "\n{{content}}"
 				} else {
-					//! 空の場合は改行なしで追加。
-					value = "{{content}}";
+					// ! 空の場合は改行なしで追加。
+					value = "{{content}}"
 				}
-				templateCustomInput.value = value;
-				templateCustomValue = value;
+				templateCustomInput.value = value
+				templateCustomValue = value
 				if (templateCustomRadio.checked) {
-					updatePreview(value);
+					updatePreview(value)
 					void this.plugin.settingsManager.updateGlobalSettings({
 						memoTemplate: value,
-					});
+					})
 				}
 			}
-		});
+		})
 
-		//! プリセットラジオボタン。
+		// ! プリセットラジオボタン。
 		for (const preset of templatePresets) {
 			const radioItem = templateRadioGroup.createDiv({
-				cls: "memolog-path-format-radio-item"
-			});
+				cls: "memolog-path-format-radio-item",
+			})
 
 			const radio = radioItem.createEl("input", {
 				type: "radio",
 				attr: {
 					name: "memo-template",
 					value: preset.value,
-					id: `memo-template-${preset.value}`
-				}
-			});
+					id: `memo-template-${preset.value}`,
+				},
+			})
 
 			if (settings.memoTemplate === preset.value) {
-				radio.checked = true;
+				radio.checked = true
 			}
 
 			radioItem.createEl("label", {
 				text: preset.label,
 				attr: {
-					for: `memo-template-${preset.value}`
+					for: `memo-template-${preset.value}`,
 				},
-				cls: "memolog-path-format-radio-label"
-			});
+				cls: "memolog-path-format-radio-label",
+			})
 
 			radio.addEventListener("change", () => {
 				void (async () => {
 					if (radio.checked) {
-						updatePreview(preset.value);
+						updatePreview(preset.value)
 						await this.plugin.settingsManager.updateGlobalSettings({
 							memoTemplate: preset.value,
-						});
+						})
 					}
-				})();
-			});
+				})()
+			})
 		}
 
-		//! プレビュー表示領域を追加。
+		// ! プレビュー表示領域を追加。
 		const previewContainer = templateSetting.descEl.createDiv({
 			cls: "memolog-template-preview-container",
 			attr: {
-				style: "margin-top: 12px; padding: 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);"
-			}
-		});
+				style:
+					"margin-top: 12px; padding: 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);",
+			},
+		})
 		previewContainer.createDiv({
 			text: "投稿例:",
 			attr: {
-				style: "font-weight: 600; margin-bottom: 8px; color: var(--text-muted);"
-			}
-		});
+				style: "font-weight: 600; margin-bottom: 8px; color: var(--text-muted);",
+			},
+		})
 		const previewContent = previewContainer.createDiv({
 			cls: "memolog-template-preview-content",
 			attr: {
-				style: "white-space: pre-wrap; font-family: var(--font-text); line-height: 1.5; color: var(--text-normal);"
-			}
-		});
+				style: "white-space: pre-wrap; font-family: var(--font-text); line-height: 1.5; color: var(--text-normal);",
+			},
+		})
 
-		//! プレビュー更新関数。
+		// ! プレビュー更新関数。
 		const updatePreview = (template: string) => {
 			try {
-				const preview = TemplateManager.preview(template);
-				previewContent.setText(preview);
+				const preview = TemplateManager.preview(template)
+				previewContent.setText(preview)
 			} catch (error) {
-				previewContent.setText(`エラー: ${(error as Error).message}`);
+				previewContent.setText(`エラー: ${(error as Error).message}`)
 			}
-		};
+		}
 
-		//! 初期プレビューを表示。
-		updatePreview(settings.memoTemplate);
+		// ! 初期プレビューを表示。
+		updatePreview(settings.memoTemplate)
 
-		templateSetting.descEl.createEl("br");
-		templateSetting.descEl.createDiv({ text: "利用可能な書式:", cls: "setting-item-description" });
+		templateSetting.descEl.createEl("br")
+		templateSetting.descEl.createDiv({ text: "利用可能な書式:", cls: "setting-item-description" })
 
-		//! 書式コード一覧表を作成。
+		// ! 書式コード一覧表を作成。
 		const table = templateSetting.descEl.createEl("table", {
 			attr: { style: "width: 100%; margin-top: 8px; border-collapse: collapse;" },
-		});
+		})
 
-		//! ヘッダー行。
-		const thead = table.createEl("thead");
-		const headerRow = thead.createEl("tr");
-		headerRow.createEl("th", { text: "書式", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
-		headerRow.createEl("th", { text: "説明", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
-		headerRow.createEl("th", { text: "例", attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" } });
+		// ! ヘッダー行。
+		const thead = table.createEl("thead")
+		const headerRow = thead.createEl("tr")
+		headerRow.createEl("th", {
+			text: "書式",
+			attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" },
+		})
+		headerRow.createEl("th", {
+			text: "説明",
+			attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" },
+		})
+		headerRow.createEl("th", {
+			text: "例",
+			attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left;" },
+		})
 
-		//! データ行。
-		const tbody = table.createEl("tbody");
+		// ! データ行。
+		const tbody = table.createEl("tbody")
 		const formatData = [
 			{ code: "%Y", desc: "年(4桁)", example: "2025" },
 			{ code: "%y", desc: "年(2桁)", example: "25" },
@@ -1013,75 +1028,84 @@ export class MemologSettingTab extends PluginSettingTab {
 			{ code: "%M", desc: "分", example: "30" },
 			{ code: "%S", desc: "秒", example: "45" },
 			{ code: "%s", desc: "UNIX時刻", example: "1738017045" },
-		];
+		]
 
 		for (const format of formatData) {
-			const row = tbody.createEl("tr");
-			row.createEl("td", { text: format.code, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" } });
-			row.createEl("td", { text: format.desc, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px;" } });
-			row.createEl("td", { text: format.example, attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" } });
+			const row = tbody.createEl("tr")
+			row.createEl("td", {
+				text: format.code,
+				attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" },
+			})
+			row.createEl("td", {
+				text: format.desc,
+				attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px;" },
+			})
+			row.createEl("td", {
+				text: format.example,
+				attr: { style: "border: 1px solid var(--background-modifier-border); padding: 4px 8px; font-family: monospace;" },
+			})
 		}
 	}
 
-	//! ゴミ箱設定を追加する。
+	// ! ゴミ箱設定を追加する。
 	private addTrashSettings(containerEl: HTMLElement): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! ゴミ箱機能設定。
+		// ! ゴミ箱機能設定。
 		new Setting(containerEl)
 			.setName("ゴミ箱機能を有効化")
 			.setDesc("削除したメモをゴミ箱ファイルに移動します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.enableTrash).onChange(async (value) => {
+			.addToggle(toggle =>
+				toggle.setValue(settings.enableTrash).onChange(async value => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						enableTrash: value,
-					});
+					})
 				})
-			);
+			)
 
-		//! ゴミ箱保持期間設定。
+		// ! ゴミ箱保持期間設定。
 		new Setting(containerEl)
 			.setName("ゴミ箱保持期間（日数）")
 			.setDesc("ゴミ箱内のメモを保持する期間（日数）。この期間を過ぎたメモは自動的に削除されます")
-			.addText((text) =>
+			.addText(text =>
 				text
 					.setPlaceholder("30")
 					.setValue(String(settings.trashRetentionDays))
-					.onChange(async (value) => {
-						const days = parseInt(value, 10);
+					.onChange(async value => {
+						const days = parseInt(value, 10)
 						if (!isNaN(days) && days > 0) {
 							await this.plugin.settingsManager.updateGlobalSettings({
 								trashRetentionDays: days,
-							});
+							})
 						}
 					})
-			);
+			)
 
-		//! ゴミ箱タブ表示設定。
+		// ! ゴミ箱タブ表示設定。
 		new Setting(containerEl)
 			.setName("ゴミ箱タブを表示")
 			.setDesc("ゴミ箱内のメモを表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showTrashTab).onChange(async (value) => {
+			.addToggle(toggle =>
+				toggle.setValue(settings.showTrashTab).onChange(async value => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						showTrashTab: value,
-					});
-					this.refreshSidebar();
+					})
+					this.refreshSidebar()
 				})
-			);
+			)
 	}
 
-	//! 高度な機能設定を追加する。
+	// ! 高度な機能設定を追加する。
 	private addAdvancedFeatures(containerEl: HTMLElement): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! ログ設定。
-		containerEl.createEl("h4", { text: "ログ設定" });
+		// ! ログ設定。
+		containerEl.createEl("h4", { text: "ログ設定" })
 
 		new Setting(containerEl)
 			.setName("ログ出力レベル")
 			.setDesc("コンソールに出力するログのレベルを設定します")
-			.addDropdown((dropdown) =>
+			.addDropdown(dropdown =>
 				dropdown
 					.addOption("none", "なし")
 					.addOption("error", "エラーのみ")
@@ -1089,220 +1113,219 @@ export class MemologSettingTab extends PluginSettingTab {
 					.addOption("info", "情報以上")
 					.addOption("debug", "デバッグ（全て）")
 					.setValue(settings.logLevel)
-					.onChange(async (value) => {
+					.onChange(async value => {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							logLevel: value as "none" | "error" | "warn" | "info" | "debug",
-						});
-						//! Loggerのログレベルを更新。
-						const { Logger } = await import("../utils/logger");
-						Logger.setLogLevel(value as "none" | "error" | "warn" | "info" | "debug");
+						})
+						// ! Loggerのログレベルを更新。
+						const { Logger } = await import("../utils/logger")
+						Logger.setLogLevel(value as "none" | "error" | "warn" | "info" | "debug")
 					})
-			);
+			)
 
-		//! 検索履歴設定。
-		containerEl.createEl("h4", { text: "検索履歴" });
+		// ! 検索履歴設定。
+		containerEl.createEl("h4", { text: "検索履歴" })
 
 		new Setting(containerEl)
 			.setName("検索履歴を有効化")
 			.setDesc("検索履歴を保存して再利用可能にする")
-			.addToggle((toggle) =>
-				toggle.setValue(true).onChange((_value) => {
-					//! 検索履歴の有効/無効を切り替え。
-					this.plugin.refreshSidebar();
+			.addToggle(toggle =>
+				toggle.setValue(true).onChange(_value => {
+					// ! 検索履歴の有効/無効を切り替え。
+					this.plugin.refreshSidebar()
 				})
-			);
+			)
 
 		new Setting(containerEl)
 			.setName("検索履歴の最大サイズ")
 			.setDesc("保存する検索履歴の最大数（1-100）")
-			.addText((text) => {
+			.addText(text => {
 				text
 					.setPlaceholder("50")
-					.setValue(String(settings.searchHistoryMaxSize));
+					.setValue(String(settings.searchHistoryMaxSize))
 
 				const saveMaxSize = async (value: string) => {
-					const numValue = parseInt(value, 10);
+					const numValue = parseInt(value, 10)
 					if (!isNaN(numValue) && numValue >= 1 && numValue <= 100) {
 						await this.plugin.settingsManager.updateGlobalSettings({
 							searchHistoryMaxSize: numValue,
-						});
+						})
 					}
-				};
+				}
 
-				//! リアルタイム保存 - input イベントを監視。
+				// ! リアルタイム保存 - input イベントを監視。
 				text.inputEl.addEventListener("input", () => {
-					const value = text.inputEl.value;
+					const value = text.inputEl.value
 					this.debounce("search-history-max-size", async () => {
-						await saveMaxSize(value);
-					});
-				});
+						await saveMaxSize(value)
+					})
+				})
 
-				//! フォーカスが外れた時も即座に保存。
+				// ! フォーカスが外れた時も即座に保存。
 				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value;
-					const existingTimer = this.debounceTimers.get("search-history-max-size");
+					const value = text.inputEl.value
+					const existingTimer = this.debounceTimers.get("search-history-max-size")
 					if (existingTimer) {
-						clearTimeout(existingTimer);
-						this.debounceTimers.delete("search-history-max-size");
+						clearTimeout(existingTimer)
+						this.debounceTimers.delete("search-history-max-size")
 					}
-					void saveMaxSize(value);
-				});
+					void saveMaxSize(value)
+				})
 
-				return text;
-			});
-
+				return text
+			})
 	}
 
-	//! カテゴリタブのコンテンツを再描画する（ちらつき防止）。
+	// ! カテゴリタブのコンテンツを再描画する（ちらつき防止）。
 	private refreshCategoryTab(): void {
-		//! カテゴリタブのコンテンツエリアを取得。
-		const categoryPane = document.querySelector('[data-tab="category"].memolog-settings-tab-pane') as HTMLElement;
-		if (!categoryPane) return;
+		// ! カテゴリタブのコンテンツエリアを取得。
+		const categoryPane = document.querySelector("[data-tab=\"category\"].memolog-settings-tab-pane") as HTMLElement
+		if (!categoryPane) return
 
-		//! 内容をクリアして再構築。
-		categoryPane.empty();
-		this.addCategorySettings(categoryPane);
+		// ! 内容をクリアして再構築。
+		categoryPane.empty()
+		this.addCategorySettings(categoryPane)
 	}
 
-	//! カテゴリ設定を追加する。
+	// ! カテゴリ設定を追加する。
 	private addCategorySettings(containerEl: HTMLElement): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! 全カテゴリタブ表示設定。
+		// ! 全カテゴリタブ表示設定。
 		new Setting(containerEl)
 			.setName("Allタブを表示")
 			.setDesc("全カテゴリの投稿をまとめて表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showAllTab).onChange(async (value) => {
+			.addToggle(toggle =>
+				toggle.setValue(settings.showAllTab).onChange(async value => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						showAllTab: value,
-					});
-					this.refreshSidebar();
+					})
+					this.refreshSidebar()
 				})
-			);
+			)
 
-		//! ピン留めタブ表示設定。
+		// ! ピン留めタブ表示設定。
 		new Setting(containerEl)
 			.setName("ピン留めタブを表示")
 			.setDesc("ピン留めされた投稿を表示するタブを追加します")
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showPinnedTab).onChange(async (value) => {
+			.addToggle(toggle =>
+				toggle.setValue(settings.showPinnedTab).onChange(async value => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						showPinnedTab: value,
-					});
-					this.refreshSidebar();
+					})
+					this.refreshSidebar()
 				})
-			);
+			)
 
-		//! デフォルトカテゴリ設定。
+		// ! デフォルトカテゴリ設定。
 		const defaultCategorySetting = new Setting(containerEl)
 			.setName("デフォルトカテゴリ")
-			.setDesc("新規メモ作成時のデフォルトカテゴリ（行をクリックして選択）");
+			.setDesc("新規メモ作成時のデフォルトカテゴリ（行をクリックして選択）")
 
-		//! カテゴリが1つもない場合。
+		// ! カテゴリが1つもない場合。
 		if (settings.categories.length === 0) {
-			defaultCategorySetting.setDesc("カテゴリを追加してください");
-			return;
+			defaultCategorySetting.setDesc("カテゴリを追加してください")
+			return
 		}
 
-		//! デフォルトカテゴリが存在しない場合、一番上のカテゴリを選択。
-		const categoryExists = settings.categories.some((c) => c.directory === settings.defaultCategory);
+		// ! デフォルトカテゴリが存在しない場合、一番上のカテゴリを選択。
+		const categoryExists = settings.categories.some(c => c.directory === settings.defaultCategory)
 		if (!categoryExists || !settings.defaultCategory) {
-			const firstCategory = settings.categories[0];
-			//! 非同期で設定を更新（awaitしない）。
+			const firstCategory = settings.categories[0]
+			// ! 非同期で設定を更新（awaitしない）。
 			void this.plugin.settingsManager
 				.updateGlobalSettings({
 					defaultCategory: firstCategory.directory,
 				})
 				.then(() => {
-					//! 更新後にサイドバーを再描画。
-					this.refreshSidebar();
-				});
-			//! 表示用に現在の設定を更新。
-			settings.defaultCategory = firstCategory.directory;
+					// ! 更新後にサイドバーを再描画。
+					this.refreshSidebar()
+				})
+			// ! 表示用に現在の設定を更新。
+			settings.defaultCategory = firstCategory.directory
 		}
 
-		//! 表を作成。
+		// ! 表を作成。
 		const tableContainer = defaultCategorySetting.controlEl.createDiv({
 			cls: "memolog-default-category-table-container",
-		});
-		const table = tableContainer.createEl("table", { cls: "memolog-default-category-table" });
+		})
+		const table = tableContainer.createEl("table", { cls: "memolog-default-category-table" })
 
-		//! ヘッダー。
-		const thead = table.createEl("thead");
-		const headerRow = thead.createEl("tr");
-		headerRow.createEl("th", { text: "選択" });
-		headerRow.createEl("th", { text: "カテゴリ名" });
-		headerRow.createEl("th", { text: "カテゴリ表示名" });
-		headerRow.createEl("th", { text: "アイコン" });
-		headerRow.createEl("th", { text: "色" });
+		// ! ヘッダー。
+		const thead = table.createEl("thead")
+		const headerRow = thead.createEl("tr")
+		headerRow.createEl("th", { text: "選択" })
+		headerRow.createEl("th", { text: "カテゴリ名" })
+		headerRow.createEl("th", { text: "カテゴリ表示名" })
+		headerRow.createEl("th", { text: "アイコン" })
+		headerRow.createEl("th", { text: "色" })
 
-		//! ボディ。
-		const tbody = table.createEl("tbody");
+		// ! ボディ。
+		const tbody = table.createEl("tbody")
 		for (const category of settings.categories) {
-			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" });
+			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" })
 
-			//! 選択されているカテゴリをハイライト。
+			// ! 選択されているカテゴリをハイライト。
 			if (category.directory === settings.defaultCategory) {
-				row.addClass("memolog-default-category-selected");
+				row.addClass("memolog-default-category-selected")
 			}
 
-			//! ラジオボタン。
-			const radioCell = row.createEl("td");
-			const radio = radioCell.createEl("input", { type: "radio" });
-			radio.name = "default-category";
-			radio.checked = category.directory === settings.defaultCategory;
+			// ! ラジオボタン。
+			const radioCell = row.createEl("td")
+			const radio = radioCell.createEl("input", { type: "radio" })
+			radio.name = "default-category"
+			radio.checked = category.directory === settings.defaultCategory
 
-			//! カテゴリ名（ディレクトリ名）。
-			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" });
+			// ! カテゴリ名（ディレクトリ名）。
+			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" })
 
-			//! カテゴリ表示名。
-			row.createEl("td", { text: category.name });
+			// ! カテゴリ表示名。
+			row.createEl("td", { text: category.name })
 
-			//! アイコン。
-			const iconCell = row.createEl("td");
+			// ! アイコン。
+			const iconCell = row.createEl("td")
 			if (category.showIcon !== false && category.icon) {
-				setIcon(iconCell, category.icon);
-			//! アイコンの色をカテゴリの色に設定。
-			iconCell.style.color = category.color;
+				setIcon(iconCell, category.icon)
+				// ! アイコンの色をカテゴリの色に設定。
+				iconCell.style.color = category.color
 			}
 
-			//! 色。
-			const colorCell = row.createEl("td");
-			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" });
-			colorBox.style.backgroundColor = category.color;
+			// ! 色。
+			const colorCell = row.createEl("td")
+			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" })
+			colorBox.style.backgroundColor = category.color
 
-			//! 行クリックで選択。
+			// ! 行クリックで選択。
 			row.addEventListener("click", () => {
 				void (async () => {
-					//! 全ての行から選択状態を解除。
-					tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
-						r.removeClass("memolog-default-category-selected");
-						const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
-						if (radioInput) radioInput.checked = false;
-					});
+					// ! 全ての行から選択状態を解除。
+					tbody.querySelectorAll(".memolog-default-category-row").forEach(r => {
+						r.removeClass("memolog-default-category-selected")
+						const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+						if (radioInput) radioInput.checked = false
+					})
 
-					//! この行を選択。
-					row.addClass("memolog-default-category-selected");
-					radio.checked = true;
+					// ! この行を選択。
+					row.addClass("memolog-default-category-selected")
+					radio.checked = true
 
-					//! 設定を更新。
+					// ! 設定を更新。
 					await this.plugin.settingsManager.updateGlobalSettings({
 						defaultCategory: category.directory,
-					});
+					})
 
-					//! サイドバーを再描画。
-					this.refreshSidebar();
-				})();
-			});
+					// ! サイドバーを再描画。
+					this.refreshSidebar()
+				})()
+			})
 		}
-		//! カテゴリ一覧を表示。
+		// ! カテゴリ一覧を表示。
 		for (let i = 0; i < settings.categories.length; i++) {
-			this.addCategoryItem(containerEl, settings.categories[i], i);
+			this.addCategoryItem(containerEl, settings.categories[i], i)
 		}
 
-		//! カテゴリ追加ボタン。
-		new Setting(containerEl).addButton((button) =>
+		// ! カテゴリ追加ボタン。
+		new Setting(containerEl).addButton(button =>
 			button
 				.setButtonText("+ カテゴリを追加")
 				.setCta()
@@ -1312,494 +1335,498 @@ export class MemologSettingTab extends PluginSettingTab {
 						directory: "new-category",
 						color: "#3b82f6",
 						icon: "folder",
-					};
-					const updatedCategories = [...settings.categories, newCategory];
+					}
+					const updatedCategories = [...settings.categories, newCategory]
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.display();
-					this.refreshSidebar();
+					})
+					this.display()
+					this.refreshSidebar()
 				})
-		);
+		)
 	}
 
-	//! カテゴリアイテムを追加する。
+	// ! カテゴリアイテムを追加する。
 	private addCategoryItem(containerEl: HTMLElement, category: CategoryConfig, index: number): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		const categoryDiv = containerEl.createDiv({ cls: "memolog-category-setting" });
+		const categoryDiv = containerEl.createDiv({ cls: "memolog-category-setting" })
 
-		//! カテゴリ名（ディレクトリ名）。
+		// ! カテゴリ名（ディレクトリ名）。
 		const directorySetting = new Setting(categoryDiv)
 			.setName("カテゴリ名 (必須)")
-			.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
+			.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。")
 
-		directorySetting.addText((text) => {
+		directorySetting.addText(text => {
 			text
 				.setPlaceholder("directory-name")
-				.setValue(category.directory);
+				.setValue(category.directory)
 
-			//! バリデーション処理。
+			// ! バリデーション処理。
 			const validate = (value: string) => {
-				//! ディレクトリ名が空の場合はエラーメッセージを表示。
+				// ! ディレクトリ名が空の場合はエラーメッセージを表示。
 				if (!value.trim()) {
-					text.inputEl.addClass("memolog-input-error");
-					directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
+					text.inputEl.addClass("memolog-input-error")
+					directorySetting.setDesc(
+						"⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。",
+					)
 				} else {
-					text.inputEl.removeClass("memolog-input-error");
-					directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
+					text.inputEl.removeClass("memolog-input-error")
+					directorySetting.setDesc("ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。")
 				}
-			};
-
-			//! 保存処理。
-			const save = async (value: string) => {
-				const updatedCategories = [...settings.categories];
-				updatedCategories[index] = { ...updatedCategories[index], directory: value };
-				await this.saveSettings({
-					categories: updatedCategories,
-				});
-				this.refreshSidebar();
-				//! デフォルトカテゴリ選択の表を更新。
-				this.updateDefaultCategoryTable();
-			};
-
-			//! 入力時はバリデーションのみ。
-			text.inputEl.addEventListener("input", () => {
-				validate(text.inputEl.value);
-			});
-
-			//! フォーカスが外れた時に保存。
-			text.inputEl.addEventListener("blur", () => {
-				const value = text.inputEl.value;
-				validate(value);
-				void save(value);
-			});
-
-			//! 初期表示時のチェック。
-			if (!category.directory.trim()) {
-				text.inputEl.addClass("memolog-input-error");
-				directorySetting.setDesc("⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。");
 			}
 
-			return text;
-		});
+			// ! 保存処理。
+			const save = async (value: string) => {
+				const updatedCategories = [...settings.categories]
+				updatedCategories[index] = { ...updatedCategories[index], directory: value }
+				await this.saveSettings({
+					categories: updatedCategories,
+				})
+				this.refreshSidebar()
+				// ! デフォルトカテゴリ選択の表を更新。
+				this.updateDefaultCategoryTable()
+			}
 
-		//! カテゴリ表示名。
+			// ! 入力時はバリデーションのみ。
+			text.inputEl.addEventListener("input", () => {
+				validate(text.inputEl.value)
+			})
+
+			// ! フォーカスが外れた時に保存。
+			text.inputEl.addEventListener("blur", () => {
+				const value = text.inputEl.value
+				validate(value)
+				void save(value)
+			})
+
+			// ! 初期表示時のチェック。
+			if (!category.directory.trim()) {
+				text.inputEl.addClass("memolog-input-error")
+				directorySetting.setDesc(
+					"⚠️ カテゴリ名は必須です。ディレクトリでカテゴリ分離がONの時にディレクトリ名として使用されます。",
+				)
+			}
+
+			return text
+		})
+
+		// ! カテゴリ表示名。
 		new Setting(categoryDiv)
 			.setName("カテゴリ表示名 (空欄可)")
 			.setDesc("タブ表示にのみ使用されます。空欄の場合はカテゴリ名が表示されます。")
-			.addText((text) => {
+			.addText(text => {
 				text
 					.setPlaceholder("表示名")
-					.setValue(category.name);
+					.setValue(category.name)
 
-				//! 保存処理（空文字列も許容）。
+				// ! 保存処理（空文字列も許容）。
 				const save = async (value: string) => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], name: value };
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], name: value }
 					await this.saveSettings({
 						categories: updatedCategories,
-					});
-					this.refreshSidebar();
-					//! デフォルトカテゴリ選択の表を更新。
-					this.updateDefaultCategoryTable();
-				};
+					})
+					this.refreshSidebar()
+					// ! デフォルトカテゴリ選択の表を更新。
+					this.updateDefaultCategoryTable()
+				}
 
-				//! フォーカスが外れた時に保存。
+				// ! フォーカスが外れた時に保存。
 				text.inputEl.addEventListener("blur", () => {
-					void save(text.inputEl.value);
-				});
+					void save(text.inputEl.value)
+				})
 
-				return text;
-			});
+				return text
+			})
 
-		//! プリセットカラー選択。
-		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー");
+		// ! プリセットカラー選択。
+		const colorSetting = new Setting(categoryDiv).setName("プリセットカラー")
 
-		//! プリセットカラーボタンを追加。
-		const colorContainer = colorSetting.controlEl.createDiv({ cls: "memolog-color-preset-container" });
+		// ! プリセットカラーボタンを追加。
+		const colorContainer = colorSetting.controlEl.createDiv({ cls: "memolog-color-preset-container" })
 
 		for (const preset of PRESET_COLORS) {
-			const colorBtn = colorContainer.createDiv({ cls: "memolog-color-preset-btn" });
-			colorBtn.style.backgroundColor = preset.value;
-			colorBtn.setAttribute("aria-label", preset.name);
+			const colorBtn = colorContainer.createDiv({ cls: "memolog-color-preset-btn" })
+			colorBtn.style.backgroundColor = preset.value
+			colorBtn.setAttribute("aria-label", preset.name)
 			if (category.color === preset.value) {
-				colorBtn.addClass("memolog-color-preset-btn-selected");
+				colorBtn.addClass("memolog-color-preset-btn-selected")
 			}
 			colorBtn.addEventListener("click", () => {
 				void (async () => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], color: preset.value };
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], color: preset.value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.refreshCategoryTab();
-					this.updateDefaultCategoryTable();
-					this.refreshSidebar();
-				})();
-			});
+					})
+					this.refreshCategoryTab()
+					this.updateDefaultCategoryTable()
+					this.refreshSidebar()
+				})()
+			})
 		}
 
-		//! カラーコード入力（カラーピッカー + テキスト入力欄）。
+		// ! カラーコード入力（カラーピッカー + テキスト入力欄）。
 		new Setting(categoryDiv)
 			.setName("カラーコード")
-			.addColorPicker((colorPicker) =>
-				colorPicker.setValue(category.color).onChange(async (value) => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], color: value };
+			.addColorPicker(colorPicker =>
+				colorPicker.setValue(category.color).onChange(async value => {
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], color: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.refreshCategoryTab();
-					this.updateDefaultCategoryTable();
-					this.refreshSidebar();
+					})
+					this.refreshCategoryTab()
+					this.updateDefaultCategoryTable()
+					this.refreshSidebar()
 				})
 			)
-			.addText((text) => {
+			.addText(text => {
 				text
 					.setValue(category.color)
-					.setPlaceholder("#3b82f6");
+					.setPlaceholder("#3b82f6")
 
-				//! 保存処理。
+				// ! 保存処理。
 				const save = async (value: string) => {
-					//! #で始まる6桁の16進数かチェック。
+					// ! #で始まる6桁の16進数かチェック。
 					if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-						const updatedCategories = [...settings.categories];
-						updatedCategories[index] = { ...updatedCategories[index], color: value };
+						const updatedCategories = [...settings.categories]
+						updatedCategories[index] = { ...updatedCategories[index], color: value }
 						await this.saveSettings({
 							categories: updatedCategories,
-						});
-						this.refreshCategoryTab();
-						this.updateDefaultCategoryTable();
-						this.refreshSidebar();
+						})
+						this.refreshCategoryTab()
+						this.updateDefaultCategoryTable()
+						this.refreshSidebar()
 					}
-				};
+				}
 
-				//! フォーカスが外れた時に保存。
+				// ! フォーカスが外れた時に保存。
 				text.inputEl.addEventListener("blur", () => {
-					void save(text.inputEl.value);
-				});
+					void save(text.inputEl.value)
+				})
 
-				return text;
-			});
+				return text
+			})
 
-		//! アイコン選択（アイコンピッカーを使用）。
+		// ! アイコン選択（アイコンピッカーを使用）。
 		const iconSetting = new Setting(categoryDiv)
 			.setName("アイコン")
-			.setDesc("カテゴリのアイコンを選択（1000種類以上から選択可能）");
+			.setDesc("カテゴリのアイコンを選択（1000種類以上から選択可能）")
 
-		//! アイコンピッカーを作成。
+		// ! アイコンピッカーを作成。
 		const iconPickerContainer = iconSetting.controlEl.createDiv({
 			cls: "memolog-icon-picker-container",
-		});
-		iconPickerContainer.style.position = "relative";
+		})
+		iconPickerContainer.style.position = "relative"
 
 		const iconPicker = new IconPicker(iconPickerContainer, category.icon, {
 			onIconSelect: (iconName: string) => {
 				void (async () => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], icon: iconName };
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], icon: iconName }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.refreshCategoryTab();
-					this.refreshSidebar();
-				})();
+					})
+					this.refreshCategoryTab()
+					this.refreshSidebar()
+				})()
 			},
-		});
+		})
 
-		iconPicker.render();
+		iconPicker.render()
 
-		//! アイコン表示トグル。
+		// ! アイコン表示トグル。
 		new Setting(categoryDiv)
 			.setName("アイコンを表示")
 			.setDesc("このカテゴリのタブにアイコンを表示します")
-			.addToggle((toggle) =>
-				toggle.setValue(category.showIcon ?? true).onChange(async (value) => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], showIcon: value };
+			.addToggle(toggle =>
+				toggle.setValue(category.showIcon ?? true).onChange(async value => {
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], showIcon: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.refreshSidebar();
+					})
+					this.refreshSidebar()
 				})
-			);
+			)
 
-		//! TODOリストとして使用するかのトグル。
+		// ! TODOリストとして使用するかのトグル。
 		new Setting(categoryDiv)
 			.setName("TODOリストにする")
-			.setDesc("このカテゴリをTODOリストとして使用します。投稿にチェックボックスが表示され、チェックを入れると非表示になります（このカテゴリのタブ選択時のみ）。")
-			.addToggle((toggle) =>
-				toggle.setValue(category.useTodoList ?? false).onChange(async (value) => {
-					const updatedCategories = [...settings.categories];
-					updatedCategories[index] = { ...updatedCategories[index], useTodoList: value };
+			.setDesc(
+				"このカテゴリをTODOリストとして使用します。投稿にチェックボックスが表示され、チェックを入れると非表示になります（このカテゴリのタブ選択時のみ）。",
+			)
+			.addToggle(toggle =>
+				toggle.setValue(category.useTodoList ?? false).onChange(async value => {
+					const updatedCategories = [...settings.categories]
+					updatedCategories[index] = { ...updatedCategories[index], useTodoList: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
-					});
-					this.refreshSidebar();
+					})
+					this.refreshSidebar()
 				})
-			);
+			)
 
-		//! 順序変更と削除ボタン。
+		// ! 順序変更と削除ボタン。
 		new Setting(categoryDiv)
-			.addButton((button) =>
+			.addButton(button =>
 				button
 					.setButtonText("↑")
 					.setTooltip("上に移動")
 					.setDisabled(index === 0)
 					.onClick(async () => {
-						const updatedCategories = [...settings.categories];
-						//! 配列の要素を入れ替え。
-						[updatedCategories[index - 1], updatedCategories[index]] = [
+						const updatedCategories = [...settings.categories] // ! 配列の要素を入れ替え。
+						;[updatedCategories[index - 1], updatedCategories[index]] = [
 							updatedCategories[index],
 							updatedCategories[index - 1],
-						];
+						]
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
-						});
-						this.display();
-						this.refreshSidebar();
+						})
+						this.display()
+						this.refreshSidebar()
 					})
 			)
-			.addButton((button) =>
+			.addButton(button =>
 				button
 					.setButtonText("↓")
 					.setTooltip("下に移動")
 					.setDisabled(index === settings.categories.length - 1)
 					.onClick(async () => {
-						const updatedCategories = [...settings.categories];
-						//! 配列の要素を入れ替え。
-						[updatedCategories[index], updatedCategories[index + 1]] = [
+						const updatedCategories = [...settings.categories] // ! 配列の要素を入れ替え。
+						;[updatedCategories[index], updatedCategories[index + 1]] = [
 							updatedCategories[index + 1],
 							updatedCategories[index],
-						];
+						]
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
-						});
-						this.display();
-						this.refreshSidebar();
+						})
+						this.display()
+						this.refreshSidebar()
 					})
 			)
-			.addButton((button) =>
+			.addButton(button =>
 				button
 					.setButtonText("削除")
 					.setWarning()
 					.onClick(async () => {
-						const updatedCategories = settings.categories.filter((_, i) => i !== index);
+						const updatedCategories = settings.categories.filter((_, i) => i !== index)
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
-						});
-						this.display();
-						this.refreshSidebar();
+						})
+						this.display()
+						this.refreshSidebar()
 					})
-			);
+			)
 	}
 
-	//! アクションボタン（設定リセット、保存）を追加する。
+	// ! アクションボタン（設定リセット、保存）を追加する。
 	private addActionButtons(containerEl: HTMLElement): void {
-		//! ボタンコンテナ。
+		// ! ボタンコンテナ。
 		const buttonContainer = containerEl.createDiv({
-			cls: "memolog-settings-actions"
-		});
+			cls: "memolog-settings-actions",
+		})
 
-		//! 左側: 設定リセットボタン。
+		// ! 左側: 設定リセットボタン。
 		const resetContainer = buttonContainer.createDiv({
-			cls: "memolog-settings-reset-container"
-		});
+			cls: "memolog-settings-reset-container",
+		})
 
 		new Setting(resetContainer)
 			.setName("設定をリセット")
 			.setDesc("全ての設定をデフォルト値に戻します。この操作は取り消せません。")
-			.addButton((button) =>
+			.addButton(button =>
 				button
 					.setButtonText("設定をリセット")
 					.setWarning()
 					.onClick(async () => {
-						//! 確認ダイアログ。
-						const confirmed = await this.showResetConfirmDialog();
+						// ! 確認ダイアログ。
+						const confirmed = await this.showResetConfirmDialog()
 						if (confirmed) {
-							//! デフォルト設定に戻す。
+							// ! デフォルト設定に戻す。
 							await this.plugin.settingsManager.updateGlobalSettings(
-								{ ...DEFAULT_GLOBAL_SETTINGS }
-							);
-							//! 画面を再描画。
-							this.display();
-							this.refreshSidebar();
-							//! 成功通知。
-							new Notice("設定をリセットしました");
+								{ ...DEFAULT_GLOBAL_SETTINGS },
+							)
+							// ! 画面を再描画。
+							this.display()
+							this.refreshSidebar()
+							// ! 成功通知。
+							new Notice("設定をリセットしました")
 						}
 					})
-			);
+			)
 
-		//! 右側: 設定保存ボタン。
+		// ! 右側: 設定保存ボタン。
 		const saveContainer = buttonContainer.createDiv({
-			cls: "memolog-settings-save-container"
-		});
+			cls: "memolog-settings-save-container",
+		})
 
 		new Setting(saveContainer)
 			.setName("設定を保存")
 			.setDesc("設定はリアルタイムで自動保存されています。このボタンは手動で保存を確認したい場合に使用できます。")
-			.addButton((button) =>
+			.addButton(button =>
 				button
 					.setButtonText("設定を保存")
 					.setCta()
 					.onClick(async () => {
-						await this.plugin.settingsManager.saveGlobalSettings();
-						//! 成功通知。
-						new Notice("設定を保存しました");
+						await this.plugin.settingsManager.saveGlobalSettings()
+						// ! 成功通知。
+						new Notice("設定を保存しました")
 					})
-			);
+			)
 	}
 
-	//! 設定リセット確認ダイアログを表示する。
+	// ! 設定リセット確認ダイアログを表示する。
 	private async showResetConfirmDialog(): Promise<boolean> {
-		return new Promise((resolve) => {
-			//! モーダルダイアログを作成。
-			const modal = document.createElement("div");
-			modal.addClass("modal-container");
-			modal.addClass("mod-dim");
+		return new Promise(resolve => {
+			// ! モーダルダイアログを作成。
+			const modal = document.createElement("div")
+			modal.addClass("modal-container")
+			modal.addClass("mod-dim")
 
-			const modalBg = modal.createDiv({ cls: "modal-bg" });
-			const modalContent = modal.createDiv({ cls: "modal" });
+			const modalBg = modal.createDiv({ cls: "modal-bg" })
+			const modalContent = modal.createDiv({ cls: "modal" })
 
-			//! タイトル。
+			// ! タイトル。
 			modalContent.createEl("h3", {
 				text: "設定をリセットしますか？",
-				cls: "modal-title"
-			});
+				cls: "modal-title",
+			})
 
-			//! メッセージ。
+			// ! メッセージ。
 			modalContent.createEl("p", {
 				text: "全ての設定がデフォルト値に戻ります。この操作は取り消せません。",
-				cls: "modal-content"
-			});
+				cls: "modal-content",
+			})
 
-			//! ボタン群。
-			const buttonGroup = modalContent.createDiv({ cls: "modal-button-container" });
+			// ! ボタン群。
+			const buttonGroup = modalContent.createDiv({ cls: "modal-button-container" })
 
 			const cancelBtn = buttonGroup.createEl("button", {
 				text: "キャンセル",
-				cls: "mod-cta"
-			});
+				cls: "mod-cta",
+			})
 
 			const confirmBtn = buttonGroup.createEl("button", {
 				text: "リセット",
-				cls: "mod-warning"
-			});
+				cls: "mod-warning",
+			})
 
-			//! イベントリスナー。
+			// ! イベントリスナー。
 			const closeModal = () => {
-				modal.remove();
-			};
+				modal.remove()
+			}
 
 			cancelBtn.addEventListener("click", () => {
-				closeModal();
-				resolve(false);
-			});
+				closeModal()
+				resolve(false)
+			})
 
 			confirmBtn.addEventListener("click", () => {
-				closeModal();
-				resolve(true);
-			});
+				closeModal()
+				resolve(true)
+			})
 
 			modalBg.addEventListener("click", () => {
-				closeModal();
-				resolve(false);
-			});
+				closeModal()
+				resolve(false)
+			})
 
-			//! モーダルを表示。
-			document.body.appendChild(modal);
-		});
+			// ! モーダルを表示。
+			document.body.appendChild(modal)
+		})
 	}
 
-	//! サイドバーをリフレッシュする。
+	// ! サイドバーをリフレッシュする。
 	private refreshSidebar(): void {
-		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG);
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG)
 		for (const leaf of leaves) {
-			const view = leaf.view;
+			const view = leaf.view
 			if (view instanceof MemologSidebar) {
-				view.refresh();
+				view.refresh()
 			}
 		}
 	}
 
-	//! デフォルトカテゴリ選択の表を更新する。
+	// ! デフォルトカテゴリ選択の表を更新する。
 	private updateDefaultCategoryTable(): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! 既存の表を探す。
-		const table = document.querySelector(".memolog-default-category-table") as HTMLTableElement;
-		if (!table) return;
+		// ! 既存の表を探す。
+		const table = document.querySelector(".memolog-default-category-table") as HTMLTableElement
+		if (!table) return
 
-		//! tbody の内容を再生成。
-		const tbody = table.querySelector("tbody");
-		if (!tbody) return;
+		// ! tbody の内容を再生成。
+		const tbody = table.querySelector("tbody")
+		if (!tbody) return
 
-		tbody.empty();
+		tbody.empty()
 
-		//! 各カテゴリの行を再作成。
+		// ! 各カテゴリの行を再作成。
 		for (const category of settings.categories) {
-			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" });
+			const row = tbody.createEl("tr", { cls: "memolog-default-category-row" })
 
-			//! 選択されているカテゴリをハイライト。
+			// ! 選択されているカテゴリをハイライト。
 			if (category.directory === settings.defaultCategory) {
-				row.addClass("memolog-default-category-selected");
+				row.addClass("memolog-default-category-selected")
 			}
 
-			//! ラジオボタン。
-			const radioCell = row.createEl("td");
-			const radio = radioCell.createEl("input", { type: "radio" });
-			radio.name = "default-category";
-			radio.checked = category.directory === settings.defaultCategory;
+			// ! ラジオボタン。
+			const radioCell = row.createEl("td")
+			const radio = radioCell.createEl("input", { type: "radio" })
+			radio.name = "default-category"
+			radio.checked = category.directory === settings.defaultCategory
 
-			//! カテゴリ名（ディレクトリ名）。
-			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" });
+			// ! カテゴリ名（ディレクトリ名）。
+			row.createEl("td", { text: category.directory, cls: "memolog-directory-name" })
 
-			//! カテゴリ表示名。
-			row.createEl("td", { text: category.name });
+			// ! カテゴリ表示名。
+			row.createEl("td", { text: category.name })
 
-			//! アイコン。
-			const iconCell = row.createEl("td");
+			// ! アイコン。
+			const iconCell = row.createEl("td")
 			if (category.showIcon !== false && category.icon) {
-				setIcon(iconCell, category.icon);
+				setIcon(iconCell, category.icon)
 			}
 
-			//! 色。
-			const colorCell = row.createEl("td");
-			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" });
-			colorBox.style.backgroundColor = category.color;
+			// ! 色。
+			const colorCell = row.createEl("td")
+			const colorBox = colorCell.createDiv({ cls: "memolog-color-box" })
+			colorBox.style.backgroundColor = category.color
 
-			//! 行クリックで選択。
+			// ! 行クリックで選択。
 			row.addEventListener("click", () => {
 				void (async () => {
-					//! 全ての行から選択状態を解除。
-					tbody.querySelectorAll(".memolog-default-category-row").forEach((r) => {
-						r.removeClass("memolog-default-category-selected");
-						const radioInput = r.querySelector('input[type="radio"]') as HTMLInputElement;
-						if (radioInput) radioInput.checked = false;
-					});
+					// ! 全ての行から選択状態を解除。
+					tbody.querySelectorAll(".memolog-default-category-row").forEach(r => {
+						r.removeClass("memolog-default-category-selected")
+						const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+						if (radioInput) radioInput.checked = false
+					})
 
-					//! この行を選択。
-					row.addClass("memolog-default-category-selected");
-					radio.checked = true;
+					// ! この行を選択。
+					row.addClass("memolog-default-category-selected")
+					radio.checked = true
 
-					//! 設定を更新。
+					// ! 設定を更新。
 					await this.plugin.settingsManager.updateGlobalSettings({
 						defaultCategory: category.directory,
-					});
+					})
 
-					//! サイドバーを再描画。
-					this.refreshSidebar();
-				})();
-			});
+					// ! サイドバーを再描画。
+					this.refreshSidebar()
+				})()
+			})
 		}
 	}
 
-	//! メモマッピングを通常のPathMapping形式に変換（表示用）。
+	// ! メモマッピングを通常のPathMapping形式に変換（表示用）。
 	private convertMemoMappingsToPathMappings(
-		memoMappings: import("../utils/path-migrator").MemoSplitMapping[]
+		memoMappings: import("../utils/path-migrator").MemoSplitMapping[],
 	): import("../utils/path-migrator").PathMapping[] {
-		const mappings: import("../utils/path-migrator").PathMapping[] = [];
+		const mappings: import("../utils/path-migrator").PathMapping[] = []
 
 		for (const memoMapping of memoMappings) {
 			for (const [newPath, memos] of memoMapping.newPathToMemos) {
@@ -1809,42 +1836,42 @@ export class MemologSettingTab extends PluginSettingTab {
 					category: memos[0]?.category || "",
 					date: memos[0] ? new Date(memos[0].timestamp) : undefined,
 					hasConflict: memoMapping.hasConflict,
-				});
+				})
 			}
 		}
 
-		return mappings;
+		return mappings
 	}
 
-	//! マイグレーションダイアログを表示。
+	// ! マイグレーションダイアログを表示。
 	private async showMigrationDialog() {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		const vaultHandler = new MemologVaultHandler(this.app);
-		const memoManager = new MemoManager(this.app);
-		const migrator = new PathMigrator(this.app, vaultHandler, memoManager);
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		const vaultHandler = new MemologVaultHandler(this.app)
+		const memoManager = new MemoManager(this.app)
+		const migrator = new PathMigrator(this.app, vaultHandler, memoManager)
 
-		//! マイグレーション計画を作成。
-		const notice = new Notice("変換計画を作成中...", 0);
+		// ! マイグレーション計画を作成。
+		const notice = new Notice("変換計画を作成中...", 0)
 		try {
-			//! メモ分割マイグレーションを使用。
+			// ! メモ分割マイグレーションを使用。
 			const memoMappings = await migrator.planMemoSplitMigration(
 				settings.rootDirectory,
 				settings.pathFormat,
 				settings.useDirectoryCategory,
-				settings.defaultCategory
-			);
+				settings.defaultCategory,
+			)
 
-			notice.hide();
+			notice.hide()
 
 			if (memoMappings.length === 0) {
-				new Notice("変換対象のファイルがありません。");
-				return;
+				new Notice("変換対象のファイルがありません。")
+				return
 			}
 
-			//! メモマッピングを通常のPathMapping形式に変換（モーダル表示用）。
-			const displayMappings = this.convertMemoMappingsToPathMappings(memoMappings);
+			// ! メモマッピングを通常のPathMapping形式に変換（モーダル表示用）。
+			const displayMappings = this.convertMemoMappingsToPathMappings(memoMappings)
 
-			//! 確認モーダルを表示。
+			// ! 確認モーダルを表示。
 			const modal = new MigrationConfirmModal(
 				this.app,
 				settings.rootDirectory,
@@ -1853,47 +1880,47 @@ export class MemologSettingTab extends PluginSettingTab {
 				settings.pathFormat,
 				this.plugin.settingsManager,
 				async (createBackup: boolean) => {
-					const progressNotice = new Notice("ファイルを変換中...", 0);
+					const progressNotice = new Notice("ファイルを変換中...", 0)
 
 					try {
-						//! メモ分割マイグレーションを実行。
+						// ! メモ分割マイグレーションを実行。
 						const result = await migrator.executeMemoSplitMigration(
 							memoMappings,
-							createBackup
-						);
+							createBackup,
+						)
 
-						progressNotice.hide();
+						progressNotice.hide()
 
-						//! 結果を表示。
-						const resultModal = new MigrationResultModal(this.app, result);
-						resultModal.open();
+						// ! 結果を表示。
+						const resultModal = new MigrationResultModal(this.app, result)
+						resultModal.open()
 
-						//! 成功した場合は初期値を更新。
+						// ! 成功した場合は初期値を更新。
 						if (result.successCount > 0) {
-							this.initialPathFormat = settings.pathFormat;
-							this.initialUseDirectoryCategory = settings.useDirectoryCategory;
+							this.initialPathFormat = settings.pathFormat
+							this.initialUseDirectoryCategory = settings.useDirectoryCategory
 
-							//! 変換ボタンを無効化。
+							// ! 変換ボタンを無効化。
 							if (this.migrationButton) {
-								this.migrationButton.disabled = true;
-								this.migrationButton.removeClass("mod-cta");
+								this.migrationButton.disabled = true
+								this.migrationButton.removeClass("mod-cta")
 							}
 						}
 					} catch (error) {
-						progressNotice.hide();
+						progressNotice.hide()
 						new Notice(
-							`❌ 変換エラー: ${error instanceof Error ? error.message : "Unknown error"}`
-						);
+							`❌ 変換エラー: ${error instanceof Error ? error.message : "Unknown error"}`,
+						)
 					}
-				}
-			);
+				},
+			)
 
-			modal.open();
+			modal.open()
 		} catch (error) {
-			notice.hide();
+			notice.hide()
 			new Notice(
-				`❌ 計画作成エラー: ${error instanceof Error ? error.message : "Unknown error"}`
-			);
+				`❌ 計画作成エラー: ${error instanceof Error ? error.message : "Unknown error"}`,
+			)
 		}
 	}
 }

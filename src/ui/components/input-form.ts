@@ -1,106 +1,105 @@
-import { setIcon } from "obsidian";
-import { debounce } from "../../utils/performance";
-import { getErrorHandler, FileIOError } from "../../core/error-handler";
-import { notify } from "../../utils/notification-manager";
+import { setIcon } from "obsidian"
+import { FileIOError, getErrorHandler } from "../../core/error-handler"
+import { notify } from "../../utils/notification-manager"
+import { debounce } from "../../utils/performance"
 
-//! 入力フォームのイベントハンドラー。
+// ! 入力フォームのイベントハンドラー。
 export interface InputFormHandlers {
-	//! 送信時のハンドラー。
-	onSubmit?: (content: string, attachments: string[]) => void;
+	// ! 送信時のハンドラー。
+	onSubmit?: (content: string, attachments: string[]) => void
 
-	//! 入力変更時のハンドラー（debounce適用済み）。
-	onChange?: (content: string) => void;
+	// ! 入力変更時のハンドラー（debounce適用済み）。
+	onChange?: (content: string) => void
 
-	//! 画像ペースト時のハンドラー（Markdownリンクを返す）。
-	onImagePaste?: (file: File) => Promise<string | null>;
+	// ! 画像ペースト時のハンドラー（Markdownリンクを返す）。
+	onImagePaste?: (file: File) => Promise<string | null>
 
-	//! 返信モードキャンセル時のハンドラー。
-	onCancelReply?: () => void;
+	// ! 返信モードキャンセル時のハンドラー。
+	onCancelReply?: () => void
 }
 
-//! 入力フォームコンポーネント。
+// ! 入力フォームコンポーネント。
 export class InputForm {
-	private container: HTMLElement;
-	private handlers: InputFormHandlers;
-	private textarea: HTMLTextAreaElement | null = null;
-	private attachmentsList: HTMLElement | null = null;
-	private selectedFiles: File[] = [];
-	private errorHandler = getErrorHandler();
-	private debouncedOnChange: ((content: string) => void) | null = null;
-	private replyContext: HTMLElement | null = null;
-	private isReplyMode = false;
-	private replyToMemoId: string | null = null;
-	private replyToContent: string | null = null;
+	private container: HTMLElement
+	private handlers: InputFormHandlers
+	private textarea: HTMLTextAreaElement | null = null
+	private attachmentsList: HTMLElement | null = null
+	private selectedFiles: File[] = []
+	private errorHandler = getErrorHandler()
+	private debouncedOnChange: ((content: string) => void) | null = null
+	private replyContext: HTMLElement | null = null
+	private isReplyMode = false
+	private replyToMemoId: string | null = null
+	private replyToContent: string | null = null
 
 	constructor(container: HTMLElement, handlers: InputFormHandlers = {}) {
-		this.container = container;
-		this.handlers = handlers;
+		this.container = container
+		this.handlers = handlers
 
-		//! onChange ハンドラーにdebounceを適用。
+		// ! onChange ハンドラーにdebounceを適用。
 		if (handlers.onChange) {
-			this.debouncedOnChange = debounce(handlers.onChange, 300);
+			this.debouncedOnChange = debounce(handlers.onChange, 300)
 		}
 	}
 
-	//! フォームを描画する。
+	// ! フォームを描画する。
 	render(): void {
-		//! コンテナをクリア。
-		this.container.empty();
+		// ! コンテナをクリア。
+		this.container.empty()
 
-		//! 返信コンテキストエリア（返信モード時のみ表示）。
+		// ! 返信コンテキストエリア（返信モード時のみ表示）。
 		if (this.isReplyMode && this.replyToContent) {
-			this.replyContext = this.container.createDiv({ cls: "memolog-reply-context" });
+			this.replyContext = this.container.createDiv({ cls: "memolog-reply-context" })
 
-			const contextHeader = this.replyContext.createDiv({ cls: "memolog-reply-context-header" });
+			const contextHeader = this.replyContext.createDiv({ cls: "memolog-reply-context-header" })
 			contextHeader.createSpan({
 				cls: "memolog-reply-context-label",
 				text: "返信先:",
-			});
+			})
 
 			const cancelBtn = contextHeader.createEl("button", {
 				cls: "memolog-reply-cancel-btn",
 				attr: { "aria-label": "返信をキャンセル" },
-			});
-			setIcon(cancelBtn, "x");
+			})
+			setIcon(cancelBtn, "x")
 			cancelBtn.addEventListener("click", () => {
-				this.exitReplyMode();
-			});
+				this.exitReplyMode()
+			})
 
-			//! 親メモの内容を表示（最初の50文字）。
-			const truncatedContent =
-				this.replyToContent.length > 50
-					? this.replyToContent.substring(0, 50) + "..."
-					: this.replyToContent;
+			// ! 親メモの内容を表示（最初の50文字）。
+			const truncatedContent = this.replyToContent.length > 50
+				? this.replyToContent.substring(0, 50) + "..."
+				: this.replyToContent
 			this.replyContext.createDiv({
 				cls: "memolog-reply-context-content",
 				text: truncatedContent,
-			});
+			})
 		}
 
-		//! テキストエリア。
+		// ! テキストエリア。
 		this.textarea = this.container.createEl("textarea", {
 			cls: "memolog-input",
 			attr: {
 				placeholder: this.isReplyMode ? "返信を入力..." : "メモを入力...",
 				rows: "3",
 			},
-		});
+		})
 
-		//! 添付ファイル一覧。
-		this.attachmentsList = this.container.createDiv({ cls: "memolog-attachments-list" });
+		// ! 添付ファイル一覧。
+		this.attachmentsList = this.container.createDiv({ cls: "memolog-attachments-list" })
 
-		//! ボタン群。
-		const buttonBar = this.container.createDiv({ cls: "memolog-input-buttons" });
+		// ! ボタン群。
+		const buttonBar = this.container.createDiv({ cls: "memolog-input-buttons" })
 
-		//! 添付ボタン（アイコンのみ）。
+		// ! 添付ボタン（アイコンのみ）。
 		const attachBtn = buttonBar.createEl("button", {
 			cls: "memolog-attach-btn",
 			attr: { "aria-label": "ファイルを添付" },
-		});
-		const attachIcon = attachBtn.createDiv({ cls: "memolog-attach-icon" });
-		setIcon(attachIcon, "paperclip");
+		})
+		const attachIcon = attachBtn.createDiv({ cls: "memolog-attach-icon" })
+		setIcon(attachIcon, "paperclip")
 
-		//! ファイル入力（非表示）。
+		// ! ファイル入力（非表示）。
 		const fileInput = buttonBar.createEl("input", {
 			type: "file",
 			cls: "memolog-file-input",
@@ -108,283 +107,281 @@ export class InputForm {
 				multiple: "true",
 				accept: "image/*,video/*,audio/*,.pdf,.txt,.md",
 			},
-		});
+		})
 
-		//! 添付ボタンクリックでファイル選択。
+		// ! 添付ボタンクリックでファイル選択。
 		attachBtn.addEventListener("click", () => {
-			fileInput.click();
-		});
+			fileInput.click()
+		})
 
-		//! ファイル選択時の処理。
+		// ! ファイル選択時の処理。
 		fileInput.addEventListener("change", () => {
 			if (fileInput.files) {
-				void this.handleFileSelect(fileInput.files);
-				fileInput.value = "";
+				void this.handleFileSelect(fileInput.files)
+				fileInput.value = ""
 			}
-		});
+		})
 
-		//! 送信ボタン（POSTアイコン）。
+		// ! 送信ボタン（POSTアイコン）。
 		const submitBtn = buttonBar.createEl("button", {
 			cls: "memolog-submit-btn",
 			attr: { "aria-label": "メモを追加" },
-		});
-		const submitIcon = submitBtn.createDiv({ cls: "memolog-submit-icon" });
-		setIcon(submitIcon, "send");
+		})
+		const submitIcon = submitBtn.createDiv({ cls: "memolog-submit-icon" })
+		setIcon(submitIcon, "send")
 
-		//! 送信ボタンのイベント。
+		// ! 送信ボタンのイベント。
 		submitBtn.addEventListener("click", () => {
-			this.handleSubmit();
-		});
+			this.handleSubmit()
+		})
 
-		//! Shift+Enterで送信（Ctrl+EnterはObsidian側の制約により動作しない）。
-		this.textarea.addEventListener("keydown", (e) => {
+		// ! Shift+Enterで送信（Ctrl+EnterはObsidian側の制約により動作しない）。
+		this.textarea.addEventListener("keydown", e => {
 			if (e.shiftKey && e.key === "Enter") {
-				this.handleSubmit();
-				e.preventDefault();
+				this.handleSubmit()
+				e.preventDefault()
 			}
-		});
+		})
 
-		//! 入力変更時のイベント（debounce適用済み）。
+		// ! 入力変更時のイベント（debounce適用済み）。
 		if (this.debouncedOnChange) {
 			this.textarea.addEventListener("input", () => {
 				if (this.textarea && this.debouncedOnChange) {
-					this.debouncedOnChange(this.textarea.value);
+					this.debouncedOnChange(this.textarea.value)
 				}
-			});
+			})
 		}
 
-		//! 画像ペーストイベント。
-		this.textarea.addEventListener("paste", (e) => {
-			void this.handlePaste(e);
-		});
+		// ! 画像ペーストイベント。
+		this.textarea.addEventListener("paste", e => {
+			void this.handlePaste(e)
+		})
 
-		//! 添付ファイルリストの初期状態を設定（非表示）。
-		this.renderAttachments();
+		// ! 添付ファイルリストの初期状態を設定（非表示）。
+		this.renderAttachments()
 	}
 
-	//! ペースト処理（画像の場合はファイルとして保存）。
+	// ! ペースト処理（画像の場合はファイルとして保存）。
 	private async handlePaste(e: ClipboardEvent): Promise<void> {
 		try {
 			if (!e.clipboardData || !this.textarea) {
-				return;
+				return
 			}
 
-			const items = e.clipboardData.items;
+			const items = e.clipboardData.items
 			for (let i = 0; i < items.length; i++) {
-				const item = items[i];
-				//! 画像ファイルの場合。
+				const item = items[i]
+				// ! 画像ファイルの場合。
 				if (item.type.startsWith("image/")) {
-					e.preventDefault();
+					e.preventDefault()
 
-					const file = item.getAsFile();
+					const file = item.getAsFile()
 					if (!file) {
-						continue;
+						continue
 					}
 
-					//! onImagePasteハンドラーを呼び出してMarkdownリンクを取得。
+					// ! onImagePasteハンドラーを呼び出してMarkdownリンクを取得。
 					if (this.handlers.onImagePaste) {
-						const markdownLink = await this.handlers.onImagePaste(file);
+						const markdownLink = await this.handlers.onImagePaste(file)
 						if (markdownLink && this.textarea) {
-							//! カーソル位置にMarkdownリンクを挿入。
-							const start = this.textarea.selectionStart;
-							const end = this.textarea.selectionEnd;
-							const currentValue = this.textarea.value;
-							const newValue =
-								currentValue.substring(0, start) +
+							// ! カーソル位置にMarkdownリンクを挿入。
+							const start = this.textarea.selectionStart
+							const end = this.textarea.selectionEnd
+							const currentValue = this.textarea.value
+							const newValue = currentValue.substring(0, start) +
 								markdownLink +
-								currentValue.substring(end);
-							this.textarea.value = newValue;
-							//! カーソル位置を更新。
-							const newCursorPos = start + markdownLink.length;
-							this.textarea.setSelectionRange(newCursorPos, newCursorPos);
-							this.textarea.focus();
+								currentValue.substring(end)
+							this.textarea.value = newValue
+							// ! カーソル位置を更新。
+							const newCursorPos = start + markdownLink.length
+							this.textarea.setSelectionRange(newCursorPos, newCursorPos)
+							this.textarea.focus()
 						}
 					}
-					break;
+					break
 				}
 			}
 		} catch (error) {
 			this.errorHandler.handle(error as Error, {
 				context: "InputForm.handlePaste",
-			});
+			})
 		}
 	}
 
-	//! ファイル選択処理。
+	// ! ファイル選択処理。
 	private async handleFileSelect(files: FileList): Promise<void> {
 		try {
-			//! ファイルサイズチェック（10MB制限）。
-			const MAX_FILE_SIZE = 10 * 1024 * 1024;
+			// ! ファイルサイズチェック（10MB制限）。
+			const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 			for (let i = 0; i < files.length; i++) {
-				const file = files[i];
+				const file = files[i]
 				if (file) {
 					if (file.size > MAX_FILE_SIZE) {
 						throw new FileIOError(
 							`ファイルサイズが大きすぎます: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
-							{ filename: file.name, size: file.size, maxSize: MAX_FILE_SIZE }
-						);
+							{ filename: file.name, size: file.size, maxSize: MAX_FILE_SIZE },
+						)
 					}
 
-					//! 画像ファイルの場合は自動的に保存してMarkdownリンクを挿入。
+					// ! 画像ファイルの場合は自動的に保存してMarkdownリンクを挿入。
 					if (file.type.startsWith("image/") && this.handlers.onImagePaste && this.textarea) {
-						const markdownLink = await this.handlers.onImagePaste(file);
+						const markdownLink = await this.handlers.onImagePaste(file)
 						if (markdownLink) {
-							//! カーソル位置にMarkdownリンクを挿入。
-							const start = this.textarea.selectionStart;
-							const end = this.textarea.selectionEnd;
-							const currentValue = this.textarea.value;
-							const newValue =
-								currentValue.substring(0, start) +
+							// ! カーソル位置にMarkdownリンクを挿入。
+							const start = this.textarea.selectionStart
+							const end = this.textarea.selectionEnd
+							const currentValue = this.textarea.value
+							const newValue = currentValue.substring(0, start) +
 								markdownLink +
 								"\n" +
-								currentValue.substring(end);
-							this.textarea.value = newValue;
-							//! カーソル位置を更新。
-							const newCursorPos = start + markdownLink.length + 1;
-							this.textarea.setSelectionRange(newCursorPos, newCursorPos);
-							this.textarea.focus();
+								currentValue.substring(end)
+							this.textarea.value = newValue
+							// ! カーソル位置を更新。
+							const newCursorPos = start + markdownLink.length + 1
+							this.textarea.setSelectionRange(newCursorPos, newCursorPos)
+							this.textarea.focus()
 						}
 					} else {
-						//! 画像以外のファイルは添付リストに追加。
-						this.selectedFiles.push(file);
+						// ! 画像以外のファイルは添付リストに追加。
+						this.selectedFiles.push(file)
 					}
 				}
 			}
-			this.renderAttachments();
+			this.renderAttachments()
 		} catch (error) {
 			this.errorHandler.handle(error as Error, {
 				context: "InputForm.handleFileSelect",
-			});
+			})
 		}
 	}
 
-	//! 添付ファイル一覧を描画する。
+	// ! 添付ファイル一覧を描画する。
 	private renderAttachments(): void {
-		if (!this.attachmentsList) return;
+		if (!this.attachmentsList) return
 
-		this.attachmentsList.empty();
+		this.attachmentsList.empty()
 
 		if (this.selectedFiles.length === 0) {
-			this.attachmentsList.hide();
-			return;
+			this.attachmentsList.hide()
+			return
 		}
 
-		this.attachmentsList.show();
+		this.attachmentsList.show()
 
 		for (let i = 0; i < this.selectedFiles.length; i++) {
-			const file = this.selectedFiles[i];
-			const item = this.attachmentsList.createDiv({ cls: "memolog-attachment-item" });
+			const file = this.selectedFiles[i]
+			const item = this.attachmentsList.createDiv({ cls: "memolog-attachment-item" })
 
-			//! ファイル名。
+			// ! ファイル名。
 			item.createSpan({
 				cls: "memolog-attachment-name",
 				text: file.name,
-			});
+			})
 
-			//! 削除ボタン。
-			const removeBtn = item.createDiv({ cls: "memolog-attachment-remove" });
-			setIcon(removeBtn, "x");
+			// ! 削除ボタン。
+			const removeBtn = item.createDiv({ cls: "memolog-attachment-remove" })
+			setIcon(removeBtn, "x")
 			removeBtn.addEventListener("click", () => {
-				this.removeFile(i);
-			});
+				this.removeFile(i)
+			})
 		}
 	}
 
-	//! ファイルを削除する。
+	// ! ファイルを削除する。
 	private removeFile(index: number): void {
-		this.selectedFiles.splice(index, 1);
-		this.renderAttachments();
+		this.selectedFiles.splice(index, 1)
+		this.renderAttachments()
 	}
 
-	//! 送信処理。
+	// ! 送信処理。
 	private handleSubmit(): void {
 		try {
-			if (!this.textarea) return;
+			if (!this.textarea) return
 
-			const content = this.textarea.value.trim();
+			const content = this.textarea.value.trim()
 			if (!content && this.selectedFiles.length === 0) {
-				notify.info("メモ内容を入力してください");
-				return;
+				notify.info("メモ内容を入力してください")
+				return
 			}
 
 			if (this.handlers.onSubmit) {
-				//! ファイル名のみを渡す（実際のファイルコピーはsidebarで処理）。
-				const attachmentNames = this.selectedFiles.map((f) => f.name);
-				this.handlers.onSubmit(content, attachmentNames);
-				this.clear();
+				// ! ファイル名のみを渡す（実際のファイルコピーはsidebarで処理）。
+				const attachmentNames = this.selectedFiles.map(f => f.name)
+				this.handlers.onSubmit(content, attachmentNames)
+				this.clear()
 			}
 		} catch (error) {
 			this.errorHandler.handle(error as Error, {
 				context: "InputForm.handleSubmit",
-			});
+			})
 		}
 	}
 
-	//! 入力欄をクリアする。
+	// ! 入力欄をクリアする。
 	clear(): void {
 		if (this.textarea) {
-			this.textarea.value = "";
+			this.textarea.value = ""
 		}
-		this.selectedFiles = [];
-		this.renderAttachments();
+		this.selectedFiles = []
+		this.renderAttachments()
 	}
 
-	//! 選択されたファイルを取得する。
+	// ! 選択されたファイルを取得する。
 	getSelectedFiles(): File[] {
-		return this.selectedFiles;
+		return this.selectedFiles
 	}
 
-	//! 入力欄にフォーカスする。
+	// ! 入力欄にフォーカスする。
 	focus(): void {
 		if (this.textarea) {
-			this.textarea.focus();
+			this.textarea.focus()
 		}
 	}
 
-	//! 入力内容を取得する。
+	// ! 入力内容を取得する。
 	getValue(): string {
-		return this.textarea ? this.textarea.value : "";
+		return this.textarea ? this.textarea.value : ""
 	}
 
-	//! 入力内容を設定する。
+	// ! 入力内容を設定する。
 	setValue(value: string): void {
 		if (this.textarea) {
-			this.textarea.value = value;
+			this.textarea.value = value
 		}
 	}
 
-	//! 返信モードを開始する。
+	// ! 返信モードを開始する。
 	enterReplyMode(memoId: string, content: string): void {
-		this.isReplyMode = true;
-		this.replyToMemoId = memoId;
-		this.replyToContent = content;
-		this.render();
-		//! テキストエリアにフォーカス。
+		this.isReplyMode = true
+		this.replyToMemoId = memoId
+		this.replyToContent = content
+		this.render()
+		// ! テキストエリアにフォーカス。
 		if (this.textarea) {
-			this.textarea.focus();
+			this.textarea.focus()
 		}
 	}
 
-	//! 返信モードを終了する。
+	// ! 返信モードを終了する。
 	exitReplyMode(): void {
-		this.isReplyMode = false;
-		this.replyToMemoId = null;
-		this.replyToContent = null;
-		this.render();
-		//! ハンドラーを呼び出す。
+		this.isReplyMode = false
+		this.replyToMemoId = null
+		this.replyToContent = null
+		this.render()
+		// ! ハンドラーを呼び出す。
 		if (this.handlers.onCancelReply) {
-			this.handlers.onCancelReply();
+			this.handlers.onCancelReply()
 		}
 	}
 
-	//! 返信モードかどうかを取得する。
+	// ! 返信モードかどうかを取得する。
 	isInReplyMode(): boolean {
-		return this.isReplyMode;
+		return this.isReplyMode
 	}
 
-	//! 返信先のメモIDを取得する。
+	// ! 返信先のメモIDを取得する。
 	getReplyToMemoId(): string | null {
-		return this.replyToMemoId;
+		return this.replyToMemoId
 	}
 }

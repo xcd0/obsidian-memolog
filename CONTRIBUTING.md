@@ -96,13 +96,13 @@ update code  # 英語、抽象的すぎる
 ### コメント例
 
 ```typescript
-//! ユーザー設定を管理するクラス。
+// ! ユーザー設定を管理するクラス。
 export class SettingsManager {
-	//! 設定ファイルを読み込む。
+	// ! 設定ファイルを読み込む。
 	async loadSettings(): Promise<Settings> {
-		//! ファイルが存在しない場合はデフォルト設定を返す。
+		// ! ファイルが存在しない場合はデフォルト設定を返す。
 		if (!this.fileExists()) {
-			return DEFAULT_SETTINGS;
+			return DEFAULT_SETTINGS
 		}
 		// 実装
 	}

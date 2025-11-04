@@ -1,23 +1,23 @@
-import { MemoEntry, CategoryConfig } from "../src/types";
-import { App } from "obsidian";
+import { App } from "obsidian"
+import { CategoryConfig, MemoEntry } from "../src/types"
 
-//! モックApp型定義。
+// ! モックApp型定義。
 interface MockApp {
 	vault: {
 		adapter: {
-			stat: jest.Mock;
-			exists: jest.Mock;
-			read: jest.Mock;
-			write: jest.Mock;
-		};
-		getAbstractFileByPath: jest.Mock;
-		read: jest.Mock;
-		create: jest.Mock;
-		modify: jest.Mock;
-	};
+			stat: jest.Mock
+			exists: jest.Mock
+			read: jest.Mock
+			write: jest.Mock
+		}
+		getAbstractFileByPath: jest.Mock
+		read: jest.Mock
+		create: jest.Mock
+		modify: jest.Mock
+	}
 }
 
-//! モックアプリを作成。
+// ! モックアプリを作成。
 function createMockApp(): MockApp {
 	return {
 		vault: {
@@ -32,73 +32,73 @@ function createMockApp(): MockApp {
 			create: jest.fn().mockResolvedValue(null),
 			modify: jest.fn().mockResolvedValue(undefined),
 		},
-	};
+	}
 }
 
-//! モックコンテナを作成。
+// ! モックコンテナを作成。
 function createMockContainer() {
 	return {
 		empty: jest.fn(),
 		innerHTML: "",
-	};
+	}
 }
 
 describe("ThreadViewコンポーネントテスト", () => {
 	describe("基本構造", () => {
 		test("ThreadViewをコンストラクトできる", () => {
-			const app = createMockApp() as unknown as App;
-			const container = createMockContainer();
-			const memos: MemoEntry[] = [];
-			const focusedMemoId = "root-memo";
-			const categories: CategoryConfig[] = [];
+			const app = createMockApp() as unknown as App
+			const container = createMockContainer()
+			const memos: MemoEntry[] = []
+			const focusedMemoId = "root-memo"
+			const categories: CategoryConfig[] = []
 
-			//! ThreadViewのモック（実装前）。
+			// ! ThreadViewのモック（実装前）。
 			const threadView = {
 				app,
 				container,
 				memos,
 				focusedMemoId,
 				categories,
-			};
+			}
 
-			expect(threadView.app).toBe(app);
-			expect(threadView.container).toBe(container);
-			expect(threadView.memos).toEqual([]);
-			expect(threadView.focusedMemoId).toBe("root-memo");
-		});
+			expect(threadView.app).toBe(app)
+			expect(threadView.container).toBe(container)
+			expect(threadView.memos).toEqual([])
+			expect(threadView.focusedMemoId).toBe("root-memo")
+		})
 
 		test("render()メソッドを持つ", () => {
-			const render = jest.fn();
+			const render = jest.fn()
 
 			const threadView = {
 				render,
-			};
+			}
 
-			threadView.render();
-			expect(render).toHaveBeenCalled();
-		});
+			threadView.render()
+			expect(render).toHaveBeenCalled()
+		})
 
 		test("destroy()メソッドでクリーンアップできる", () => {
-			const container = createMockContainer();
+			const container = createMockContainer()
 
 			const destroy = jest.fn(() => {
-				container.empty();
-			});
+				container.empty()
+			})
 
 			const threadView = {
 				container,
 				destroy,
-			};
+			}
 
-			threadView.destroy();
-			expect(destroy).toHaveBeenCalled();
-			expect(container.empty).toHaveBeenCalled();
-		});
-	});
+			threadView.destroy()
+			expect(destroy).toHaveBeenCalled()
+			expect(container.empty).toHaveBeenCalled()
+		})
+	})
 
 	describe("スレッドツリー表示", () => {
 		test("フォーカスメモとその返信を階層表示する", () => {
-			//! テストデータ: ルートメモと2つの返信。
+			// ! テストデータ: ルートメモと2つの返信。
 			const memos: MemoEntry[] = [
 				{
 					id: "root",
@@ -126,22 +126,22 @@ describe("ThreadViewコンポーネントテスト", () => {
 					parentId: "root",
 					replyCount: 0,
 				},
-			];
+			]
 
-			const focusedMemoId = "root";
+			const focusedMemoId = "root"
 
-			//! フォーカスメモとその子孫をフィルタリングするロジック。
-			const focusedMemo = memos.find((m) => m.id === focusedMemoId);
-			const childMemos = memos.filter((m) => m.parentId === focusedMemoId);
+			// ! フォーカスメモとその子孫をフィルタリングするロジック。
+			const focusedMemo = memos.find(m => m.id === focusedMemoId)
+			const childMemos = memos.filter(m => m.parentId === focusedMemoId)
 
-			expect(focusedMemo?.id).toBe("root");
-			expect(childMemos.length).toBe(2);
-			expect(childMemos[0].id).toBe("reply1");
-			expect(childMemos[1].id).toBe("reply2");
-		});
+			expect(focusedMemo?.id).toBe("root")
+			expect(childMemos.length).toBe(2)
+			expect(childMemos[0].id).toBe("reply1")
+			expect(childMemos[1].id).toBe("reply2")
+		})
 
 		test("フォーカスメモの子孫のみを表示する（祖先は表示しない）", () => {
-			//! テストデータ: 祖先 -> ルート -> 子。
+			// ! テストデータ: 祖先 -> ルート -> 子。
 			const memos: MemoEntry[] = [
 				{
 					id: "grandparent",
@@ -169,20 +169,20 @@ describe("ThreadViewコンポーネントテスト", () => {
 					parentId: "parent",
 					replyCount: 0,
 				},
-			];
+			]
 
-			const focusedMemoId = "parent";
+			const focusedMemoId = "parent"
 
-			//! フォーカスメモとその子孫のみを取得。
-			const focusedMemo = memos.find((m) => m.id === focusedMemoId);
-			const descendants = memos.filter((m) => m.parentId === focusedMemoId);
+			// ! フォーカスメモとその子孫のみを取得。
+			const focusedMemo = memos.find(m => m.id === focusedMemoId)
+			const descendants = memos.filter(m => m.parentId === focusedMemoId)
 
-			//! 祖先は含まれない。
-			expect(focusedMemo?.id).toBe("parent");
-			expect(descendants.length).toBe(1);
-			expect(descendants[0].id).toBe("child");
-			expect(descendants.every((m) => m.id !== "grandparent")).toBe(true);
-		});
+			// ! 祖先は含まれない。
+			expect(focusedMemo?.id).toBe("parent")
+			expect(descendants.length).toBe(1)
+			expect(descendants[0].id).toBe("child")
+			expect(descendants.every(m => m.id !== "grandparent")).toBe(true)
+		})
 
 		test("空のスレッド（返信なし）でもエラーにならない", () => {
 			const memos: MemoEntry[] = [
@@ -194,31 +194,31 @@ describe("ThreadViewコンポーネントテスト", () => {
 					attachments: [],
 					replyCount: 0,
 				},
-			];
+			]
 
-			const focusedMemoId = "lonely-memo";
+			const focusedMemoId = "lonely-memo"
 
-			const focusedMemo = memos.find((m) => m.id === focusedMemoId);
-			const children = memos.filter((m) => m.parentId === focusedMemoId);
+			const focusedMemo = memos.find(m => m.id === focusedMemoId)
+			const children = memos.filter(m => m.parentId === focusedMemoId)
 
-			expect(focusedMemo).toBeDefined();
-			expect(children.length).toBe(0);
-		});
-	});
+			expect(focusedMemo).toBeDefined()
+			expect(children.length).toBe(0)
+		})
+	})
 
 	describe("ナビゲーション", () => {
 		test("戻るボタンでメインビューに戻る", () => {
-			const onBack = jest.fn();
+			const onBack = jest.fn()
 
 			const threadView = {
 				onBack,
-			};
+			}
 
-			//! 戻るボタンがクリックされた。
-			threadView.onBack();
+			// ! 戻るボタンがクリックされた。
+			threadView.onBack()
 
-			expect(onBack).toHaveBeenCalled();
-		});
+			expect(onBack).toHaveBeenCalled()
+		})
 
 		test("親メモへのナビゲーションリンクを表示できる", () => {
 			const memos: MemoEntry[] = [
@@ -239,30 +239,30 @@ describe("ThreadViewコンポーネントテスト", () => {
 					parentId: "parent",
 					replyCount: 0,
 				},
-			];
+			]
 
-			const focusedMemoId = "child";
+			const focusedMemoId = "child"
 
-			//! フォーカスメモの親IDを取得。
-			const focusedMemo = memos.find((m) => m.id === focusedMemoId);
-			const parentId = focusedMemo?.parentId;
+			// ! フォーカスメモの親IDを取得。
+			const focusedMemo = memos.find(m => m.id === focusedMemoId)
+			const parentId = focusedMemo?.parentId
 
-			expect(parentId).toBe("parent");
-		});
-	});
+			expect(parentId).toBe("parent")
+		})
+	})
 
 	describe("子メモクリックでフォーカス変更", () => {
 		test("子メモをクリックすると、そのメモを新しいフォーカスとして再表示する", () => {
-			const onThreadCardClick = jest.fn();
+			const onThreadCardClick = jest.fn()
 
 			const threadView = {
 				onThreadCardClick,
-			};
+			}
 
-			//! 子メモがクリックされた。
-			threadView.onThreadCardClick("child-memo-id");
+			// ! 子メモがクリックされた。
+			threadView.onThreadCardClick("child-memo-id")
 
-			expect(onThreadCardClick).toHaveBeenCalledWith("child-memo-id");
-		});
-	});
-});
+			expect(onThreadCardClick).toHaveBeenCalledWith("child-memo-id")
+		})
+	})
+})

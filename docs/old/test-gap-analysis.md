@@ -40,6 +40,7 @@
 多くのテストでArrange、Act、Assertのセクションが明確に分離されていない。
 
 **例**: `date-range-filter.test.ts` 164-214行目
+
 ```typescript
 it("「今日」フィルターは今日のタイムスタンプを持つメモのみを返す", () => {
 	//! テスト用のメモデータを作成。 <- Arrange
@@ -72,6 +73,7 @@ it("「今日」フィルターは今日のタイムスタンプを持つメモ�
 
 **例**: `date-range-filter-bug.test.ts` 229-284行目
 このテストでは以下の複数のことを検証している:
+
 - フィルタリング後のメモ数
 - 過去のメモが除外されること
 - 正しいメモが含まれること
@@ -86,6 +88,7 @@ it("「今日」フィルターは今日のタイムスタンプを持つメモ�
 一部のテストでは「どう振る舞うか」ではなく「どう実装されているか」に焦点が当たっている。
 
 **例**: `date-range-filter.test.ts` 76-91行目
+
 ```typescript
 it("toISOString().split('T')[0]はUTC日付を返す", () => { ... });
 ```
@@ -101,19 +104,21 @@ it("toISOString().split('T')[0]はUTC日付を返す", () => { ... });
 テストコード内にマジックナンバーが散在している。
 
 **例**: `date-range-filter.test.ts` 48-49行目
+
 ```typescript
-const daysDiff = Math.floor((today.getTime() - weekAgo.getTime()) / (1000 * 60 * 60 * 24));
-expect(daysDiff).toBe(7);
+const daysDiff = Math.floor((today.getTime() - weekAgo.getTime()) / (1000 * 60 * 60 * 24))
+expect(daysDiff).toBe(7)
 ```
 
 `1000 * 60 * 60 * 24` は「1日のミリ秒数」だが、定数化されていない。
 
 **改善案**:
+
 ```typescript
-const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-const daysDiff = Math.floor((today.getTime() - weekAgo.getTime()) / MILLISECONDS_PER_DAY);
-const EXPECTED_WEEK_DAYS = 7;
-expect(daysDiff).toBe(EXPECTED_WEEK_DAYS);
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
+const daysDiff = Math.floor((today.getTime() - weekAgo.getTime()) / MILLISECONDS_PER_DAY)
+const EXPECTED_WEEK_DAYS = 7
+expect(daysDiff).toBe(EXPECTED_WEEK_DAYS)
 ```
 
 ### 5. テストデータの重複
@@ -125,9 +130,10 @@ expect(daysDiff).toBe(EXPECTED_WEEK_DAYS);
 
 **改善案**:
 テストデータ生成のヘルパー関数を作成する。
+
 ```typescript
 function createTestMemo(id: string, timestamp: string, content: string): MemoEntry {
-	return { id, timestamp, content, category: "test" };
+	return { id, timestamp, content, category: "test" }
 }
 ```
 
@@ -137,9 +143,10 @@ function createTestMemo(id: string, timestamp: string, content: string): MemoEnt
 本番テストコードにconsole.logが残っている。
 
 **例**: `week-filter-duplicate-bug.test.ts` 115-160行目
+
 ```typescript
-console.log("=== 複数ファイルから読み込み ===");
-console.log("ファイル2のメモ数:", memosFile2.length);
+console.log("=== 複数ファイルから読み込み ===")
+console.log("ファイル2のメモ数:", memosFile2.length)
 ```
 
 **改善案**:
@@ -151,17 +158,19 @@ console.log("ファイル2のメモ数:", memosFile2.length);
 一部のテストタイトルが非常に長く、読みにくい。
 
 **例**:
+
 ```typescript
 it("【バグ検証】修正前: ファイル内の全メモが読み込まれていた（不具合の再現確認）", async () => { ... });
 ```
 
 **改善案**:
 テストタイトルは簡潔にし、詳細はテスト内のコメントで補足する。
+
 ```typescript
 it("修正前: 日付フィルターが機能しない", async () => {
-	//! バグの状況: ファイル内の全メモが読み込まれていた。
+	// ! バグの状況: ファイル内の全メモが読み込まれていた。
 	// ...
-});
+})
 ```
 
 ### 8. Red-Green-Refactorサイクルの不明確さ
@@ -172,6 +181,7 @@ it("修正前: 日付フィルターが機能しない", async () => {
 **例**: `date-range-filter-bug.test.ts` には「修正前」と「修正後」の両方のテストがある。
 
 **改善案**:
+
 - 修正前のテスト(Red)は、修正前にコミットする。
 - 修正後は、そのテストが通ること(Green)を確認する。
 - 修正前のテストを「修正前」「修正後」で分けるのではなく、1つのテストが「最初は失敗→修正後は成功」となるようにする。
@@ -184,6 +194,7 @@ it("修正前: 日付フィルターが機能しない", async () => {
 **例**: `memo-manager.test.ts` では、VaultHandlerを完全にモック化している。
 
 **改善案**:
+
 - 単体テストではモックを使用する。
 - 統合テストでは実際のオブジェクトを使用する(または、より現実に近いモック)。
 - テストの種類(単体/統合)を明確にする。
@@ -196,6 +207,7 @@ it("修正前: 日付フィルターが機能しない", async () => {
 **例**: `week-filter-duplicate-bug.test.ts` では、beforeEachでモックをセットアップしているが、テスト間で状態が共有される可能性がある。
 
 **改善案**:
+
 - beforeEachで確実に状態をクリアする。
 - afterEachで必要なクリーンアップを行う。
 - テストの実行順序に依存しないことを確認する。

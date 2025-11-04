@@ -1,35 +1,35 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access */
 import {
-	ErrorHandler,
-	MemologError,
-	FileIOError,
-	ValidationError,
-	ParseError,
 	ConfigurationError,
-	ErrorSeverity,
 	ErrorCategory,
-	initializeErrorHandler,
+	ErrorHandler,
+	ErrorSeverity,
+	FileIOError,
 	getErrorHandler,
-} from "../src/core/error-handler";
+	initializeErrorHandler,
+	MemologError,
+	ParseError,
+	ValidationError,
+} from "../src/core/error-handler"
 
-//! Noticeのモック。
+// ! Noticeのモック。
 jest.mock("obsidian", () => ({
 	Notice: jest.fn(),
-}));
+}))
 
 describe("ErrorHandler", () => {
-	let errorHandler: ErrorHandler;
+	let errorHandler: ErrorHandler
 
 	beforeEach(() => {
-		//! テスト前にエラーハンドラーを初期化。
+		// ! テスト前にエラーハンドラーを初期化。
 		errorHandler = new ErrorHandler({
 			showNotice: false,
 			logToConsole: false,
 			throwOnCritical: false,
-		});
+		})
 
-		jest.clearAllMocks();
-	});
+		jest.clearAllMocks()
+	})
 
 	describe("Error Classes", () => {
 		test("MemologError should create error with correct properties", () => {
@@ -37,207 +37,207 @@ describe("ErrorHandler", () => {
 				"Test error",
 				ErrorSeverity.ERROR,
 				ErrorCategory.FILE_IO,
-				{ key: "value" }
-			);
+				{ key: "value" },
+			)
 
-			expect(error.message).toBe("Test error");
-			expect(error.severity).toBe(ErrorSeverity.ERROR);
-			expect(error.category).toBe(ErrorCategory.FILE_IO);
-			expect(error.context).toEqual({ key: "value" });
-			expect(error.timestamp).toBeInstanceOf(Date);
-		});
+			expect(error.message).toBe("Test error")
+			expect(error.severity).toBe(ErrorSeverity.ERROR)
+			expect(error.category).toBe(ErrorCategory.FILE_IO)
+			expect(error.context).toEqual({ key: "value" })
+			expect(error.timestamp).toBeInstanceOf(Date)
+		})
 
 		test("FileIOError should have correct defaults", () => {
-			const error = new FileIOError("File not found");
+			const error = new FileIOError("File not found")
 
-			expect(error.severity).toBe(ErrorSeverity.ERROR);
-			expect(error.category).toBe(ErrorCategory.FILE_IO);
-		});
+			expect(error.severity).toBe(ErrorSeverity.ERROR)
+			expect(error.category).toBe(ErrorCategory.FILE_IO)
+		})
 
 		test("ValidationError should have correct defaults", () => {
-			const error = new ValidationError("Invalid input");
+			const error = new ValidationError("Invalid input")
 
-			expect(error.severity).toBe(ErrorSeverity.WARNING);
-			expect(error.category).toBe(ErrorCategory.VALIDATION);
-		});
+			expect(error.severity).toBe(ErrorSeverity.WARNING)
+			expect(error.category).toBe(ErrorCategory.VALIDATION)
+		})
 
 		test("ParseError should have correct defaults", () => {
-			const error = new ParseError("Parse failed");
+			const error = new ParseError("Parse failed")
 
-			expect(error.severity).toBe(ErrorSeverity.ERROR);
-			expect(error.category).toBe(ErrorCategory.PARSE);
-		});
+			expect(error.severity).toBe(ErrorSeverity.ERROR)
+			expect(error.category).toBe(ErrorCategory.PARSE)
+		})
 
 		test("ConfigurationError should have correct defaults", () => {
-			const error = new ConfigurationError("Config error");
+			const error = new ConfigurationError("Config error")
 
-			expect(error.severity).toBe(ErrorSeverity.ERROR);
-			expect(error.category).toBe(ErrorCategory.CONFIGURATION);
-		});
-	});
+			expect(error.severity).toBe(ErrorSeverity.ERROR)
+			expect(error.category).toBe(ErrorCategory.CONFIGURATION)
+		})
+	})
 
 	describe("handle", () => {
 		test("should add error to log", () => {
-			const error = new MemologError("Test error");
+			const error = new MemologError("Test error")
 
-			errorHandler.handle(error);
+			errorHandler.handle(error)
 
-			const log = errorHandler.getErrorLog();
-			expect(log).toHaveLength(1);
-			expect(log[0].message).toBe("Test error");
-		});
+			const log = errorHandler.getErrorLog()
+			expect(log).toHaveLength(1)
+			expect(log[0].message).toBe("Test error")
+		})
 
 		test("should convert regular Error to MemologError", () => {
-			const error = new Error("Regular error");
+			const error = new Error("Regular error")
 
-			errorHandler.handle(error);
+			errorHandler.handle(error)
 
-			const log = errorHandler.getErrorLog();
-			expect(log).toHaveLength(1);
-			expect(log[0]).toBeInstanceOf(MemologError);
-			expect(log[0].message).toBe("Regular error");
-		});
+			const log = errorHandler.getErrorLog()
+			expect(log).toHaveLength(1)
+			expect(log[0]).toBeInstanceOf(MemologError)
+			expect(log[0].message).toBe("Regular error")
+		})
 
 		test("should merge context", () => {
 			const error = new MemologError("Test", ErrorSeverity.ERROR, ErrorCategory.UNKNOWN, {
 				original: "data",
-			});
+			})
 
-			errorHandler.handle(error, { additional: "context" });
+			errorHandler.handle(error, { additional: "context" })
 
-			const log = errorHandler.getErrorLog();
+			const log = errorHandler.getErrorLog()
 			expect(log[0].context).toEqual({
 				original: "data",
 				additional: "context",
-			});
-		});
+			})
+		})
 
 		test("should throw on critical error when enabled", () => {
 			const criticalHandler = new ErrorHandler({
 				showNotice: false,
 				logToConsole: false,
 				throwOnCritical: true,
-			});
+			})
 
-			const error = new MemologError("Critical error", ErrorSeverity.CRITICAL);
+			const error = new MemologError("Critical error", ErrorSeverity.CRITICAL)
 
-			expect(() => criticalHandler.handle(error)).toThrow();
-		});
-	});
+			expect(() => criticalHandler.handle(error)).toThrow()
+		})
+	})
 
 	describe("wrap", () => {
 		test("should return success result for successful promise", async () => {
-			const promise = Promise.resolve(42);
+			const promise = Promise.resolve(42)
 
-			const result = await errorHandler.wrap(promise);
+			const result = await errorHandler.wrap(promise)
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBe(42);
-			expect(result.error).toBeUndefined();
-		});
+			expect(result.success).toBe(true)
+			expect(result.data).toBe(42)
+			expect(result.error).toBeUndefined()
+		})
 
 		test("should return error result for failed promise", async () => {
-			const promise = Promise.reject(new Error("Failed"));
+			const promise = Promise.reject(new Error("Failed"))
 
-			const result = await errorHandler.wrap(promise);
+			const result = await errorHandler.wrap(promise)
 
-			expect(result.success).toBe(false);
-			expect(result.data).toBeUndefined();
-			expect(result.error).toBeInstanceOf(MemologError);
-		});
+			expect(result.success).toBe(false)
+			expect(result.data).toBeUndefined()
+			expect(result.error).toBeInstanceOf(MemologError)
+		})
 
 		test("should include context in error", async () => {
-			const promise = Promise.reject(new Error("Failed"));
+			const promise = Promise.reject(new Error("Failed"))
 
-			const result = await errorHandler.wrap(promise, { operation: "test" });
+			const result = await errorHandler.wrap(promise, { operation: "test" })
 
-			expect(result.error?.context).toHaveProperty("operation", "test");
-		});
-	});
+			expect(result.error?.context).toHaveProperty("operation", "test")
+		})
+	})
 
 	describe("wrapSync", () => {
 		test("should return success result for successful function", () => {
-			const func = () => 42;
+			const func = () => 42
 
-			const result = errorHandler.wrapSync(func);
+			const result = errorHandler.wrapSync(func)
 
-			expect(result.success).toBe(true);
-			expect(result.data).toBe(42);
-			expect(result.error).toBeUndefined();
-		});
+			expect(result.success).toBe(true)
+			expect(result.data).toBe(42)
+			expect(result.error).toBeUndefined()
+		})
 
 		test("should return error result for throwing function", () => {
 			const func = () => {
-				throw new Error("Failed");
-			};
+				throw new Error("Failed")
+			}
 
-			const result = errorHandler.wrapSync(func);
+			const result = errorHandler.wrapSync(func)
 
-			expect(result.success).toBe(false);
-			expect(result.data).toBeUndefined();
-			expect(result.error).toBeInstanceOf(MemologError);
-		});
-	});
+			expect(result.success).toBe(false)
+			expect(result.data).toBeUndefined()
+			expect(result.error).toBeInstanceOf(MemologError)
+		})
+	})
 
 	describe("Error Log Management", () => {
 		test("should limit error log size", () => {
-			//! MAX_LOG_SIZE(100)を超えるエラーを追加。
+			// ! MAX_LOG_SIZE(100)を超えるエラーを追加。
 			for (let i = 0; i < 150; i++) {
-				errorHandler.handle(new MemologError(`Error ${i}`));
+				errorHandler.handle(new MemologError(`Error ${i}`))
 			}
 
-			const log = errorHandler.getErrorLog();
-			expect(log).toHaveLength(100);
-		});
+			const log = errorHandler.getErrorLog()
+			expect(log).toHaveLength(100)
+		})
 
 		test("should clear error log", () => {
-			errorHandler.handle(new MemologError("Error 1"));
-			errorHandler.handle(new MemologError("Error 2"));
+			errorHandler.handle(new MemologError("Error 1"))
+			errorHandler.handle(new MemologError("Error 2"))
 
-			expect(errorHandler.getErrorLog()).toHaveLength(2);
+			expect(errorHandler.getErrorLog()).toHaveLength(2)
 
-			errorHandler.clearErrorLog();
+			errorHandler.clearErrorLog()
 
-			expect(errorHandler.getErrorLog()).toHaveLength(0);
-		});
+			expect(errorHandler.getErrorLog()).toHaveLength(0)
+		})
 
 		test("should filter errors by category", () => {
-			errorHandler.handle(new FileIOError("File error"));
-			errorHandler.handle(new ValidationError("Validation error"));
-			errorHandler.handle(new FileIOError("Another file error"));
+			errorHandler.handle(new FileIOError("File error"))
+			errorHandler.handle(new ValidationError("Validation error"))
+			errorHandler.handle(new FileIOError("Another file error"))
 
-			const fileErrors = errorHandler.getErrorsByCategory(ErrorCategory.FILE_IO);
-			expect(fileErrors).toHaveLength(2);
-		});
+			const fileErrors = errorHandler.getErrorsByCategory(ErrorCategory.FILE_IO)
+			expect(fileErrors).toHaveLength(2)
+		})
 
 		test("should filter errors by severity", () => {
-			errorHandler.handle(new MemologError("Info", ErrorSeverity.INFO));
-			errorHandler.handle(new MemologError("Warning", ErrorSeverity.WARNING));
-			errorHandler.handle(new MemologError("Error", ErrorSeverity.ERROR));
-			errorHandler.handle(new MemologError("Critical", ErrorSeverity.CRITICAL));
+			errorHandler.handle(new MemologError("Info", ErrorSeverity.INFO))
+			errorHandler.handle(new MemologError("Warning", ErrorSeverity.WARNING))
+			errorHandler.handle(new MemologError("Error", ErrorSeverity.ERROR))
+			errorHandler.handle(new MemologError("Critical", ErrorSeverity.CRITICAL))
 
-			const warningAndAbove = errorHandler.getErrorsBySeverity(ErrorSeverity.WARNING);
-			expect(warningAndAbove).toHaveLength(3); //! WARNING, ERROR, CRITICAL。
-		});
-	});
+			const warningAndAbove = errorHandler.getErrorsBySeverity(ErrorSeverity.WARNING)
+			expect(warningAndAbove).toHaveLength(3) // ! WARNING, ERROR, CRITICAL。
+		})
+	})
 
 	describe("Global Error Handler", () => {
 		test("should initialize global error handler", () => {
 			const handler = initializeErrorHandler({
 				showNotice: false,
-			});
+			})
 
-			expect(handler).toBeInstanceOf(ErrorHandler);
-		});
+			expect(handler).toBeInstanceOf(ErrorHandler)
+		})
 
 		test("should get global error handler", () => {
-			const handler1 = getErrorHandler();
-			const handler2 = getErrorHandler();
+			const handler1 = getErrorHandler()
+			const handler2 = getErrorHandler()
 
-			//! 同じインスタンスを返す。
-			expect(handler1).toBe(handler2);
-		});
-	});
+			// ! 同じインスタンスを返す。
+			expect(handler1).toBe(handler2)
+		})
+	})
 
 	describe("Console Logging", () => {
 		test("should call console.info for INFO severity", () => {
@@ -245,126 +245,126 @@ describe("ErrorHandler", () => {
 				showNotice: false,
 				logToConsole: true,
 				throwOnCritical: false,
-			});
+			})
 
-			const consoleInfoSpy = jest.spyOn(console, "info").mockImplementation();
+			const consoleInfoSpy = jest.spyOn(console, "info").mockImplementation()
 
-			loggingHandler.handle(new MemologError("Info message", ErrorSeverity.INFO));
+			loggingHandler.handle(new MemologError("Info message", ErrorSeverity.INFO))
 
-			expect(consoleInfoSpy).toHaveBeenCalled();
-			expect(consoleInfoSpy.mock.calls[0][0]).toContain("Info message");
+			expect(consoleInfoSpy).toHaveBeenCalled()
+			expect(consoleInfoSpy.mock.calls[0][0]).toContain("Info message")
 
-			consoleInfoSpy.mockRestore();
-		});
+			consoleInfoSpy.mockRestore()
+		})
 
 		test("should call console.warn for WARNING severity", () => {
 			const loggingHandler = new ErrorHandler({
 				showNotice: false,
 				logToConsole: true,
 				throwOnCritical: false,
-			});
+			})
 
-			const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+			const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
 
-			loggingHandler.handle(new ValidationError("Warning message"));
+			loggingHandler.handle(new ValidationError("Warning message"))
 
-			expect(consoleWarnSpy).toHaveBeenCalled();
-			expect(consoleWarnSpy.mock.calls[0][0]).toContain("Warning message");
+			expect(consoleWarnSpy).toHaveBeenCalled()
+			expect(consoleWarnSpy.mock.calls[0][0]).toContain("Warning message")
 
-			consoleWarnSpy.mockRestore();
-		});
+			consoleWarnSpy.mockRestore()
+		})
 
 		test("should call console.error for ERROR severity", () => {
 			const loggingHandler = new ErrorHandler({
 				showNotice: false,
 				logToConsole: true,
 				throwOnCritical: false,
-			});
+			})
 
-			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation()
 
-			loggingHandler.handle(new FileIOError("Error message"));
+			loggingHandler.handle(new FileIOError("Error message"))
 
-			expect(consoleErrorSpy).toHaveBeenCalled();
-			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Error message");
+			expect(consoleErrorSpy).toHaveBeenCalled()
+			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Error message")
 
-			consoleErrorSpy.mockRestore();
-		});
+			consoleErrorSpy.mockRestore()
+		})
 
 		test("should call console.error for CRITICAL severity", () => {
 			const loggingHandler = new ErrorHandler({
 				showNotice: false,
 				logToConsole: true,
 				throwOnCritical: false,
-			});
+			})
 
-			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+			const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation()
 
-			loggingHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL));
+			loggingHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL))
 
-			expect(consoleErrorSpy).toHaveBeenCalled();
-			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Critical message");
+			expect(consoleErrorSpy).toHaveBeenCalled()
+			expect(consoleErrorSpy.mock.calls[0][0]).toContain("Critical message")
 
-			consoleErrorSpy.mockRestore();
-		});
-	});
+			consoleErrorSpy.mockRestore()
+		})
+	})
 
 	describe("Notice Display", () => {
-		const { Notice } = require("obsidian");
+		const { Notice } = require("obsidian")
 
 		test("should not show notice for INFO severity", () => {
 			const noticeHandler = new ErrorHandler({
 				showNotice: true,
 				logToConsole: false,
 				throwOnCritical: false,
-			});
+			})
 
-			noticeHandler.handle(new MemologError("Info message", ErrorSeverity.INFO));
+			noticeHandler.handle(new MemologError("Info message", ErrorSeverity.INFO))
 
-			//! INFOレベルではNoticeが呼ばれない。
-			expect(Notice).not.toHaveBeenCalled();
-		});
+			// ! INFOレベルではNoticeが呼ばれない。
+			expect(Notice).not.toHaveBeenCalled()
+		})
 
 		test("should show notice for WARNING severity with correct icon", () => {
 			const noticeHandler = new ErrorHandler({
 				showNotice: true,
 				logToConsole: false,
 				throwOnCritical: false,
-			});
+			})
 
-			noticeHandler.handle(new ValidationError("Warning message"));
+			noticeHandler.handle(new ValidationError("Warning message"))
 
-			expect(Notice).toHaveBeenCalled();
-			expect(Notice.mock.calls[0][0]).toContain("⚠️");
-			expect(Notice.mock.calls[0][0]).toContain("Warning message");
-		});
+			expect(Notice).toHaveBeenCalled()
+			expect(Notice.mock.calls[0][0]).toContain("⚠️")
+			expect(Notice.mock.calls[0][0]).toContain("Warning message")
+		})
 
 		test("should show notice for ERROR severity with correct icon", () => {
 			const noticeHandler = new ErrorHandler({
 				showNotice: true,
 				logToConsole: false,
 				throwOnCritical: false,
-			});
+			})
 
-			noticeHandler.handle(new FileIOError("Error message"));
+			noticeHandler.handle(new FileIOError("Error message"))
 
-			expect(Notice).toHaveBeenCalled();
-			expect(Notice.mock.calls[0][0]).toContain("❌");
-			expect(Notice.mock.calls[0][0]).toContain("Error message");
-		});
+			expect(Notice).toHaveBeenCalled()
+			expect(Notice.mock.calls[0][0]).toContain("❌")
+			expect(Notice.mock.calls[0][0]).toContain("Error message")
+		})
 
 		test("should show notice for CRITICAL severity with correct icon", () => {
 			const noticeHandler = new ErrorHandler({
 				showNotice: true,
 				logToConsole: false,
 				throwOnCritical: false,
-			});
+			})
 
-			noticeHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL));
+			noticeHandler.handle(new MemologError("Critical message", ErrorSeverity.CRITICAL))
 
-			expect(Notice).toHaveBeenCalled();
-			expect(Notice.mock.calls[0][0]).toContain("🚨");
-			expect(Notice.mock.calls[0][0]).toContain("Critical message");
-		});
-	});
-});
+			expect(Notice).toHaveBeenCalled()
+			expect(Notice.mock.calls[0][0]).toContain("🚨")
+			expect(Notice.mock.calls[0][0]).toContain("Critical message")
+		})
+	})
+})

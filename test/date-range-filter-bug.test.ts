@@ -1,24 +1,25 @@
-import { MemoManager } from "../src/core/memo-manager";
-import { App, TFile } from "obsidian";
+import { App, TFile } from "obsidian"
+import { MemoManager } from "../src/core/memo-manager"
 
-//! 実際のデータを使用した日付範囲フィルターのバグ検証テスト。
-//! このテストは、今日(2025-10-31)のフィルターがONの時に、
-//! 過去の日付(2025-10-27〜2025-10-30)のメモが表示されてしまう不具合を検証する。
+// ! 実際のデータを使用した日付範囲フィルターのバグ検証テスト。
+// ! このテストは、今日(2025-10-31)のフィルターがONの時に、
+// ! 過去の日付(2025-10-27〜2025-10-30)のメモが表示されてしまう不具合を検証する。
 
-//! TFileのモック作成ヘルパー。
+// ! TFileのモック作成ヘルパー。
 const createMockTFile = (path: string): TFile => {
 	return Object.create(TFile.prototype, {
 		path: { value: path },
-	}) as TFile;
-};
+	}) as TFile
+}
 
 describe("日付範囲フィルター - 実データでのバグ検証", () => {
-	let mockApp: App;
-	let memoManager: MemoManager;
-	const filePath = "memolog/work/2025-10-31.md";
+	let mockApp: App
+	let memoManager: MemoManager
+	const filePath = "memolog/work/2025-10-31.md"
 
-	//! 実際のメモデータ（ユーザー提供）。
-	const testMemoData = `<!-- memo-id: 019a38a5-98d9-74be-a09f-992e6fafe2f4, timestamp: 2025-10-31T05:02:48.025Z, category: "work", template: "{{content}}" -->
+	// ! 実際のメモデータ（ユーザー提供）。
+	const testMemoData =
+		`<!-- memo-id: 019a38a5-98d9-74be-a09f-992e6fafe2f4, timestamp: 2025-10-31T05:02:48.025Z, category: "work", template: "{{content}}" -->
 test
 
 <!-- memo-id: 019a24be-b267-765c-925a-1e63455bced8, timestamp: 2025-10-27T08:17:48.647Z, category: "work", template: "{{content}}" -->
@@ -87,13 +88,13 @@ eeeee
 
 <!-- memo-id: 019a3428-11e3-7604-b213-c8ee726016d6, timestamp: 2025-10-30T08:07:12.611Z, category: "work", template: "{{content}}" -->
 eee
-`;
+`
 
 	beforeEach(() => {
-		//! vault APIのモック作成。
-		const mockRead = jest.fn();
-		const mockGetAbstractFileByPath = jest.fn();
-		const mockStat = jest.fn();
+		// ! vault APIのモック作成。
+		const mockRead = jest.fn()
+		const mockGetAbstractFileByPath = jest.fn()
+		const mockStat = jest.fn()
 
 		mockApp = {
 			vault: {
@@ -108,372 +109,388 @@ eee
 					stat: mockStat,
 				},
 			},
-		} as unknown as App;
+		} as unknown as App
 
-		//! TFileのモックを作成。
-		const mockFile = createMockTFile(filePath);
-		mockGetAbstractFileByPath.mockReturnValue(mockFile);
+		// ! TFileのモックを作成。
+		const mockFile = createMockTFile(filePath)
+		mockGetAbstractFileByPath.mockReturnValue(mockFile)
 
-		//! 実際のテストデータを返す。
-		mockRead.mockResolvedValue(testMemoData);
+		// ! 実際のテストデータを返す。
+		mockRead.mockResolvedValue(testMemoData)
 
-		//! ファイルのstatを返す。
+		// ! ファイルのstatを返す。
 		mockStat.mockResolvedValue({
 			mtime: Date.now(),
 			ctime: Date.now(),
 			size: testMemoData.length,
-		});
+		})
 
-		memoManager = new MemoManager(mockApp);
-
-		//! ファイルが存在すると仮定。
-		(mockApp.vault.adapter.exists as jest.Mock).mockResolvedValue(true);
-		(mockApp.vault.adapter.read as jest.Mock).mockResolvedValue(testMemoData);
-	});
+		memoManager = new MemoManager(mockApp) // ! ファイルが存在すると仮定。
+		;(mockApp.vault.adapter.exists as jest.Mock).mockResolvedValue(true)
+		;(mockApp.vault.adapter.read as jest.Mock).mockResolvedValue(testMemoData)
+	})
 
 	describe("実データでのフィルタリング検証", () => {
 		it("ファイルから全メモを正しく読み込めることを確認", async () => {
-			//! まず、ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! まず、ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! メモが読み込まれていることを確認。
-			expect(allMemos.length).toBeGreaterThan(0);
+			// ! メモが読み込まれていることを確認。
+			expect(allMemos.length).toBeGreaterThan(0)
 
-			//! タイムスタンプの日付分布を確認。
+			// ! タイムスタンプの日付分布を確認。
 			const memosByDate = {
-				"2025-10-27": allMemos.filter((m) => m.timestamp.startsWith("2025-10-27")),
-				"2025-10-28": allMemos.filter((m) => m.timestamp.startsWith("2025-10-28")),
-				"2025-10-29": allMemos.filter((m) => m.timestamp.startsWith("2025-10-29")),
-				"2025-10-30": allMemos.filter((m) => m.timestamp.startsWith("2025-10-30")),
-				"2025-10-31": allMemos.filter((m) => m.timestamp.startsWith("2025-10-31")),
-			};
+				"2025-10-27": allMemos.filter(m => m.timestamp.startsWith("2025-10-27")),
+				"2025-10-28": allMemos.filter(m => m.timestamp.startsWith("2025-10-28")),
+				"2025-10-29": allMemos.filter(m => m.timestamp.startsWith("2025-10-29")),
+				"2025-10-30": allMemos.filter(m => m.timestamp.startsWith("2025-10-30")),
+				"2025-10-31": allMemos.filter(m => m.timestamp.startsWith("2025-10-31")),
+			}
 
-			//! 実際に読み込めたメモ数を出力（デバッグ用）。
-			console.log("Total memos loaded:", allMemos.length);
+			// ! 実際に読み込めたメモ数を出力（デバッグ用）。
+			console.log("Total memos loaded:", allMemos.length)
 			console.log("Memos by date:", {
 				"2025-10-27": memosByDate["2025-10-27"].length,
 				"2025-10-28": memosByDate["2025-10-28"].length,
 				"2025-10-29": memosByDate["2025-10-29"].length,
 				"2025-10-30": memosByDate["2025-10-30"].length,
 				"2025-10-31": memosByDate["2025-10-31"].length,
-			});
+			})
 
-			//! 重要: 2025-10-31のメモに、正しいIDのメモが含まれていることを確認。
+			// ! 重要: 2025-10-31のメモに、正しいIDのメモが含まれていることを確認。
 			const todayMemo = memosByDate["2025-10-31"].find(
-				(m) => m.id === "019a38a5-98d9-74be-a09f-992e6fafe2f4"
-			);
-			expect(todayMemo).toBeDefined();
-			expect(todayMemo?.content).toBe("test");
-		});
+				m => m.id === "019a38a5-98d9-74be-a09f-992e6fafe2f4",
+			)
+			expect(todayMemo).toBeDefined()
+			expect(todayMemo?.content).toBe("test")
+		})
 
 		it("【バグ検証】修正前: ファイル内の全メモが読み込まれていた（不具合の再現確認）", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! 読み込んだメモの日付分布を確認。
+			// ! 読み込んだメモの日付分布を確認。
 			const memosByDate = {
-				"2025-10-27": allMemos.filter((m) => m.timestamp.startsWith("2025-10-27")),
-				"2025-10-28": allMemos.filter((m) => m.timestamp.startsWith("2025-10-28")),
-				"2025-10-29": allMemos.filter((m) => m.timestamp.startsWith("2025-10-29")),
-				"2025-10-30": allMemos.filter((m) => m.timestamp.startsWith("2025-10-30")),
-				"2025-10-31": allMemos.filter((m) => m.timestamp.startsWith("2025-10-31")),
-			};
+				"2025-10-27": allMemos.filter(m => m.timestamp.startsWith("2025-10-27")),
+				"2025-10-28": allMemos.filter(m => m.timestamp.startsWith("2025-10-28")),
+				"2025-10-29": allMemos.filter(m => m.timestamp.startsWith("2025-10-29")),
+				"2025-10-30": allMemos.filter(m => m.timestamp.startsWith("2025-10-30")),
+				"2025-10-31": allMemos.filter(m => m.timestamp.startsWith("2025-10-31")),
+			}
 
-			console.log("=== 修正前の状況: ファイル読み込み ===");
-			console.log("ファイルパス:", filePath);
-			console.log("ファイル内の全メモ数:", allMemos.length);
-			console.log("2025-10-27のメモ:", memosByDate["2025-10-27"].length, "件");
-			console.log("2025-10-28のメモ:", memosByDate["2025-10-28"].length, "件");
-			console.log("2025-10-29のメモ:", memosByDate["2025-10-29"].length, "件");
-			console.log("2025-10-30のメモ:", memosByDate["2025-10-30"].length, "件");
-			console.log("2025-10-31のメモ:", memosByDate["2025-10-31"].length, "件");
+			console.log("=== 修正前の状況: ファイル読み込み ===")
+			console.log("ファイルパス:", filePath)
+			console.log("ファイル内の全メモ数:", allMemos.length)
+			console.log("2025-10-27のメモ:", memosByDate["2025-10-27"].length, "件")
+			console.log("2025-10-28のメモ:", memosByDate["2025-10-28"].length, "件")
+			console.log("2025-10-29のメモ:", memosByDate["2025-10-29"].length, "件")
+			console.log("2025-10-30のメモ:", memosByDate["2025-10-30"].length, "件")
+			console.log("2025-10-31のメモ:", memosByDate["2025-10-31"].length, "件")
 
-			//! 【不具合の再現】
-			//! 問題の状況:
-			//! - ファイル名: 2025-10-31.md
-			//! - ファイル内容: 2025-10-27から2025-10-31までのメモが混在（25件）
-			//! - ユーザーの操作: 「今日」ボタンをON（2025-10-31のメモだけを表示したい）
-			//!
-			//! 修正前の不具合:
-			//! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでのフィルタリングがなかった
-			//! - そのため、allMemosに含まれる全てのメモ(25件)が表示されていた
-			//!
-			//! 修正後の動作:
-			//! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでフィルタリングを行う
-			//! - そのため、2025-10-31のメモのみ(2件)が表示される
+			// ! 【不具合の再現】
+			// ! 問題の状況:
+			// ! - ファイル名: 2025-10-31.md
+			// ! - ファイル内容: 2025-10-27から2025-10-31までのメモが混在（25件）
+			// ! - ユーザーの操作: 「今日」ボタンをON（2025-10-31のメモだけを表示したい）
+			// !
+			// ! 修正前の不具合:
+			// ! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでのフィルタリングがなかった
+			// ! - そのため、allMemosに含まれる全てのメモ(25件)が表示されていた
+			// !
+			// ! 修正後の動作:
+			// ! - sidebar.tsでファイルを読み込んだ後、タイムスタンプでフィルタリングを行う
+			// ! - そのため、2025-10-31のメモのみ(2件)が表示される
 
-			//! 過去の日付のメモがファイル内に含まれていることを確認。
+			// ! 過去の日付のメモがファイル内に含まれていることを確認。
 			const oldMemoIds = [
-				"019a24be-b267-765c-925a-1e63455bced8", //! 2025-10-27。
-				"019a24bf-b268-765c-925a-1e63453bced3", //! 2025-10-27。
-				"019a2809-b5ef-71c8-a2d0-746c3234b97a", //! 2025-10-27。
-				"019a280f-44b7-7213-b284-142ee6274f5f", //! 2025-10-27。
-				"019a2d36-7d1a-7231-97ce-89b1399e26b0", //! 2025-10-28。
-				"019a2db1-124c-76eb-84cc-9fdd104cdadf", //! 2025-10-29。
-				"019a32a3-5a56-7360-8d2e-acf8d06377f6", //! 2025-10-30。
-			];
+				"019a24be-b267-765c-925a-1e63455bced8", // ! 2025-10-27。
+				"019a24bf-b268-765c-925a-1e63453bced3", // ! 2025-10-27。
+				"019a2809-b5ef-71c8-a2d0-746c3234b97a", // ! 2025-10-27。
+				"019a280f-44b7-7213-b284-142ee6274f5f", // ! 2025-10-27。
+				"019a2d36-7d1a-7231-97ce-89b1399e26b0", // ! 2025-10-28。
+				"019a2db1-124c-76eb-84cc-9fdd104cdadf", // ! 2025-10-29。
+				"019a32a3-5a56-7360-8d2e-acf8d06377f6", // ! 2025-10-30。
+			]
 
-			const oldMemosInFile = allMemos.filter((m) => oldMemoIds.includes(m.id));
-			console.log("ファイル内の過去の日付のメモ数:", oldMemosInFile.length, "件");
+			const oldMemosInFile = allMemos.filter(m => oldMemoIds.includes(m.id))
+			console.log("ファイル内の過去の日付のメモ数:", oldMemosInFile.length, "件")
 
-			//! 【修正前の状況を確認】
-			//! ファイル内に過去の日付のメモが含まれている。
-			expect(oldMemosInFile.length).toBeGreaterThan(0);
+			// ! 【修正前の状況を確認】
+			// ! ファイル内に過去の日付のメモが含まれている。
+			expect(oldMemosInFile.length).toBeGreaterThan(0)
 
-			//! 【修正前の不具合】
-			//! タイムスタンプフィルタリングがない場合、
-			//! ユーザーには全てのメモが表示される（不具合）。
-			console.log("修正前の不具合: 「今日」ボタンONでも全", allMemos.length, "件が表示される");
-		});
+			// ! 【修正前の不具合】
+			// ! タイムスタンプフィルタリングがない場合、
+			// ! ユーザーには全てのメモが表示される（不具合）。
+			console.log("修正前の不具合: 「今日」ボタンONでも全", allMemos.length, "件が表示される")
+		})
 
 		it("【バグ検証】修正後: タイムスタンプフィルタリングにより正しく動作する", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			console.log("=== 修正後の動作: タイムスタンプフィルタリング ===");
-			console.log("ファイル内の全メモ数:", allMemos.length);
+			console.log("=== 修正後の動作: タイムスタンプフィルタリング ===")
+			console.log("ファイル内の全メモ数:", allMemos.length)
 
-			//! 「今日」フィルターのロジック（2025-10-31を今日と仮定）。
-			const today = new Date("2025-10-31T12:00:00Z"); //! 固定日時でテスト。
-			const startDate = new Date(today);
-			startDate.setHours(0, 0, 0, 0); //! 2025-10-31 00:00:00。
-			const endDate = new Date(today);
-			endDate.setHours(23, 59, 59, 999); //! 2025-10-31 23:59:59。
+			// ! 「今日」フィルターのロジック（2025-10-31を今日と仮定）。
+			const today = new Date("2025-10-31T12:00:00Z") // ! 固定日時でテスト。
+			const startDate = new Date(today)
+			startDate.setHours(0, 0, 0, 0) // ! 2025-10-31 00:00:00。
+			const endDate = new Date(today)
+			endDate.setHours(23, 59, 59, 999) // ! 2025-10-31 23:59:59。
 
-			console.log("フィルター範囲:");
-			console.log("  開始:", startDate.toISOString());
-			console.log("  終了:", endDate.toISOString());
+			console.log("フィルター範囲:")
+			console.log("  開始:", startDate.toISOString())
+			console.log("  終了:", endDate.toISOString())
 
-			//! 【修正後の実装】タイムスタンプベースのフィルタリング。
-			//! (sidebar.ts 578-582行目と同じロジック)
-			const filteredMemos = allMemos.filter((memo) => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
+			// ! 【修正後の実装】タイムスタンプベースのフィルタリング。
+			// ! (sidebar.ts 578-582行目と同じロジック)
+			const filteredMemos = allMemos.filter(memo => {
+				const memoDate = new Date(memo.timestamp)
+				return memoDate >= startDate && memoDate <= endDate
+			})
 
-			console.log("フィルター後のメモ数:", filteredMemos.length);
-			console.log("フィルター後のメモID:", filteredMemos.map((m) => m.id));
+			console.log("フィルター後のメモ数:", filteredMemos.length)
+			console.log("フィルター後のメモID:", filteredMemos.map(m => m.id))
 
-			//! 【修正後の動作確認】
-			//! 過去の日付のメモは除外される。
+			// ! 【修正後の動作確認】
+			// ! 過去の日付のメモは除外される。
 			const oldMemoIds = [
-				"019a24be-b267-765c-925a-1e63455bced8", //! 2025-10-27。
-				"019a24bf-b268-765c-925a-1e63453bced3", //! 2025-10-27。
-				"019a2809-b5ef-71c8-a2d0-746c3234b97a", //! 2025-10-27。
-				"019a280f-44b7-7213-b284-142ee6274f5f", //! 2025-10-27。
-				"019a2d36-7d1a-7231-97ce-89b1399e26b0", //! 2025-10-28。
-				"019a2db1-124c-76eb-84cc-9fdd104cdadf", //! 2025-10-29。
-				"019a32a3-5a56-7360-8d2e-acf8d06377f6", //! 2025-10-30。
-			];
+				"019a24be-b267-765c-925a-1e63455bced8", // ! 2025-10-27。
+				"019a24bf-b268-765c-925a-1e63453bced3", // ! 2025-10-27。
+				"019a2809-b5ef-71c8-a2d0-746c3234b97a", // ! 2025-10-27。
+				"019a280f-44b7-7213-b284-142ee6274f5f", // ! 2025-10-27。
+				"019a2d36-7d1a-7231-97ce-89b1399e26b0", // ! 2025-10-28。
+				"019a2db1-124c-76eb-84cc-9fdd104cdadf", // ! 2025-10-29。
+				"019a32a3-5a56-7360-8d2e-acf8d06377f6", // ! 2025-10-30。
+			]
 
-			const oldMemosInFiltered = filteredMemos.filter((m) => oldMemoIds.includes(m.id));
-			console.log("フィルター後の過去の日付のメモ数:", oldMemosInFiltered.length, "件");
+			const oldMemosInFiltered = filteredMemos.filter(m => oldMemoIds.includes(m.id))
+			console.log("フィルター後の過去の日付のメモ数:", oldMemosInFiltered.length, "件")
 
-			//! 過去のメモは除外されることを確認。
-			expect(oldMemosInFiltered.length).toBe(0);
+			// ! 過去のメモは除外されることを確認。
+			expect(oldMemosInFiltered.length).toBe(0)
 
-			//! 2025-10-31のメモのみが残る。
-			expect(filteredMemos.length).toBeGreaterThanOrEqual(1);
+			// ! 2025-10-31のメモのみが残る。
+			expect(filteredMemos.length).toBeGreaterThanOrEqual(1)
 
-			//! 正しいIDのメモが含まれていることを確認。
-			const correctMemo = filteredMemos.find((m) => m.id === "019a38a5-98d9-74be-a09f-992e6fafe2f4");
-			expect(correctMemo).toBeDefined();
-			expect(correctMemo?.content).toBe("test");
+			// ! 正しいIDのメモが含まれていることを確認。
+			const correctMemo = filteredMemos.find(m => m.id === "019a38a5-98d9-74be-a09f-992e6fafe2f4")
+			expect(correctMemo).toBeDefined()
+			expect(correctMemo?.content).toBe("test")
 
-			console.log("修正後の正しい動作: 「今日」ボタンONで", filteredMemos.length, "件のみ表示される");
-		});
+			console.log("修正後の正しい動作: 「今日」ボタンONで", filteredMemos.length, "件のみ表示される")
+		})
 
 		it("フィルタリングなしの場合、全メモが表示されることを確認", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! フィルタリングなし（"all"）の場合、読み込めたメモが全て表示される。
-			expect(allMemos.length).toBeGreaterThan(0);
-		});
+			// ! フィルタリングなし（"all"）の場合、読み込めたメモが全て表示される。
+			expect(allMemos.length).toBeGreaterThan(0)
+		})
 
 		it("「一週間」フィルター適用時、過去7日間のメモのみが含まれることを確認", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! 「一週間」フィルターのロジックを再現（2025-10-31を今日と仮定）。
-			const today = new Date("2025-10-31T12:00:00Z"); //! 固定日時でテスト。
-			const startDate = new Date(today);
-			startDate.setDate(today.getDate() - 7); //! 2025-10-24。
-			startDate.setHours(0, 0, 0, 0);
-			const endDate = new Date(today);
-			endDate.setHours(23, 59, 59, 999);
+			// ! 「一週間」フィルターのロジックを再現（2025-10-31を今日と仮定）。
+			const today = new Date("2025-10-31T12:00:00Z") // ! 固定日時でテスト。
+			const startDate = new Date(today)
+			startDate.setDate(today.getDate() - 7) // ! 2025-10-24。
+			startDate.setHours(0, 0, 0, 0)
+			const endDate = new Date(today)
+			endDate.setHours(23, 59, 59, 999)
 
-			//! タイムスタンプベースのフィルタリング。
-			const filteredMemos = allMemos.filter((memo) => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
+			// ! タイムスタンプベースのフィルタリング。
+			const filteredMemos = allMemos.filter(memo => {
+				const memoDate = new Date(memo.timestamp)
+				return memoDate >= startDate && memoDate <= endDate
+			})
 
-			//! テストデータの全メモが2025-10-27以降なので、全メモが含まれるはず。
-			expect(filteredMemos.length).toBe(allMemos.length);
+			// ! テストデータの全メモが2025-10-27以降なので、全メモが含まれるはず。
+			expect(filteredMemos.length).toBe(allMemos.length)
 
-			//! 全てのメモが2025-10-24以降であることを確認。
+			// ! 全てのメモが2025-10-24以降であることを確認。
 			for (const memo of filteredMemos) {
-				const memoDate = new Date(memo.timestamp);
-				expect(memoDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
-				expect(memoDate.getTime()).toBeLessThanOrEqual(endDate.getTime());
+				const memoDate = new Date(memo.timestamp)
+				expect(memoDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime())
+				expect(memoDate.getTime()).toBeLessThanOrEqual(endDate.getTime())
 			}
-		});
+		})
 
 		it("【パース検証】テンプレートに改行が含まれるメモが正しくパースされることを確認", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			console.log("=== デバッグ: 読み込まれたメモ一覧 ===");
-			console.log("全メモ数:", allMemos.length);
-			console.log("全メモID:", allMemos.map((m) => m.id));
+			console.log("=== デバッグ: 読み込まれたメモ一覧 ===")
+			console.log("全メモ数:", allMemos.length)
+			console.log("全メモID:", allMemos.map(m => m.id))
 
-			//! 8番目のメモ(mock-uuid-v7-127)の詳細を確認。
-			const problematicMemo = allMemos.find((m) => m.id.includes("mock-uuid"));
+			// ! 8番目のメモ(mock-uuid-v7-127)の詳細を確認。
+			const problematicMemo = allMemos.find(m => m.id.includes("mock-uuid"))
 			if (problematicMemo) {
-				console.log("=== パース失敗メモの詳細 ===");
-				console.log("ID:", problematicMemo.id);
-				console.log("content:", problematicMemo.content.substring(0, 100));
-				console.log("template:", problematicMemo.template);
+				console.log("=== パース失敗メモの詳細 ===")
+				console.log("ID:", problematicMemo.id)
+				console.log("content:", problematicMemo.content.substring(0, 100))
+				console.log("template:", problematicMemo.template)
 			}
 
-			//! テンプレートに改行が含まれるメモを確認。
-			//! <!-- memo-id: 019a2db1-4161-7538-b87e-f0f69c7ee4a4, timestamp: 2025-10-29T01:59:42.689Z, category: "work", template: "# %Y-%m-%d %H:%M:%S\n{{content}}" -->
-			//! # 2025-10-29 10:59:42
-			//! qwert
+			// ! テンプレートに改行が含まれるメモを確認。
+			// ! <!-- memo-id: 019a2db1-4161-7538-b87e-f0f69c7ee4a4, timestamp: 2025-10-29T01:59:42.689Z, category: "work", template: "# %Y-%m-%d %H:%M:%S\n{{content}}" -->
+			// ! # 2025-10-29 10:59:42
+			// ! qwert
 
-			const targetMemo = allMemos.find((m) => m.id === "019a2db1-4161-7538-b87e-f0f69c7ee4a4");
+			const targetMemo = allMemos.find(m => m.id === "019a2db1-4161-7538-b87e-f0f69c7ee4a4")
 
-			console.log("=== パース検証: テンプレートに改行が含まれるメモ ===");
-			console.log("メモが見つかったか:", targetMemo !== undefined);
+			console.log("=== パース検証: テンプレートに改行が含まれるメモ ===")
+			console.log("メモが見つかったか:", targetMemo !== undefined)
 			if (targetMemo) {
-				console.log("メモID:", targetMemo.id);
-				console.log("タイムスタンプ:", targetMemo.timestamp);
-				console.log("テンプレート:", targetMemo.template);
-				console.log("コンテンツ:", targetMemo.content);
+				console.log("メモID:", targetMemo.id)
+				console.log("タイムスタンプ:", targetMemo.timestamp)
+				console.log("テンプレート:", targetMemo.template)
+				console.log("コンテンツ:", targetMemo.content)
 			}
 
-			//! 【重要】現在の実装では、このメモがパースに失敗している。
-			//! パースに失敗すると、新しいタイムスタンプで新しいメモとして作成されてしまう。
-			//!
-			//! 正しい実装では:
-			//! - id: "019a2db1-4161-7538-b87e-f0f69c7ee4a4"
-			//! - timestamp: "2025-10-29T01:59:42.689Z"
-			//! - template: "# %Y-%m-%d %H:%M:%S\n{{content}}"
-			//! - content: "qwert" (テンプレート適用前の内容)
-			//!
-			//! 不具合の実装では:
-			//! - targetMemoがundefinedになる
-			//! - または、タイムスタンプが2025-10-31になってしまう
+			// ! 【重要】現在の実装では、このメモがパースに失敗している。
+			// ! パースに失敗すると、新しいタイムスタンプで新しいメモとして作成されてしまう。
+			// !
+			// ! 正しい実装では:
+			// ! - id: "019a2db1-4161-7538-b87e-f0f69c7ee4a4"
+			// ! - timestamp: "2025-10-29T01:59:42.689Z"
+			// ! - template: "# %Y-%m-%d %H:%M:%S\n{{content}}"
+			// ! - content: "qwert" (テンプレート適用前の内容)
+			// !
+			// ! 不具合の実装では:
+			// ! - targetMemoがundefinedになる
+			// ! - または、タイムスタンプが2025-10-31になってしまう
 
-			//! 【修正完了】パース問題が修正されたため、メモが正しく見つかることを検証。
-			expect(targetMemo).toBeDefined();
-			if (!targetMemo) throw new Error("Target memo not found");
-			expect(targetMemo.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4");
-			expect(targetMemo.timestamp).toBe("2025-10-29T01:59:42.689Z");
-			expect(targetMemo.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}");
-			expect(targetMemo.content).toBe("qwert");
-		});
+			// ! 【修正完了】パース問題が修正されたため、メモが正しく見つかることを検証。
+			expect(targetMemo).toBeDefined()
+			if (!targetMemo) throw new Error("Target memo not found")
+			expect(targetMemo.id).toBe("019a2db1-4161-7538-b87e-f0f69c7ee4a4")
+			expect(targetMemo.timestamp).toBe("2025-10-29T01:59:42.689Z")
+			expect(targetMemo.template).toBe("# %Y-%m-%d %H:%M:%S\n{{content}}")
+			expect(targetMemo.content).toBe("qwert")
+		})
 
 		it("【タイムゾーン検証】ユーザーのローカルタイムゾーンでフィルタリングされることを確認", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! 【重要なケース】
-			//! メモ: 2025-10-28T23:45:37.050Z (UTC)
-			//! ユーザーがGMT+9の場合、これは日本時間で 2025-10-29 08:45:37 JST
-			//! つまり、ユーザーにとっては「10/29のメモ」
-			//!
-			//! 問題:
-			//! - UTCベースでフィルタリングすると、このメモは10/28として扱われる
-			//! - ユーザー視点では10/29のメモなのに、10/28でフィルタされてしまう
+			// ! 【重要なケース】
+			// ! メモ: 2025-10-28T23:45:37.050Z (UTC)
+			// ! ユーザーがGMT+9の場合、これは日本時間で 2025-10-29 08:45:37 JST
+			// ! つまり、ユーザーにとっては「10/29のメモ」
+			// !
+			// ! 問題:
+			// ! - UTCベースでフィルタリングすると、このメモは10/28として扱われる
+			// ! - ユーザー視点では10/29のメモなのに、10/28でフィルタされてしまう
 
-			const testMemo = allMemos.find((m) => m.id === "019a2d36-7d1a-7231-97ce-89b1399e26b0");
-			expect(testMemo).toBeDefined();
-			expect(testMemo?.timestamp).toBe("2025-10-28T23:45:37.050Z");
+			const testMemo = allMemos.find(m => m.id === "019a2d36-7d1a-7231-97ce-89b1399e26b0")
+			expect(testMemo).toBeDefined()
+			expect(testMemo?.timestamp).toBe("2025-10-28T23:45:37.050Z")
 
-			console.log("=== タイムゾーン検証 ===");
-			console.log("UTC時刻:", testMemo?.timestamp);
+			console.log("=== タイムゾーン検証 ===")
+			console.log("UTC時刻:", testMemo?.timestamp)
 
-			//! このメモのローカル時刻を計算。
-			if (!testMemo) throw new Error("Test memo not found");
-			const utcDate = new Date(testMemo.timestamp);
-			const localDateStr = utcDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-			console.log("日本時間 (GMT+9):", localDateStr);
+			// ! このメモのローカル時刻を計算。
+			if (!testMemo) throw new Error("Test memo not found")
+			const utcDate = new Date(testMemo.timestamp)
+			const localDateStr = utcDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })
+			console.log("日本時間 (GMT+9):", localDateStr)
 
-			//! 日本時間での日付を取得。
+			// ! 日本時間での日付を取得。
 			const localDateStr2 = utcDate.toLocaleString("en-US", {
 				timeZone: "Asia/Tokyo",
 				year: "numeric",
 				month: "2-digit",
 				day: "2-digit",
-			});
-			const localDateOnly = localDateStr2.split(",")[0]; //! "10/29/2025" -> "10/29/2025"
-			const [month, day, year] = localDateOnly.split("/");
-			const isoLocalDate = `${year}-${month}-${day}`;
-			console.log("日本時間の日付のみ:", isoLocalDate);
+			})
+			const localDateOnly = localDateStr2.split(",")[0] // ! "10/29/2025" -> "10/29/2025"
+			const [month, day, year] = localDateOnly.split("/")
+			const isoLocalDate = `${year}-${month}-${day}`
+			console.log("日本時間の日付のみ:", isoLocalDate)
 
-			//! GMT+9では、このメモは2025-10-29のメモとして扱われるべき。
-			expect(isoLocalDate).toBe("2025-10-29");
+			// ! GMT+9では、このメモは2025-10-29のメモとして扱われるべき。
+			expect(isoLocalDate).toBe("2025-10-29")
 
-			//! 【現在の実装の問題点】
-			//! sidebar.tsで `new Date().setHours(0, 0, 0, 0)` を使うと、
-			//! ローカルタイムゾーンの0時になる。
-			//!
-			//! しかし、メモのタイムスタンプ (memo.timestamp) はUTC形式の文字列。
-			//! `new Date(memo.timestamp)` でDateオブジェクトに変換すると、
-			//! UTCとして解釈される。
-			//!
-			//! 比較時に、両方がローカルタイムゾーンに揃っているか確認が必要。
+			// ! 【現在の実装の問題点】
+			// ! sidebar.tsで `new Date().setHours(0, 0, 0, 0)` を使うと、
+			// ! ローカルタイムゾーンの0時になる。
+			// !
+			// ! しかし、メモのタイムスタンプ (memo.timestamp) はUTC形式の文字列。
+			// ! `new Date(memo.timestamp)` でDateオブジェクトに変換すると、
+			// ! UTCとして解釈される。
+			// !
+			// ! 比較時に、両方がローカルタイムゾーンに揃っているか確認が必要。
 
-			//! 「今日」フィルターのロジック（ローカルタイムゾーン）。
-			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
-			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
-			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
+			// ! 「今日」フィルターのロジック（ローカルタイムゾーン）。
+			// ! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00")
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00")
 
-			console.log("=== フィルター範囲 (ローカルタイムゾーン) ===");
-			console.log("開始:", startDate.toISOString(), "(ローカル:", startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
-			console.log("終了:", endDate.toISOString(), "(ローカル:", endDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
+			console.log("=== フィルター範囲 (ローカルタイムゾーン) ===")
+			console.log(
+				"開始:",
+				startDate.toISOString(),
+				"(ローカル:",
+				startDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+				")",
+			)
+			console.log(
+				"終了:",
+				endDate.toISOString(),
+				"(ローカル:",
+				endDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+				")",
+			)
 
-			//! メモの日時をDateオブジェクトに変換（UTCとして解釈される）。
-			const memoDate = new Date(testMemo.timestamp);
-			console.log("メモ日時:", memoDate.toISOString(), "(ローカル:", memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }), ")");
+			// ! メモの日時をDateオブジェクトに変換（UTCとして解釈される）。
+			const memoDate = new Date(testMemo.timestamp)
+			console.log(
+				"メモ日時:",
+				memoDate.toISOString(),
+				"(ローカル:",
+				memoDate.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+				")",
+			)
 
-			//! 比較。
-			const isInRange = memoDate >= startDate && memoDate <= endDate;
-			console.log("フィルター範囲内か:", isInRange);
+			// ! 比較。
+			const isInRange = memoDate >= startDate && memoDate <= endDate
+			console.log("フィルター範囲内か:", isInRange)
 
-			//! 【期待される動作】
-			//! ユーザーがGMT+9で、2025-10-29のメモを見ている場合、
-			//! 2025-10-28T23:45:37.050Z (UTC) = 2025-10-29 08:45:37 (JST)
-			//! は「10/29のメモ」として表示されるべき。
-			//!
-			//! つまり、isInRange は true であるべき。
-			expect(isInRange).toBe(true);
-		});
+			// ! 【期待される動作】
+			// ! ユーザーがGMT+9で、2025-10-29のメモを見ている場合、
+			// ! 2025-10-28T23:45:37.050Z (UTC) = 2025-10-29 08:45:37 (JST)
+			// ! は「10/29のメモ」として表示されるべき。
+			// !
+			// ! つまり、isInRange は true であるべき。
+			expect(isInRange).toBe(true)
+		})
 
 		it("タイムスタンプの境界値でフィルタリングが正しく動作することを確認", async () => {
-			//! ファイルから全メモを読み込む。
-			const allMemos = await memoManager.getMemos(filePath, "work");
+			// ! ファイルから全メモを読み込む。
+			const allMemos = await memoManager.getMemos(filePath, "work")
 
-			//! 2025-10-29の範囲でフィルタリング（GMT+9基準）。
-			//! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
-			const startDate = new Date("2025-10-29T00:00:00.000+09:00");
-			const endDate = new Date("2025-10-29T23:59:59.999+09:00");
+			// ! 2025-10-29の範囲でフィルタリング（GMT+9基準）。
+			// ! GMT+9での10/29 00:00〜23:59 を UTC時刻で表現。
+			const startDate = new Date("2025-10-29T00:00:00.000+09:00")
+			const endDate = new Date("2025-10-29T23:59:59.999+09:00")
 
-			//! タイムスタンプベースのフィルタリング。
-			const filteredMemos = allMemos.filter((memo) => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
+			// ! タイムスタンプベースのフィルタリング。
+			const filteredMemos = allMemos.filter(memo => {
+				const memoDate = new Date(memo.timestamp)
+				return memoDate >= startDate && memoDate <= endDate
+			})
 
-			//! 2025-10-29のメモのみが含まれることを確認。
-			expect(filteredMemos.length).toBeGreaterThan(0);
+			// ! 2025-10-29のメモのみが含まれることを確認。
+			expect(filteredMemos.length).toBeGreaterThan(0)
 
-			//! 特定のメモ(2025-10-29T01:59:30.636Z)が含まれることを確認。
-			const targetMemo = filteredMemos.find((m) => m.id === "019a2db1-124c-76eb-84cc-9fdd104cdadf");
-			expect(targetMemo).toBeDefined();
-			expect(targetMemo?.timestamp).toBe("2025-10-29T01:59:30.636Z");
-		});
-	});
-});
+			// ! 特定のメモ(2025-10-29T01:59:30.636Z)が含まれることを確認。
+			const targetMemo = filteredMemos.find(m => m.id === "019a2db1-124c-76eb-84cc-9fdd104cdadf")
+			expect(targetMemo).toBeDefined()
+			expect(targetMemo?.timestamp).toBe("2025-10-29T01:59:30.636Z")
+		})
+	})
+})

@@ -1,59 +1,59 @@
-import { ViewMode } from "../src/types";
+import { ViewMode } from "../src/types"
 
 describe("Sidebarビューモード統合テスト", () => {
 	describe("ビューモード切り替え", () => {
 		test("showThreadView()でスレッドビューに切り替わる", () => {
-			//! Sidebarの状態をモック。
+			// ! Sidebarの状態をモック。
 			const state = {
 				viewMode: "main" as ViewMode,
 				focusedThreadId: null as string | null,
-			};
+			}
 
 			const showThreadView = (memoId: string) => {
-				state.viewMode = "thread";
-				state.focusedThreadId = memoId;
-			};
+				state.viewMode = "thread"
+				state.focusedThreadId = memoId
+			}
 
-			showThreadView("test-memo-123");
+			showThreadView("test-memo-123")
 
-			expect(state.viewMode).toBe("thread");
-			expect(state.focusedThreadId).toBe("test-memo-123");
-		});
+			expect(state.viewMode).toBe("thread")
+			expect(state.focusedThreadId).toBe("test-memo-123")
+		})
 
 		test("showMainView()でメインビューに切り替わる", () => {
 			const state = {
 				viewMode: "thread" as ViewMode,
 				focusedThreadId: "some-memo" as string | null,
-			};
+			}
 
 			const showMainView = () => {
-				state.viewMode = "main";
-				state.focusedThreadId = null;
-			};
+				state.viewMode = "main"
+				state.focusedThreadId = null
+			}
 
-			showMainView();
+			showMainView()
 
-			expect(state.viewMode).toBe("main");
-			expect(state.focusedThreadId).toBeNull();
-		});
+			expect(state.viewMode).toBe("main")
+			expect(state.focusedThreadId).toBeNull()
+		})
 
 		test("スレッドビューから別のメモのスレッドビューに遷移できる", () => {
 			const state = {
 				viewMode: "thread" as ViewMode,
 				focusedThreadId: "memo-1" as string | null,
-			};
+			}
 
 			const showThreadView = (memoId: string) => {
-				state.viewMode = "thread";
-				state.focusedThreadId = memoId;
-			};
+				state.viewMode = "thread"
+				state.focusedThreadId = memoId
+			}
 
-			showThreadView("memo-2");
+			showThreadView("memo-2")
 
-			expect(state.viewMode).toBe("thread");
-			expect(state.focusedThreadId).toBe("memo-2");
-		});
-	});
+			expect(state.viewMode).toBe("thread")
+			expect(state.focusedThreadId).toBe("memo-2")
+		})
+	})
 
 	describe("DOM切り替え処理", () => {
 		test("メインビューではMemoListを表示し、ThreadViewを非表示にする", () => {
@@ -61,138 +61,138 @@ describe("Sidebarビューモード統合テスト", () => {
 				return {
 					memoListVisible: viewMode === "main",
 					threadViewVisible: viewMode === "thread",
-				};
-			};
+				}
+			}
 
-			const visibility = checkVisibility("main");
+			const visibility = checkVisibility("main")
 
-			expect(visibility.memoListVisible).toBe(true);
-			expect(visibility.threadViewVisible).toBe(false);
-		});
+			expect(visibility.memoListVisible).toBe(true)
+			expect(visibility.threadViewVisible).toBe(false)
+		})
 
 		test("スレッドビューではThreadViewを表示し、MemoListを非表示にする", () => {
 			const checkVisibility = (viewMode: ViewMode) => {
 				return {
 					memoListVisible: viewMode === "main",
 					threadViewVisible: viewMode === "thread",
-				};
-			};
+				}
+			}
 
-			const visibility = checkVisibility("thread");
+			const visibility = checkVisibility("thread")
 
-			expect(visibility.memoListVisible).toBe(false);
-			expect(visibility.threadViewVisible).toBe(true);
-		});
-	});
+			expect(visibility.memoListVisible).toBe(false)
+			expect(visibility.threadViewVisible).toBe(true)
+		})
+	})
 
 	describe("ハンドラーの統合", () => {
 		test("MemoListのonThreadClickハンドラーでshowThreadView()が呼ばれる", () => {
-			const showThreadView = jest.fn();
+			const showThreadView = jest.fn()
 
 			const handlers = {
 				onThreadClick: (memoId: string) => {
-					showThreadView(memoId);
+					showThreadView(memoId)
 				},
-			};
+			}
 
-			//! カードがクリックされた。
-			handlers.onThreadClick("clicked-memo");
+			// ! カードがクリックされた。
+			handlers.onThreadClick("clicked-memo")
 
-			expect(showThreadView).toHaveBeenCalledWith("clicked-memo");
-		});
+			expect(showThreadView).toHaveBeenCalledWith("clicked-memo")
+		})
 
 		test("ThreadViewのonBackハンドラーでshowMainView()が呼ばれる", () => {
-			const showMainView = jest.fn();
+			const showMainView = jest.fn()
 
 			const handlers = {
 				onBack: () => {
-					showMainView();
+					showMainView()
 				},
-			};
+			}
 
-			//! 戻るボタンがクリックされた。
-			handlers.onBack();
+			// ! 戻るボタンがクリックされた。
+			handlers.onBack()
 
-			expect(showMainView).toHaveBeenCalled();
-		});
+			expect(showMainView).toHaveBeenCalled()
+		})
 
 		test("ThreadViewのonNavigateToParentハンドラーでshowThreadView()が呼ばれる", () => {
-			const showThreadView = jest.fn();
+			const showThreadView = jest.fn()
 
 			const handlers = {
 				onNavigateToParent: (parentId: string) => {
-					showThreadView(parentId);
+					showThreadView(parentId)
 				},
-			};
+			}
 
-			//! 親メモへのナビゲーションがクリックされた。
-			handlers.onNavigateToParent("parent-memo");
+			// ! 親メモへのナビゲーションがクリックされた。
+			handlers.onNavigateToParent("parent-memo")
 
-			expect(showThreadView).toHaveBeenCalledWith("parent-memo");
-		});
+			expect(showThreadView).toHaveBeenCalledWith("parent-memo")
+		})
 
 		test("ThreadViewのonThreadCardClickハンドラーでshowThreadView()が呼ばれる", () => {
-			const showThreadView = jest.fn();
+			const showThreadView = jest.fn()
 
 			const handlers = {
 				onThreadCardClick: (memoId: string) => {
-					showThreadView(memoId);
+					showThreadView(memoId)
 				},
-			};
+			}
 
-			//! 子メモがクリックされた。
-			handlers.onThreadCardClick("child-memo");
+			// ! 子メモがクリックされた。
+			handlers.onThreadCardClick("child-memo")
 
-			expect(showThreadView).toHaveBeenCalledWith("child-memo");
-		});
-	});
+			expect(showThreadView).toHaveBeenCalledWith("child-memo")
+		})
+	})
 
 	describe("スレッドビューでの返信処理", () => {
 		test("スレッドビュー内で返信ボタンをクリックした場合、focusedThreadIdを親として設定する", () => {
 			const handleReply = (parentMemoId: string) => {
-				//! 返信モードに入る（InputFormの処理）。
-				//! 親メモIDはfocusedThreadIdまたは指定されたparentMemoId。
+				// ! 返信モードに入る（InputFormの処理）。
+				// ! 親メモIDはfocusedThreadIdまたは指定されたparentMemoId。
 				return {
 					replyMode: true,
 					parentId: parentMemoId,
-				};
-			};
+				}
+			}
 
-			const result = handleReply("focused-memo");
+			const result = handleReply("focused-memo")
 
-			expect(result.replyMode).toBe(true);
-			expect(result.parentId).toBe("focused-memo");
-		});
-	});
+			expect(result.replyMode).toBe(true)
+			expect(result.parentId).toBe("focused-memo")
+		})
+	})
 
 	describe("メモデータの更新", () => {
 		test("スレッドビューでメモを編集・削除した後、表示が更新される", () => {
-			const reloadMemos = jest.fn();
+			const reloadMemos = jest.fn()
 
-			//! メモを編集または削除。
+			// ! メモを編集または削除。
 			const onSaveEdit = (_memoId: string, _newContent: string) => {
-				//! 編集処理...
-				//! メモをリロード。
-				reloadMemos();
-			};
+				// ! 編集処理...
+				// ! メモをリロード。
+				reloadMemos()
+			}
 
-			onSaveEdit("memo-123", "編集後の内容");
+			onSaveEdit("memo-123", "編集後の内容")
 
-			expect(reloadMemos).toHaveBeenCalled();
-		});
+			expect(reloadMemos).toHaveBeenCalled()
+		})
 
 		test("メインビューに戻った後、メモリストが更新される", () => {
-			const reloadMemos = jest.fn();
+			const reloadMemos = jest.fn()
 
 			const showMainView = () => {
-				//! メインビューに戻る。
-				//! メモをリロードして表示を更新。
-				reloadMemos();
-			};
+				// ! メインビューに戻る。
+				// ! メモをリロードして表示を更新。
+				reloadMemos()
+			}
 
-			showMainView();
+			showMainView()
 
-			expect(reloadMemos).toHaveBeenCalled();
-		});
-	});
-});
+			expect(reloadMemos).toHaveBeenCalled()
+		})
+	})
+})

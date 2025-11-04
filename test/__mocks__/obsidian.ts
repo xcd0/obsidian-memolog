@@ -1,17 +1,17 @@
-//! Obsidian APIのモック。
+// ! Obsidian APIのモック。
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/require-await */
 
 export class App {
-	vault: Vault = new Vault();
-	workspace: Workspace = new Workspace();
+	vault: Vault = new Vault()
+	workspace: Workspace = new Workspace()
 }
 
 export class Vault {
-	adapter: any = {};
+	adapter: any = {}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async read(_file: TFile): Promise<string> {
-		return "";
+		return ""
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,7 +21,7 @@ export class Vault {
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async create(_path: string, _data: string): Promise<TFile> {
-		return new TFile();
+		return new TFile()
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -31,18 +31,18 @@ export class Vault {
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	getAbstractFileByPath(_path: string): TFile | TFolder | null {
-		return null;
+		return null
 	}
 
 	getMarkdownFiles(): TFile[] {
-		return [];
+		return []
 	}
 }
 
 export class Workspace {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	getRightLeaf(_split: boolean): WorkspaceLeaf {
-		return new WorkspaceLeaf();
+		return new WorkspaceLeaf()
 	}
 }
 
@@ -54,23 +54,23 @@ export class WorkspaceLeaf {
 }
 
 export class TFile {
-	path: string = "";
-	name: string = "";
-	extension: string = "md";
-	basename: string = "";
-	parent: TFolder | null = null;
+	path: string = ""
+	name: string = ""
+	extension: string = "md"
+	basename: string = ""
+	parent: TFolder | null = null
 }
 
 export class TFolder {
-	path: string = "";
-	name: string = "";
-	parent: TFolder | null = null;
-	children: (TFile | TFolder)[] = [];
+	path: string = ""
+	name: string = ""
+	parent: TFolder | null = null
+	children: (TFile | TFolder)[] = []
 }
 
 export class Plugin {
-	app: App = new App();
-	manifest: any = {};
+	app: App = new App()
+	manifest: any = {}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	addCommand(_command: any): void {
@@ -83,7 +83,7 @@ export class Plugin {
 	}
 
 	async loadData(): Promise<any> {
-		return {};
+		return {}
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -93,20 +93,20 @@ export class Plugin {
 }
 
 export class ItemView {
-	containerEl: HTMLElement = document.createElement("div");
-	app: App = new App();
-	leaf: WorkspaceLeaf = new WorkspaceLeaf();
+	containerEl: HTMLElement = document.createElement("div")
+	app: App = new App()
+	leaf: WorkspaceLeaf = new WorkspaceLeaf()
 
 	getViewType(): string {
-		return "";
+		return ""
 	}
 
 	getDisplayText(): string {
-		return "";
+		return ""
 	}
 
 	getIcon(): string {
-		return "";
+		return ""
 	}
 
 	async onOpen(): Promise<void> {

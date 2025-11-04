@@ -50,6 +50,7 @@ v0.0.14では、メモ同士を関連付けるスレッド機能を実装する�
 **メモリレイヤー（実行時）**: 双方向インデックス構造
 
 この方式により、以下を実現：
+
 - ファイルフォーマットはシンプル（親IDのみ）
 - 実行時は高速な双方向参照（O(1)）
 - データ整合性の維持が容易
@@ -57,93 +58,94 @@ v0.0.14では、メモ同士を関連付けるスレッド機能を実装する�
 ### 2.2 ハイブリッドインデックスの詳細
 
 ```typescript
-//! スレッドインデックス（メモリ内のみ）。
+// ! スレッドインデックス（メモリ内のみ）。
 export interface ThreadIndex {
-	//! 親メモID → 子メモIDリストのマップ。
-	childrenMap: Map<string, string[]>;
+	// ! 親メモID → 子メモIDリストのマップ。
+	childrenMap: Map<string, string[]>
 
-	//! 子メモID → 親メモIDのマップ。
-	parentMap: Map<string, string>;
+	// ! 子メモID → 親メモIDのマップ。
+	parentMap: Map<string, string>
 
-	//! ルートメモIDのセット（parentIdがないメモ）。
-	rootIds: Set<string>;
+	// ! ルートメモIDのセット（parentIdがないメモ）。
+	rootIds: Set<string>
 
-	//! 各メモの深さ（ルート=0）。
-	depthMap: Map<string, number>;
+	// ! 各メモの深さ（ルート=0）。
+	depthMap: Map<string, number>
 
-	//! 各メモの子孫数（自身含まず）。
-	descendantCountMap: Map<string, number>;
+	// ! 各メモの子孫数（自身含まず）。
+	descendantCountMap: Map<string, number>
 }
 ```
 
 **構築方法:**
-```typescript
-//! スレッドインデックスを構築する。
-function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
-	const childrenMap = new Map<string, string[]>();
-	const parentMap = new Map<string, string>();
-	const rootIds = new Set<string>();
-	const depthMap = new Map<string, number>();
-	const descendantCountMap = new Map<string, number>();
 
-	//! 第1パス: 親子関係を構築。
+```typescript
+// ! スレッドインデックスを構築する。
+function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
+	const childrenMap = new Map<string, string[]>()
+	const parentMap = new Map<string, string>()
+	const rootIds = new Set<string>()
+	const depthMap = new Map<string, number>()
+	const descendantCountMap = new Map<string, number>()
+
+	// ! 第1パス: 親子関係を構築。
 	for (const memo of memos) {
 		if (memo.parentId) {
-			//! 子として登録。
+			// ! 子として登録。
 			if (!childrenMap.has(memo.parentId)) {
-				childrenMap.set(memo.parentId, []);
+				childrenMap.set(memo.parentId, [])
 			}
-			childrenMap.get(memo.parentId)!.push(memo.id);
-			parentMap.set(memo.id, memo.parentId);
+			childrenMap.get(memo.parentId)!.push(memo.id)
+			parentMap.set(memo.id, memo.parentId)
 		} else {
-			//! ルートメモ。
-			rootIds.add(memo.id);
+			// ! ルートメモ。
+			rootIds.add(memo.id)
 		}
 	}
 
-        //! 第2パス: 深さと子孫数を計算（BFS）。
-        const queue: Array<{ id: string; depth: number }> = [];
-        for (const rootId of rootIds) {
-                queue.push({ id: rootId, depth: 0 });
-        }
+	// ! 第2パス: 深さと子孫数を計算（BFS）。
+	const queue: Array<{ id: string; depth: number }> = []
+	for (const rootId of rootIds) {
+		queue.push({ id: rootId, depth: 0 })
+	}
 
-        //! 配列のshift()はO(N)になるため、ポインタで管理する。
-        let head = 0;
-        while (head < queue.length) {
-                const { id, depth } = queue[head++];
-                depthMap.set(id, depth);
+	// ! 配列のshift()はO(N)になるため、ポインタで管理する。
+	let head = 0
+	while (head < queue.length) {
+		const { id, depth } = queue[head++]
+		depthMap.set(id, depth)
 
-                const children = childrenMap.get(id) || [];
-                for (const childId of children) {
-                        queue.push({ id: childId, depth: depth + 1 });
+		const children = childrenMap.get(id) || []
+		for (const childId of children) {
+			queue.push({ id: childId, depth: depth + 1 })
 		}
 	}
 
-        //! 第3パス: 子孫数を計算（反復処理）。
-        const postOrder: string[] = [];
-        const stack: string[] = [];
-        for (const rootId of rootIds) {
-                stack.push(rootId);
-                while (stack.length > 0) {
-                        const currentId = stack.pop()!;
-                        postOrder.push(currentId);
-                        const children = childrenMap.get(currentId) || [];
-                        for (const childId of children) {
-                                stack.push(childId);
-                        }
-                }
-        }
+	// ! 第3パス: 子孫数を計算（反復処理）。
+	const postOrder: string[] = []
+	const stack: string[] = []
+	for (const rootId of rootIds) {
+		stack.push(rootId)
+		while (stack.length > 0) {
+			const currentId = stack.pop()!
+			postOrder.push(currentId)
+			const children = childrenMap.get(currentId) || []
+			for (const childId of children) {
+				stack.push(childId)
+			}
+		}
+	}
 
-        //! 末尾から走査して子孫数を集計。
-        for (let i = postOrder.length - 1; i >= 0; i--) {
-                const memoId = postOrder[i];
-                const children = childrenMap.get(memoId) || [];
-                let count = 0;
-                for (const childId of children) {
-                        count += 1 + (descendantCountMap.get(childId) || 0);
-                }
-                descendantCountMap.set(memoId, count);
-        }
+	// ! 末尾から走査して子孫数を集計。
+	for (let i = postOrder.length - 1; i >= 0; i--) {
+		const memoId = postOrder[i]
+		const children = childrenMap.get(memoId) || []
+		let count = 0
+		for (const childId of children) {
+			count += 1 + (descendantCountMap.get(childId) || 0)
+		}
+		descendantCountMap.set(memoId, count)
+	}
 
 	return {
 		childrenMap,
@@ -151,11 +153,12 @@ function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
 		rootIds,
 		depthMap,
 		descendantCountMap,
-	};
+	}
 }
 ```
 
 **計算量:**
+
 - 構築: O(N) （Nはメモ数）
 - 子メモ取得: O(1)
 - 親メモ取得: O(1)
@@ -163,6 +166,7 @@ function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
 - 子孫数取得: O(1)
 
 **メリット:**
+
 1. **ファイルフォーマットがシンプル**: 親IDのみを保存
 2. **高速な双方向参照**: メモリ上では完全な双方向インデックス
 3. **整合性維持が容易**: ファイル読み込み時に再構築するため、常に正しい状態
@@ -172,90 +176,91 @@ function buildThreadIndex(memos: MemoEntry[]): ThreadIndex {
 ### 2.3 MemoEntry型の拡張
 
 ```typescript
-//! メモエントリの型定義。
+// ! メモエントリの型定義。
 export interface MemoEntry {
-	//! メモの一意識別子（UUID等）。
-	id: string;
+	// ! メモの一意識別子（UUID等）。
+	id: string
 
-	//! カテゴリ名。
-	category: string;
+	// ! カテゴリ名。
+	category: string
 
-	//! タイムスタンプ（ISO 8601形式）。
-	timestamp: string;
+	// ! タイムスタンプ（ISO 8601形式）。
+	timestamp: string
 
-	//! メモの本文。
-	content: string;
+	// ! メモの本文。
+	content: string
 
-	//! 添付ファイルのパス配列（オプション）。
-	attachments?: string[];
+	// ! 添付ファイルのパス配列（オプション）。
+	attachments?: string[]
 
-	//! メモ作成時に使用されたテンプレート（オプション）。
-	template?: string;
+	// ! メモ作成時に使用されたテンプレート（オプション）。
+	template?: string
 
-	//! 作成日時（Date型）。
-	createdAt?: Date;
+	// ! 作成日時（Date型）。
+	createdAt?: Date
 
-	//! 更新日時（Date型）。
-	updatedAt?: Date;
+	// ! 更新日時（Date型）。
+	updatedAt?: Date
 
-	//! ゴミ箱に移動した日時（ISO 8601形式）。
-	trashedAt?: string;
+	// ! ゴミ箱に移動した日時（ISO 8601形式）。
+	trashedAt?: string
 
-	//! ピン留めした日時（ISO 8601形式）。
-	pinnedAt?: string;
+	// ! ピン留めした日時（ISO 8601形式）。
+	pinnedAt?: string
 
-	//! 親メモのID（スレッドの場合）。v0.0.14で追加。
-	parentId?: string;
+	// ! 親メモのID（スレッドの場合）。v0.0.14で追加。
+	parentId?: string
 
-	//! 返信数（キャッシュ用）。v0.0.14で追加。
-	replyCount?: number;
+	// ! 返信数（キャッシュ用）。v0.0.14で追加。
+	replyCount?: number
 }
 ```
 
 ### 2.4 スレッドツリー構造
 
 ```typescript
-//! スレッドツリーのノード。
+// ! スレッドツリーのノード。
 export interface ThreadNode {
-	//! メモID。
-	id: string;
+	// ! メモID。
+	id: string
 
-	//! 子ノードのID配列（返信）。
-	childIds: string[];
+	// ! 子ノードのID配列（返信）。
+	childIds: string[]
 
-	//! 親ノードのID。
-	parentId?: string;
+	// ! 親ノードのID。
+	parentId?: string
 
-	//! スレッドの深さ（0がルート）。
-	depth: number;
+	// ! スレッドの深さ（0がルート）。
+	depth: number
 
-	//! 子孫の総数（自身含まず）。
-	descendantCount: number;
+	// ! 子孫の総数（自身含まず）。
+	descendantCount: number
 
-	//! 折りたたみ状態（UIで使用）。
-	collapsed?: boolean;
+	// ! 折りたたみ状態（UIで使用）。
+	collapsed?: boolean
 }
 
-//! スレッドツリー。
+// ! スレッドツリー。
 export interface ThreadTree {
-	//! ルートメモのID。
-	rootId: string;
+	// ! ルートメモのID。
+	rootId: string
 
-	//! ノードマップ（ID → ThreadNode）。
-	nodes: Map<string, ThreadNode>;
+	// ! ノードマップ（ID → ThreadNode）。
+	nodes: Map<string, ThreadNode>
 
-	//! 全メモ数（ルート含む）。
-	totalCount: number;
+	// ! 全メモ数（ルート含む）。
+	totalCount: number
 
-	//! 最大深さ。
-	maxDepth: number;
+	// ! 最大深さ。
+	maxDepth: number
 
-	//! 最終更新日時（ツリー内の最新タイムスタンプ）。
-	lastUpdated: string;
+	// ! 最終更新日時（ツリー内の最新タイムスタンプ）。
+	lastUpdated: string
 }
 ```
 
 **設計変更点:**
+
 - ノード内にメモ本体を持たず、IDのみを保持
 - メモ本体はMemoManagerから取得（メモリ効率化）
 - nodesをMapで管理し、任意のノードへO(1)アクセス
@@ -263,16 +268,19 @@ export interface ThreadTree {
 ### 2.5 HTMLコメントタグの拡張
 
 現在のフォーマット:
+
 ```html
 <!-- memo-id: abc123, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
 ```
 
 v0.0.14での拡張:
+
 ```html
 <!-- memo-id: abc123, timestamp: 2025-11-04T10:00:00+09:00, category: "work", parent-id: xyz789 -->
 ```
 
 **ポイント:**
+
 - `parent-id` はオプション属性
 - 親メモが存在しない（ルートメモ）場合は省略
 - 既存のメモとの後方互換性を維持
@@ -286,32 +294,34 @@ v0.0.14での拡張:
 #### 3.1.1 返信の作成
 
 **操作:**
+
 1. 既存のメモカードの「返信」ボタンをクリック
 2. 入力フォームが開き、親メモの情報が表示される
 3. メモを入力して送信
 
 **実装:**
+
 ```typescript
-//! 返信メモを作成する。
+// ! 返信メモを作成する。
 async function createReply(
-        parentMemo: MemoEntry,
-        content: string,
-        category: string,
-        threadIndex: ThreadIndex
+	parentMemo: MemoEntry,
+	content: string,
+	category: string,
+	threadIndex: ThreadIndex,
 ): Promise<MemoEntry> {
-        //! 新しいメモを作成。
-        const replyMemo = createMemoEntry(category, content);
+	// ! 新しいメモを作成。
+	const replyMemo = createMemoEntry(category, content)
 
-        //! 親メモIDを設定。
-        replyMemo.parentId = parentMemo.id;
+	// ! 親メモIDを設定。
+	replyMemo.parentId = parentMemo.id
 
-        //! 親メモと同じファイルに追加。
-        await addMemoToFile(replyMemo, parentMemo);
+	// ! 親メモと同じファイルに追加。
+	await addMemoToFile(replyMemo, parentMemo)
 
-        //! スレッドインデックスを更新。
-        await updateThreadIndex(threadIndex, replyMemo);
+	// ! スレッドインデックスを更新。
+	await updateThreadIndex(threadIndex, replyMemo)
 
-        return replyMemo;
+	return replyMemo
 }
 ```
 
@@ -327,49 +337,49 @@ async function createReply(
 ### 3.2 スレッドツリーの構築
 
 ```typescript
-//! スレッドツリーを構築する（ThreadIndexから）。
+// ! スレッドツリーを構築する（ThreadIndexから）。
 function buildThreadTree(
 	rootId: string,
 	threadIndex: ThreadIndex,
-	memoMap: Map<string, MemoEntry>
+	memoMap: Map<string, MemoEntry>,
 ): ThreadTree {
-	const nodes = new Map<string, ThreadNode>();
-	let totalCount = 0;
-	let maxDepth = 0;
-	let lastUpdated = "";
+	const nodes = new Map<string, ThreadNode>()
+	let totalCount = 0
+	let maxDepth = 0
+	let lastUpdated = ""
 
-	//! BFSでツリーを構築。
-	const queue: string[] = [rootId];
+	// ! BFSでツリーを構築。
+	const queue: string[] = [rootId]
 
 	while (queue.length > 0) {
-		const currentId = queue.shift()!;
-		const depth = threadIndex.depthMap.get(currentId) || 0;
-		const childIds = threadIndex.childrenMap.get(currentId) || [];
-		const descendantCount = threadIndex.descendantCountMap.get(currentId) || 0;
-		const parentId = threadIndex.parentMap.get(currentId);
+		const currentId = queue.shift()!
+		const depth = threadIndex.depthMap.get(currentId) || 0
+		const childIds = threadIndex.childrenMap.get(currentId) || []
+		const descendantCount = threadIndex.descendantCountMap.get(currentId) || 0
+		const parentId = threadIndex.parentMap.get(currentId)
 
-		//! ノードを作成。
+		// ! ノードを作成。
 		const node: ThreadNode = {
 			id: currentId,
 			childIds: [...childIds], // コピー
 			parentId,
 			depth,
 			descendantCount,
-		};
-
-		nodes.set(currentId, node);
-
-		//! 統計を更新。
-		totalCount++;
-		maxDepth = Math.max(maxDepth, depth);
-
-		const memo = memoMap.get(currentId);
-		if (memo && (!lastUpdated || memo.timestamp > lastUpdated)) {
-			lastUpdated = memo.timestamp;
 		}
 
-		//! 子をキューに追加。
-		queue.push(...childIds);
+		nodes.set(currentId, node)
+
+		// ! 統計を更新。
+		totalCount++
+		maxDepth = Math.max(maxDepth, depth)
+
+		const memo = memoMap.get(currentId)
+		if (memo && (!lastUpdated || memo.timestamp > lastUpdated)) {
+			lastUpdated = memo.timestamp
+		}
+
+		// ! 子をキューに追加。
+		queue.push(...childIds)
 	}
 
 	return {
@@ -378,11 +388,12 @@ function buildThreadTree(
 		totalCount,
 		maxDepth,
 		lastUpdated,
-	};
+	}
 }
 ```
 
 **最適化ポイント:**
+
 1. ThreadIndexから直接構築（O(N)）
 2. 再帰を使わずBFSで実装（スタックオーバーフロー回避）
 3. メモ本体は参照のみ（メモリ効率化）
@@ -399,6 +410,7 @@ function buildThreadTree(
 スレッド関係をインデントで表現。
 
 **表示例:**
+
 ```
 ┌─────────────────────────────────────┐
 │ 📝 プロジェクトXの方針について      │ <- ルート
@@ -432,39 +444,42 @@ function buildThreadTree(
 #### 3.4.1 削除ポリシー
 
 **オプション1: 子メモも一緒に削除（推奨）**
+
 - 親メモを削除すると、すべての子孫メモも削除される
 - スレッドの一貫性を保つ
 
 **オプション2: 子メモを孤児化**
+
 - 親メモのみ削除し、子メモは残る
 - 子メモのparentIdをnullに設定
 
 **採用: オプション1（一括削除）**
+
 - 理由: データの整合性を保ちやすい
 - ただし、削除前に確認ダイアログを表示
 
 ```typescript
-//! スレッド全体を削除する。
+// ! スレッド全体を削除する。
 async function deleteThread(rootMemo: MemoEntry): Promise<void> {
-        //! スレッドツリーを構築。
-        const memoMap = buildMemoMap(); // MemoManagerが保持するID→MemoEntryのMapを再構築
-        const memoList = Array.from(memoMap.values());
-        const threadIndex = threadIndexManager.getIndex(memoList);
-        const tree = buildThreadTree(rootMemo.id, threadIndex, memoMap);
+	// ! スレッドツリーを構築。
+	const memoMap = buildMemoMap() // MemoManagerが保持するID→MemoEntryのMapを再構築
+	const memoList = Array.from(memoMap.values())
+	const threadIndex = threadIndexManager.getIndex(memoList)
+	const tree = buildThreadTree(rootMemo.id, threadIndex, memoMap)
 
-        //! 削除確認。
-        const confirmed = await confirmDialog(
-                `このメモと返信${tree.totalCount - 1}件を削除しますか？`
-        );
-        if (!confirmed) return;
+	// ! 削除確認。
+	const confirmed = await confirmDialog(
+		`このメモと返信${tree.totalCount - 1}件を削除しますか？`,
+	)
+	if (!confirmed) return
 
-        //! ツリー内の全メモを収集。
-        const memosToDelete = Array.from(tree.nodes.keys());
+	// ! ツリー内の全メモを収集。
+	const memosToDelete = Array.from(tree.nodes.keys())
 
-        //! 一括削除。
-        for (const memoId of memosToDelete) {
-                await deleteMemo(memoId);
-        }
+	// ! 一括削除。
+	for (const memoId of memosToDelete) {
+		await deleteMemo(memoId)
+	}
 }
 ```
 
@@ -487,6 +502,7 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 ```
 
 **新規追加:**
+
 - **返信ボタン（💬）**: このメモに返信を作成
 - **返信数表示（↗︎返信N件）**: スレッド情報を表示、クリックでツリー表示に切り替え
 
@@ -529,6 +545,7 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 ```
 
 **表示モード:**
+
 - **フラット**: 従来通りの時系列表示
 - **ツリー**: スレッド構造を可視化
 
@@ -547,6 +564,7 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 ```
 
 **視覚的な接続線:**
+
 ```
 │ <- 縦線で親子関係を表現
 ┗━ <- 子メモの開始位置
@@ -559,98 +577,98 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 ### 5.1 ThreadIndexManagerの実装
 
 ```typescript
-//! スレッドインデックスマネージャー。
+// ! スレッドインデックスマネージャー。
 export class ThreadIndexManager {
-        private index: ThreadIndex | null = null;
-        private treeCache: Map<string, ThreadTree> = new Map();
-        private lastBuildTime: number = 0;
-        private lastSignature: string | null = null; // メモ集合の最新署名（構造変化検出用）
+	private index: ThreadIndex | null = null
+	private treeCache: Map<string, ThreadTree> = new Map()
+	private lastBuildTime: number = 0
+	private lastSignature: string | null = null // メモ集合の最新署名（構造変化検出用）
 
-        //! スレッドインデックスを取得（キャッシュ済みなら再利用）。
-        getIndex(memos: MemoEntry[]): ThreadIndex {
-                const signature = this.createSignature(memos);
+	// ! スレッドインデックスを取得（キャッシュ済みなら再利用）。
+	getIndex(memos: MemoEntry[]): ThreadIndex {
+		const signature = this.createSignature(memos)
 
-                //! インデックスが未構築、または構造が変わった場合は再構築。
-                if (!this.index || this.needsRebuild(signature)) {
-                        this.index = buildThreadIndex(memos);
-                        this.lastSignature = signature;
-                        this.lastBuildTime = Date.now();
-                        //! ツリーキャッシュもクリア。
-                        this.treeCache.clear();
-                }
-                return this.index;
+		// ! インデックスが未構築、または構造が変わった場合は再構築。
+		if (!this.index || this.needsRebuild(signature)) {
+			this.index = buildThreadIndex(memos)
+			this.lastSignature = signature
+			this.lastBuildTime = Date.now()
+			// ! ツリーキャッシュもクリア。
+			this.treeCache.clear()
+		}
+		return this.index
 	}
 
-	//! スレッドツリーをキャッシュから取得（なければ構築）。
+	// ! スレッドツリーをキャッシュから取得（なければ構築）。
 	getThreadTree(
 		rootId: string,
 		threadIndex: ThreadIndex,
-		memoMap: Map<string, MemoEntry>
+		memoMap: Map<string, MemoEntry>,
 	): ThreadTree {
 		if (this.treeCache.has(rootId)) {
-			return this.treeCache.get(rootId)!;
+			return this.treeCache.get(rootId)!
 		}
 
-		const tree = buildThreadTree(rootId, threadIndex, memoMap);
-		this.treeCache.set(rootId, tree);
-		return tree;
+		const tree = buildThreadTree(rootId, threadIndex, memoMap)
+		this.treeCache.set(rootId, tree)
+		return tree
 	}
 
-	//! 子メモIDリストを取得（O(1)）。
+	// ! 子メモIDリストを取得（O(1)）。
 	getChildren(parentId: string, threadIndex: ThreadIndex): string[] {
-		return threadIndex.childrenMap.get(parentId) || [];
+		return threadIndex.childrenMap.get(parentId) || []
 	}
 
-	//! 親メモIDを取得（O(1)）。
+	// ! 親メモIDを取得（O(1)）。
 	getParent(childId: string, threadIndex: ThreadIndex): string | undefined {
-		return threadIndex.parentMap.get(childId);
+		return threadIndex.parentMap.get(childId)
 	}
 
-	//! 深さを取得（O(1)）。
+	// ! 深さを取得（O(1)）。
 	getDepth(memoId: string, threadIndex: ThreadIndex): number {
-		return threadIndex.depthMap.get(memoId) || 0;
+		return threadIndex.depthMap.get(memoId) || 0
 	}
 
-	//! 子孫数を取得（O(1)）。
+	// ! 子孫数を取得（O(1)）。
 	getDescendantCount(memoId: string, threadIndex: ThreadIndex): number {
-		return threadIndex.descendantCountMap.get(memoId) || 0;
+		return threadIndex.descendantCountMap.get(memoId) || 0
 	}
 
-        //! インデックスを強制的に再構築。
-        rebuild(memos: MemoEntry[]): void {
-                this.index = buildThreadIndex(memos);
-                this.lastSignature = this.createSignature(memos);
-                this.lastBuildTime = Date.now();
-                this.treeCache.clear();
-        }
+	// ! インデックスを強制的に再構築。
+	rebuild(memos: MemoEntry[]): void {
+		this.index = buildThreadIndex(memos)
+		this.lastSignature = this.createSignature(memos)
+		this.lastBuildTime = Date.now()
+		this.treeCache.clear()
+	}
 
-	//! 特定のツリーキャッシュを無効化。
+	// ! 特定のツリーキャッシュを無効化。
 	invalidateTree(rootId: string): void {
-		this.treeCache.delete(rootId);
+		this.treeCache.delete(rootId)
 	}
 
-	//! 全キャッシュをクリア。
-        clear(): void {
-                this.index = null;
-                this.treeCache.clear();
-                this.lastSignature = null;
-        }
+	// ! 全キャッシュをクリア。
+	clear(): void {
+		this.index = null
+		this.treeCache.clear()
+		this.lastSignature = null
+	}
 
-        private needsRebuild(signature: string): boolean {
-                if (!this.index) return true;
-                return signature !== this.lastSignature;
-        }
+	private needsRebuild(signature: string): boolean {
+		if (!this.index) return true
+		return signature !== this.lastSignature
+	}
 
-        //! メモ集合の署名を生成し、構造変更を検出する。
-        private createSignature(memos: MemoEntry[]): string {
-                const parts = memos.map(memo => {
-                        const parent = memo.parentId ?? "";
-                        const updated = memo.updatedAt ? memo.updatedAt.toISOString() : memo.timestamp;
-                        return `${memo.id}:${parent}:${updated}`;
-                });
-                parts.sort();
-                return `${memos.length}|${parts.join("|")}`;
-        }
+	// ! メモ集合の署名を生成し、構造変更を検出する。
+	private createSignature(memos: MemoEntry[]): string {
+		const parts = memos.map(memo => {
+			const parent = memo.parentId ?? ""
+			const updated = memo.updatedAt ? memo.updatedAt.toISOString() : memo.timestamp
+			return `${memo.id}:${parent}:${updated}`
+		})
+		parts.sort()
+		return `${memos.length}|${parts.join("|")}`
+	}
 }
 ```
 
@@ -660,43 +678,43 @@ export class ThreadIndexManager {
 現在は全体再構築だが、将来的には差分更新を実装。
 
 ```typescript
-//! メモ追加時の差分更新。
+// ! メモ追加時の差分更新。
 function addMemoToIndex(memo: MemoEntry, index: ThreadIndex): void {
 	if (memo.parentId) {
-		//! 子として登録。
+		// ! 子として登録。
 		if (!index.childrenMap.has(memo.parentId)) {
-			index.childrenMap.set(memo.parentId, []);
+			index.childrenMap.set(memo.parentId, [])
 		}
-		index.childrenMap.get(memo.parentId)!.push(memo.id);
-		index.parentMap.set(memo.id, memo.parentId);
+		index.childrenMap.get(memo.parentId)!.push(memo.id)
+		index.parentMap.set(memo.id, memo.parentId)
 
-		//! 深さを設定。
-		const parentDepth = index.depthMap.get(memo.parentId) || 0;
-		index.depthMap.set(memo.id, parentDepth + 1);
+		// ! 深さを設定。
+		const parentDepth = index.depthMap.get(memo.parentId) || 0
+		index.depthMap.set(memo.id, parentDepth + 1)
 
-		//! 祖先の子孫数を更新。
-		updateAncestorDescendantCount(memo.parentId, index, +1);
+		// ! 祖先の子孫数を更新。
+		updateAncestorDescendantCount(memo.parentId, index, +1)
 	} else {
-		//! ルートメモ。
-		index.rootIds.add(memo.id);
-		index.depthMap.set(memo.id, 0);
+		// ! ルートメモ。
+		index.rootIds.add(memo.id)
+		index.depthMap.set(memo.id, 0)
 	}
 
-	index.descendantCountMap.set(memo.id, 0);
+	index.descendantCountMap.set(memo.id, 0)
 }
 
-//! 祖先の子孫数を更新（反復処理）。
+// ! 祖先の子孫数を更新（反復処理）。
 function updateAncestorDescendantCount(
-        memoId: string,
-        index: ThreadIndex,
-        delta: number
+	memoId: string,
+	index: ThreadIndex,
+	delta: number,
 ): void {
-        let currentId: string | undefined = memoId;
-        while (currentId) {
-                const current = index.descendantCountMap.get(currentId) || 0;
-                index.descendantCountMap.set(currentId, current + delta);
-                currentId = index.parentMap.get(currentId);
-        }
+	let currentId: string | undefined = memoId
+	while (currentId) {
+		const current = index.descendantCountMap.get(currentId) || 0
+		index.descendantCountMap.set(currentId, current + delta)
+		currentId = index.parentMap.get(currentId)
+	}
 }
 ```
 
@@ -736,19 +754,27 @@ function updateAncestorDescendantCount(
 
 ```markdown
 <!-- memo-id: root-001, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
+
 ## 2025-11-04 10:00
+
 プロジェクトXの方針について検討したい。
 
 <!-- memo-id: reply-001, timestamp: 2025-11-04T10:15:00+09:00, category: "work", parent-id: root-001 -->
+
 ## 2025-11-04 10:15
+
 技術選定から始めよう。Reactがいいと思う。
 
 <!-- memo-id: reply-002, timestamp: 2025-11-04T10:20:00+09:00, category: "work", parent-id: reply-001 -->
+
 ## 2025-11-04 10:20
+
 TypeScriptは必須だね。
 
 <!-- memo-id: reply-003, timestamp: 2025-11-04T10:25:00+09:00, category: "work", parent-id: reply-001 -->
+
 ## 2025-11-04 10:25
+
 ビルドツールはViteで。
 ```
 
@@ -834,11 +860,13 @@ TypeScriptは必須だね。
 ### 8.4 長いスレッドへの対応
 
 **仮想スクロール（v0.0.15以降）:**
+
 - 表示領域外のノードはレンダリングしない
 - スクロールに応じて動的にレンダリング
 - 10,000ノードのスレッドでも滑らかにスクロール
 
 **段階的ローディング（v0.0.15以降）:**
+
 - 初期表示は深さ10まで
 - 「さらに表示」ボタンで追加ロード
 - メモリとレンダリングコストを削減
@@ -850,25 +878,26 @@ TypeScriptは必須だね。
 ### 9.1 循環参照の防止
 
 ```typescript
-//! 既存メモの親を変更する際に循環参照が生じないか検証する。
+// ! 既存メモの親を変更する際に循環参照が生じないか検証する。
 function wouldIntroduceCycle(
-        childId: string,
-        candidateParentId: string,
-        threadIndex: ThreadIndex
+	childId: string,
+	candidateParentId: string,
+	threadIndex: ThreadIndex,
 ): boolean {
-        if (childId === candidateParentId) return true;
+	if (childId === candidateParentId) return true
 
-        let currentId: string | undefined = candidateParentId;
-        while (currentId) {
-                if (currentId === childId) return true; // childの祖先に到達
-                currentId = threadIndex.parentMap.get(currentId);
-        }
+	let currentId: string | undefined = candidateParentId
+	while (currentId) {
+		if (currentId === childId) return true // childの祖先に到達
+		currentId = threadIndex.parentMap.get(currentId)
+	}
 
-        return false;
+	return false
 }
 ```
 
 **利用上の注意:**
+
 - `childId` は既にThreadIndex上に存在している必要がある（新規返信では不要）。
 - UI上でドラッグ＆ドロップなどで親を変更する場合にのみ呼び出す。
 
@@ -878,19 +907,17 @@ ThreadIndexを使用することでO(1)の親参照が可能。
 ### 9.2 孤児メモの検出と修復
 
 ```typescript
-//! 孤児メモ（親が存在しないメモ）を検出。
+// ! 孤児メモ（親が存在しないメモ）を検出。
 function findOrphanMemos(allMemos: MemoEntry[]): MemoEntry[] {
-	const memoIds = new Set(allMemos.map(m => m.id));
-	return allMemos.filter(m =>
-		m.parentId && !memoIds.has(m.parentId)
-	);
+	const memoIds = new Set(allMemos.map(m => m.id))
+	return allMemos.filter(m => m.parentId && !memoIds.has(m.parentId))
 }
 
-//! 孤児メモをルートメモに昇格。
+// ! 孤児メモをルートメモに昇格。
 function repairOrphanMemos(orphans: MemoEntry[]): void {
 	for (const orphan of orphans) {
-		orphan.parentId = undefined;
-		console.warn(`Orphan memo ${orphan.id} promoted to root`);
+		orphan.parentId = undefined
+		console.warn(`Orphan memo ${orphan.id} promoted to root`)
 	}
 }
 ```
@@ -931,14 +958,14 @@ function repairOrphanMemos(orphans: MemoEntry[]): void {
 
 ## 11. 用語集
 
-| 用語 | 説明 |
-|------|------|
-| スレッド | 親子関係で繋がったメモの集合 |
-| ルートメモ | スレッドの最上位メモ（parentIdがnull） |
-| 返信 | 既存メモに対する子メモ |
-| スレッドツリー | スレッド全体を木構造で表現したもの |
-| 深さ | ルートメモからの階層数（ルート=0） |
-| 孤児メモ | 親メモが存在しないメモ（データ不整合） |
+| 用語           | 説明                                   |
+| -------------- | -------------------------------------- |
+| スレッド       | 親子関係で繋がったメモの集合           |
+| ルートメモ     | スレッドの最上位メモ（parentIdがnull） |
+| 返信           | 既存メモに対する子メモ                 |
+| スレッドツリー | スレッド全体を木構造で表現したもの     |
+| 深さ           | ルートメモからの階層数（ルート=0）     |
+| 孤児メモ       | 親メモが存在しないメモ（データ不整合） |
 
 ---
 

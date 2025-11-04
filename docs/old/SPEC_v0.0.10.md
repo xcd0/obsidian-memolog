@@ -42,12 +42,14 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 ### 2.1 修正済みのエラー (20件)
 
 #### 2.1.1 ESLint auto-fixで修正 (18件)
+
 - const宣言の適正化 (2件)
 - エスケープ文字の削除 (4件)
 - 不要な型アサーションの削除 (約10件)
 - その他の自動修正可能なエラー
 
 **修正箇所**:
+
 - `src/ui/sidebar.ts`: `let endDate` → `const endDate`
 - `src/utils/path-generator.ts`: `let fileName` → `const fileName`
 - `src/ui/settings-tab.ts`: 不要なエスケープ文字の削除
@@ -56,6 +58,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 #### 2.1.2 手動修正 (2件)
 
 **不要なasyncの削除**:
+
 - `src/core/settings.ts:44`: `findSettingsFile()`のasync削除
   ```typescript
   // Before
@@ -75,6 +78,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
   ```
 
 **Floating Promiseの修正**:
+
 - `src/ui/settings-tab.ts:1177`: voidキーワードでラップ
   ```typescript
   // Before
@@ -91,11 +95,13 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 **問題**: イベントハンドラー内でasync関数を使用しているため、Promiseが返されている
 
 **場所**:
+
 - `src/ui/settings-tab.ts`: 約30件
 - `src/ui/sidebar.ts`: 2件
 - `src/ui/components/memo-card.ts`: 数件
 
 **例**:
+
 ```typescript
 // エラーが出るコード
 .onChange(async (value) => {
@@ -109,6 +115,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 ```
 
 **対応方針**:
+
 - 機能的には問題がないため、v0.0.10では対応を保留
 - v0.0.11以降で段階的に修正
 
@@ -117,17 +124,20 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 **問題**: `any`型の値に対する操作で型安全性が保証されない
 
 **場所**:
+
 - `test/error-handler.test.ts`: 6件（テストコード）
 - `src/ui/sidebar.ts`: 2件（Obsidian API使用箇所）
 
 **例**:
+
 ```typescript
 // sidebar.ts:1615-1622
-(this.app as any).commands.executeCommandById(commandId);
-(this.app as any).workspace.openTabById(tabId);
+;(this.app as any).commands.executeCommandById(commandId)
+;(this.app as any).workspace.openTabById(tabId)
 ```
 
 **対応方針**:
+
 - テストコードのエラーは実害がないため無視
 - Obsidian APIの型定義不足によるものは、API側の改善を待つ
 
@@ -138,6 +148,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 ### 3.1 TODO.md
 
 **更新内容**:
+
 - v0.0.10セクションを追加
 - 開発方針を明記: 「v0.1.0に向けた既存機能のブラッシュアップ。新機能の追加は行わず、v0.0.9の機能の未熟な部分を改善」
 - ESLint修正の進捗を記録
@@ -146,6 +157,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 ### 3.2 README.md
 
 **更新内容**:
+
 - バージョンを v0.0.9 → v0.0.10 に更新
 - v0.0.10の主な変更点を追加:
   - コード品質向上
@@ -155,6 +167,7 @@ v0.0.10では、これらの問題を解決し、v0.1.0（最初の安定版）�
 ### 3.3 SPEC_v0.0.10.md（本ドキュメント）
 
 **作成目的**:
+
 - v0.0.10の開発方針を明確に記録
 - ESLintエラー修正の詳細を文書化
 - 残存する問題と対応方針を明記
@@ -183,6 +196,7 @@ Lines        : 67.21%
 ```
 
 **主要コンポーネントのカバレッジ**:
+
 - core: 85.45% statements, 74.6% branches
 - fs: 90% statements, 74.28% branches
 - utils: 29.48% statements（backup-manager、path-migratorが未テスト）

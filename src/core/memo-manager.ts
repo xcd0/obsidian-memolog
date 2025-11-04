@@ -1,50 +1,50 @@
-import { App } from "obsidian";
-import { MemoEntry, SortOrder, SaveUnit, ThreadIndex, ThreadTree } from "../types";
-import { MemologVaultHandler } from "../fs/vault-handler";
-import { CacheManager } from "./cache-manager";
-import { getErrorHandler, FileIOError } from "./error-handler";
-import { notify } from "../utils/notification-manager";
-import { memoToText, parseTextToMemo } from "./memo-helpers";
+import { App } from "obsidian"
+import { MemologVaultHandler } from "../fs/vault-handler"
+import { MemoEntry, SaveUnit, SortOrder, ThreadIndex, ThreadTree } from "../types"
+import { notify } from "../utils/notification-manager"
+import { CacheManager } from "./cache-manager"
+import { FileIOError, getErrorHandler } from "./error-handler"
 import {
 	createMemoEntry,
-	insertMemoIntoList,
-	splitFileIntoMemos,
 	generateCacheKey,
-	removeMemoFromList,
-	updateMemoInList,
+	insertMemoIntoList,
 	joinMemosToFileContent,
+	removeMemoFromList,
+	splitFileIntoMemos,
 	toLocalISOString,
-} from "./memo-crud-operations";
-import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations";
+	updateMemoInList,
+} from "./memo-crud-operations"
+import { memoToText, parseTextToMemo } from "./memo-helpers"
 import {
-	findDeletedMemoInFiles,
 	extractCategoryFromMemo,
 	filterMemologFiles,
+	findDeletedMemoInFiles,
 	findMemoIndexById,
-} from "./memo-search-operations";
-import { ThreadIndexManager } from "./thread-operations";
+} from "./memo-search-operations"
+import { markMemoAsDeleted, markMemoAsRestored } from "./memo-trash-operations"
+import { ThreadIndexManager } from "./thread-operations"
 
-//! メモを管理するクラス。
+// ! メモを管理するクラス。
 export class MemoManager {
-	//! VaultHandlerインスタンス（publicアクセス可能）。
-	public vaultHandler: MemologVaultHandler;
+	// ! VaultHandlerインスタンス（publicアクセス可能）。
+	public vaultHandler: MemologVaultHandler
 
-	//! CacheManagerインスタンス。
-	private cacheManager: CacheManager;
+	// ! CacheManagerインスタンス。
+	private cacheManager: CacheManager
 
-	//! ThreadIndexManagerインスタンス（publicアクセス可能）。
-	public threadIndexManager: ThreadIndexManager;
+	// ! ThreadIndexManagerインスタンス（publicアクセス可能）。
+	public threadIndexManager: ThreadIndexManager
 
-	//! ErrorHandlerインスタンス。
-	private errorHandler = getErrorHandler();
+	// ! ErrorHandlerインスタンス。
+	private errorHandler = getErrorHandler()
 
 	constructor(app: App) {
-		this.vaultHandler = new MemologVaultHandler(app);
-		this.cacheManager = new CacheManager(app);
-		this.threadIndexManager = new ThreadIndexManager();
+		this.vaultHandler = new MemologVaultHandler(app)
+		this.cacheManager = new CacheManager(app)
+		this.threadIndexManager = new ThreadIndexManager()
 	}
 
-	//! メモを追加する。
+	// ! メモを追加する。
 	async addMemo(
 		filePath: string,
 		category: string,
@@ -54,484 +54,484 @@ export class MemoManager {
 		attachments?: string[],
 		existingId?: string,
 		existingTimestamp?: string,
-		useTodoList = false
+		useTodoList = false,
 	): Promise<MemoEntry> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! メモエントリを作成。
+				// ! メモエントリを作成。
 				const memo = createMemoEntry(
 					category,
 					content,
 					existingId,
 					existingTimestamp,
 					attachments,
-					template
-				);
+					template,
+				)
 
-				//! メモをテキスト形式に変換。
-				const memoText = memoToText(memo, template, useTodoList);
+				// ! メモをテキスト形式に変換。
+				const memoText = memoToText(memo, template, useTodoList)
 
-				//! ファイルが存在しない場合は空として扱う。
-				const fileExists = this.vaultHandler.fileExists(filePath);
-				let fileContent = "";
+				// ! ファイルが存在しない場合は空として扱う。
+				const fileExists = this.vaultHandler.fileExists(filePath)
+				let fileContent = ""
 				if (fileExists) {
-					fileContent = await this.vaultHandler.readFile(filePath);
+					fileContent = await this.vaultHandler.readFile(filePath)
 				}
 
-				//! 既存のメモを分割。
-				const existingMemos = splitFileIntoMemos(fileContent);
+				// ! 既存のメモを分割。
+				const existingMemos = splitFileIntoMemos(fileContent)
 
-				//! 挿入位置を決定（昇順: bottom、降順: top）。
-				const insertAtTop = order === "desc";
-				const newContent = insertMemoIntoList(memoText, existingMemos, insertAtTop);
+				// ! 挿入位置を決定（昇順: bottom、降順: top）。
+				const insertAtTop = order === "desc"
+				const newContent = insertMemoIntoList(memoText, existingMemos, insertAtTop)
 
-				//! ファイル全体を書き込む。
-				await this.vaultHandler.writeFile(filePath, newContent);
+				// ! ファイル全体を書き込む。
+				await this.vaultHandler.writeFile(filePath, newContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("メモを追加しました");
-				return memo;
+				notify.success("メモを追加しました")
+				return memo
 			})(),
-			{ filePath, category, context: "MemoManager.addMemo" }
-		);
+			{ filePath, category, context: "MemoManager.addMemo" },
+		)
 
 		if (!result.success || !result.data) {
 			throw new FileIOError("メモの追加に失敗しました", {
 				filePath,
 				category,
-			});
+			})
 		}
 
-		return result.data;
+		return result.data
 	}
 
-	//! メモをゴミ箱に移動する（削除フラグを追加してコメントアウト）。
+	// ! メモをゴミ箱に移動する（削除フラグを追加してコメントアウト）。
 	async moveToTrash(
 		filePath: string,
 		category: string,
 		memoId: string,
-		rootDirectory: string
+		rootDirectory: string,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ファイルが存在しない場合はfalseを返す。
-				const fileExists = this.vaultHandler.fileExists(filePath);
+				// ! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath)
 				if (!fileExists) {
-					notify.warning("ファイルが見つかりません");
-					return false;
+					notify.warning("ファイルが見つかりません")
+					return false
 				}
 
-				//! ファイル全体を読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
+				// ! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
 
-				//! メモを分割してゴミ箱操作で削除状態にする。
-				const memos = splitFileIntoMemos(fileContent);
-				const trashedAt = toLocalISOString();
-				const { memos: updatedMemos, marked } = markMemoAsDeleted(memos, memoId, trashedAt);
+				// ! メモを分割してゴミ箱操作で削除状態にする。
+				const memos = splitFileIntoMemos(fileContent)
+				const trashedAt = toLocalISOString()
+				const { memos: updatedMemos, marked } = markMemoAsDeleted(memos, memoId, trashedAt)
 
 				if (!marked) {
-					notify.warning("削除対象のメモが見つかりません");
-					return false;
+					notify.warning("削除対象のメモが見つかりません")
+					return false
 				}
 
-				//! ファイルを更新。
-				const newContent = joinMemosToFileContent(updatedMemos);
-				await this.vaultHandler.writeFile(filePath, newContent);
+				// ! ファイルを更新。
+				const newContent = joinMemosToFileContent(updatedMemos)
+				await this.vaultHandler.writeFile(filePath, newContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("メモをゴミ箱に移動しました");
-				return true;
+				notify.success("メモをゴミ箱に移動しました")
+				return true
 			})(),
-			{ filePath, category, memoId, rootDirectory, context: "MemoManager.moveToTrash" }
-		);
+			{ filePath, category, memoId, rootDirectory, context: "MemoManager.moveToTrash" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 
-	//! ゴミ箱からメモを復活させる。
+	// ! ゴミ箱からメモを復活させる。
 	async restoreFromTrash(
 		memoId: string,
 		rootDirectory: string,
 		pathFormat: string,
 		saveUnit: SaveUnit,
-		useDirectoryCategory: boolean
+		useDirectoryCategory: boolean,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! 全カテゴリのファイルから対象メモを検索。
-				const allFiles = this.vaultHandler.getMarkdownFiles();
-				const fileContents = new Map<string, string>();
+				// ! 全カテゴリのファイルから対象メモを検索。
+				const allFiles = this.vaultHandler.getMarkdownFiles()
+				const fileContents = new Map<string, string>()
 
-				//! ファイル内容を読み込んでMapに格納。
+				// ! ファイル内容を読み込んでMapに格納。
 				for (const file of allFiles) {
-					const content = await this.vaultHandler.readFile(file.path);
-					fileContents.set(file.path, content);
+					const content = await this.vaultHandler.readFile(file.path)
+					fileContents.set(file.path, content)
 				}
 
-				//! memolog配下のファイルのみをフィルタリング。
-				const memologFileContents = filterMemologFiles(fileContents, rootDirectory);
+				// ! memolog配下のファイルのみをフィルタリング。
+				const memologFileContents = filterMemologFiles(fileContents, rootDirectory)
 
-				//! 削除されたメモを検索。
-				const searchResult = findDeletedMemoInFiles(memologFileContents, memoId);
+				// ! 削除されたメモを検索。
+				const searchResult = findDeletedMemoInFiles(memologFileContents, memoId)
 
 				if (!searchResult) {
-					notify.warning("復活対象のメモが見つかりません");
-					return false;
+					notify.warning("復活対象のメモが見つかりません")
+					return false
 				}
 
-				const { filePath: targetFilePath, memoIndex: targetMemoIndex, allMemos } = searchResult;
+				const { filePath: targetFilePath, memoIndex: targetMemoIndex, allMemos } = searchResult
 
-				//! ゴミ箱操作で復元する。
-				const { memos: updatedMemos, restored } = markMemoAsRestored(allMemos, memoId);
+				// ! ゴミ箱操作で復元する。
+				const { memos: updatedMemos, restored } = markMemoAsRestored(allMemos, memoId)
 
 				if (!restored) {
-					notify.warning("メモの復元に失敗しました");
-					return false;
+					notify.warning("メモの復元に失敗しました")
+					return false
 				}
 
-				//! ファイルに書き込み。
-				const newContent = joinMemosToFileContent(updatedMemos);
-				await this.vaultHandler.writeFile(targetFilePath, newContent);
+				// ! ファイルに書き込み。
+				const newContent = joinMemosToFileContent(updatedMemos)
+				await this.vaultHandler.writeFile(targetFilePath, newContent)
 
-				//! categoryを抽出してキャッシュを無効化。
-				const restoredMemo = updatedMemos[targetMemoIndex];
-				const category = extractCategoryFromMemo(restoredMemo);
+				// ! categoryを抽出してキャッシュを無効化。
+				const restoredMemo = updatedMemos[targetMemoIndex]
+				const category = extractCategoryFromMemo(restoredMemo)
 				if (category) {
-					const cacheKey = generateCacheKey(targetFilePath, category);
-					this.cacheManager.invalidateMemos(cacheKey);
+					const cacheKey = generateCacheKey(targetFilePath, category)
+					this.cacheManager.invalidateMemos(cacheKey)
 				}
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("メモを復活しました");
-				return true;
+				notify.success("メモを復活しました")
+				return true
 			})(),
-			{ memoId, rootDirectory, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" }
-		);
+			{ memoId, rootDirectory, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 
-	//! メモを削除する（IDで検索して削除）。
+	// ! メモを削除する（IDで検索して削除）。
 	async deleteMemo(filePath: string, category: string, memoId: string): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ファイルが存在しない場合はfalseを返す。
-				const fileExists = this.vaultHandler.fileExists(filePath);
+				// ! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath)
 				if (!fileExists) {
-					notify.warning("ファイルが見つかりません");
-					return false;
+					notify.warning("ファイルが見つかりません")
+					return false
 				}
 
-				//! ファイル全体を読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
+				// ! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
 
-				//! メモを分割してCRUD操作で削除。
-				const memos = splitFileIntoMemos(fileContent);
-				const { memos: filtered, removed } = removeMemoFromList(memos, memoId);
+				// ! メモを分割してCRUD操作で削除。
+				const memos = splitFileIntoMemos(fileContent)
+				const { memos: filtered, removed } = removeMemoFromList(memos, memoId)
 
 				if (!removed) {
-					//! 削除対象が見つからなかった。
-					notify.warning("削除対象のメモが見つかりません");
-					return false;
+					// ! 削除対象が見つからなかった。
+					notify.warning("削除対象のメモが見つかりません")
+					return false
 				}
 
-				//! ファイル全体を書き込む。
-				const newContent = joinMemosToFileContent(filtered);
-				await this.vaultHandler.writeFile(filePath, newContent);
+				// ! ファイル全体を書き込む。
+				const newContent = joinMemosToFileContent(filtered)
+				await this.vaultHandler.writeFile(filePath, newContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("メモを削除しました");
-				return true;
+				notify.success("メモを削除しました")
+				return true
 			})(),
-			{ filePath, category, memoId, context: "MemoManager.deleteMemo" }
-		);
+			{ filePath, category, memoId, context: "MemoManager.deleteMemo" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 
-	//! カテゴリ内の全メモを取得する。
+	// ! カテゴリ内の全メモを取得する。
 	async getMemos(filePath: string, category: string): Promise<MemoEntry[]> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! キャッシュキーを生成（ファイルパス + カテゴリ）。
-				const cacheKey = generateCacheKey(filePath, category);
+				// ! キャッシュキーを生成（ファイルパス + カテゴリ）。
+				const cacheKey = generateCacheKey(filePath, category)
 
-				//! キャッシュをチェック。
-				const cachedMemos = await this.cacheManager.getMemos(cacheKey);
+				// ! キャッシュをチェック。
+				const cachedMemos = await this.cacheManager.getMemos(cacheKey)
 				if (cachedMemos) {
-					return cachedMemos;
+					return cachedMemos
 				}
 
-				//! ファイルが存在しない場合は空配列を返す。
-				const fileExists = this.vaultHandler.fileExists(filePath);
+				// ! ファイルが存在しない場合は空配列を返す。
+				const fileExists = this.vaultHandler.fileExists(filePath)
 				if (!fileExists) {
-					return [];
+					return []
 				}
 
-				//! ファイル全体を読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
+				// ! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
 				if (!fileContent) {
-					return [];
+					return []
 				}
 
-				//! メモを分割（HTMLコメント <!-- memo-id: で分割）。
-				const memoTexts = splitFileIntoMemos(fileContent);
+				// ! メモを分割（HTMLコメント <!-- memo-id: で分割）。
+				const memoTexts = splitFileIntoMemos(fileContent)
 
-				//! メモエントリに変換（categoryでフィルタリング）。
-				const memos: MemoEntry[] = [];
+				// ! メモエントリに変換（categoryでフィルタリング）。
+				const memos: MemoEntry[] = []
 				for (const text of memoTexts) {
-					const memo = parseTextToMemo(text, category);
-					//! categoryが空文字の場合はフィルタリングしない（全メモを取得）。
+					const memo = parseTextToMemo(text, category)
+					// ! categoryが空文字の場合はフィルタリングしない（全メモを取得）。
 					if (memo && (!category || memo.category === category)) {
-						memos.push(memo);
+						memos.push(memo)
 					}
 				}
 
-				//! キャッシュに保存。
-				await this.cacheManager.setMemos(cacheKey, memos);
+				// ! キャッシュに保存。
+				await this.cacheManager.setMemos(cacheKey, memos)
 
-				return memos;
+				return memos
 			})(),
-			{ filePath, category, context: "MemoManager.getMemos" }
-		);
+			{ filePath, category, context: "MemoManager.getMemos" },
+		)
 
-		return result.success && result.data ? result.data : [];
+		return result.success && result.data ? result.data : []
 	}
 
-	//! 特定のメモを取得する。
+	// ! 特定のメモを取得する。
 	async getMemoById(filePath: string, category: string, memoId: string): Promise<MemoEntry | null> {
-		const memos = await this.getMemos(filePath, category);
-		return memos.find((m) => m.id === memoId) || null;
+		const memos = await this.getMemos(filePath, category)
+		return memos.find(m => m.id === memoId) || null
 	}
 
-	//! メモを更新する（IDで検索して内容を置き換え）。
+	// ! メモを更新する（IDで検索して内容を置き換え）。
 	async updateMemo(
 		filePath: string,
 		category: string,
 		memoId: string,
 		newContent: string,
 		template?: string,
-		useTodoList = false
+		useTodoList = false,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ファイルが存在しない場合はfalseを返す。
-				const fileExists = this.vaultHandler.fileExists(filePath);
+				// ! ファイルが存在しない場合はfalseを返す。
+				const fileExists = this.vaultHandler.fileExists(filePath)
 				if (!fileExists) {
-					notify.warning("ファイルが見つかりません");
-					return false;
+					notify.warning("ファイルが見つかりません")
+					return false
 				}
 
-				//! ファイル全体を読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
+				// ! ファイル全体を読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
 
-				//! メモを分割してCRUD操作で更新。
-				const memoTexts = splitFileIntoMemos(fileContent);
+				// ! メモを分割してCRUD操作で更新。
+				const memoTexts = splitFileIntoMemos(fileContent)
 
-				//! 対象メモを検索してインデックスを取得。
-				const memoIndex = findMemoIndexById(memoTexts, memoId);
+				// ! 対象メモを検索してインデックスを取得。
+				const memoIndex = findMemoIndexById(memoTexts, memoId)
 				if (memoIndex === -1) {
-					notify.warning("更新対象のメモが見つかりません");
-					return false;
+					notify.warning("更新対象のメモが見つかりません")
+					return false
 				}
 
-				//! 対象メモを解析して内容を更新。
-				const memo = parseTextToMemo(memoTexts[memoIndex], category);
+				// ! 対象メモを解析して内容を更新。
+				const memo = parseTextToMemo(memoTexts[memoIndex], category)
 				if (!memo) {
-					notify.warning("メモの解析に失敗しました");
-					return false;
+					notify.warning("メモの解析に失敗しました")
+					return false
 				}
-				memo.content = newContent;
+				memo.content = newContent
 
-				//! 新しいテキストに変換してCRUD操作で更新。
-				const newMemoText = memoToText(memo, template, useTodoList);
-				const { memos: updatedMemos, updated } = updateMemoInList(memoTexts, memoId, newMemoText);
+				// ! 新しいテキストに変換してCRUD操作で更新。
+				const newMemoText = memoToText(memo, template, useTodoList)
+				const { memos: updatedMemos, updated } = updateMemoInList(memoTexts, memoId, newMemoText)
 
 				if (!updated) {
-					notify.warning("メモの更新に失敗しました");
-					return false;
+					notify.warning("メモの更新に失敗しました")
+					return false
 				}
 
-				//! ファイル全体を書き込む。
-				const newFileContent = joinMemosToFileContent(updatedMemos);
-				await this.vaultHandler.writeFile(filePath, newFileContent);
+				// ! ファイル全体を書き込む。
+				const newFileContent = joinMemosToFileContent(updatedMemos)
+				await this.vaultHandler.writeFile(filePath, newFileContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("メモを更新しました");
-				return true;
+				notify.success("メモを更新しました")
+				return true
 			})(),
-			{ filePath, category, memoId, context: "MemoManager.updateMemo" }
-		);
+			{ filePath, category, memoId, context: "MemoManager.updateMemo" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 
-	//! TODO完了状態を更新する。
+	// ! TODO完了状態を更新する。
 	async updateTodoCompleted(
 		filePath: string,
 		category: string,
 		memoId: string,
-		completed: boolean
+		completed: boolean,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				const fileExists = this.vaultHandler.fileExists(filePath);
+				const fileExists = this.vaultHandler.fileExists(filePath)
 				if (!fileExists) {
-					return false;
+					return false
 				}
 
-				const fileContent = await this.vaultHandler.readFile(filePath);
-				const memoTexts = splitFileIntoMemos(fileContent);
-				let updated = false;
+				const fileContent = await this.vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
+				let updated = false
 
-				const newMemoTexts = memoTexts.map((memoText) => {
+				const newMemoTexts = memoTexts.map(memoText => {
 					if (memoText.includes(`memo-id: ${memoId}`)) {
-						updated = true;
-						let newText: string;
-						//! チェックボックスを切り替え。
+						updated = true
+						let newText: string
+						// ! チェックボックスを切り替え。
 						if (completed) {
-							//! - [ ] を - [x] に置換。
-							//! HTMLコメントの後の改行も考慮して、行頭または改行直後のチェックボックスを探す。
-							newText = memoText.replace(/(^|\n)-\s*\[\s?\]\s+/m, "$1- [x] ");
+							// ! - [ ] を - [x] に置換。
+							// ! HTMLコメントの後の改行も考慮して、行頭または改行直後のチェックボックスを探す。
+							newText = memoText.replace(/(^|\n)-\s*\[\s?\]\s+/m, "$1- [x] ")
 						} else {
-							//! - [x] を - [ ] に置換。
-							newText = memoText.replace(/(^|\n)-\s*\[x\]\s+/m, "$1- [ ] ");
+							// ! - [x] を - [ ] に置換。
+							newText = memoText.replace(/(^|\n)-\s*\[x\]\s+/m, "$1- [ ] ")
 						}
 
-						return newText;
+						return newText
 					}
-					return memoText;
-				});
+					return memoText
+				})
 
 				if (!updated) {
-					return false;
+					return false
 				}
 
-				const newFileContent = joinMemosToFileContent(newMemoTexts);
-				await this.vaultHandler.writeFile(filePath, newFileContent);
+				const newFileContent = joinMemosToFileContent(newMemoTexts)
+				await this.vaultHandler.writeFile(filePath, newFileContent)
 
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				return true;
+				return true
 			})(),
-			{ filePath, category, memoId, context: "MemoManager.updateTodoCompleted" }
-		);
+			{ filePath, category, memoId, context: "MemoManager.updateTodoCompleted" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 
-	//! カテゴリ領域を初期化する。
+	// ! カテゴリ領域を初期化する。
 	async initializeCategory(
 		filePath: string,
 		category: string,
-		order: SortOrder = "asc"
+		order: SortOrder = "asc",
 	): Promise<void> {
-		await this.vaultHandler.initializeTagPair(filePath, category, { order });
+		await this.vaultHandler.initializeTagPair(filePath, category, { order })
 	}
 
-	//! スレッドインデックスを取得する。
+	// ! スレッドインデックスを取得する。
 	async getThreadIndex(filePath: string, category: string): Promise<ThreadIndex> {
-		//! ファイルからメモを読み込む。
-		const fileContent = await this.vaultHandler.readFile(filePath);
-		const memoTexts = splitFileIntoMemos(fileContent);
+		// ! ファイルからメモを読み込む。
+		const fileContent = await this.vaultHandler.readFile(filePath)
+		const memoTexts = splitFileIntoMemos(fileContent)
 		const memos = memoTexts
-			.map((text) => parseTextToMemo(text, category))
+			.map(text => parseTextToMemo(text, category))
 			.filter((memo): memo is MemoEntry => memo !== null)
-			.filter((memo) => memo.category === category); // カテゴリでフィルタリング
+			.filter(memo => memo.category === category) // カテゴリでフィルタリング
 
-		//! ThreadIndexManagerを使ってインデックスを取得。
-		return this.threadIndexManager.getIndex(memos);
+		// ! ThreadIndexManagerを使ってインデックスを取得。
+		return this.threadIndexManager.getIndex(memos)
 	}
 
-	//! スレッドツリーを取得する。
+	// ! スレッドツリーを取得する。
 	async getThreadTree(
 		filePath: string,
 		category: string,
-		rootId: string
+		rootId: string,
 	): Promise<ThreadTree> {
-		const index = await this.getThreadIndex(filePath, category);
-		const fileContent = await this.vaultHandler.readFile(filePath);
-		const memoTexts = splitFileIntoMemos(fileContent);
+		const index = await this.getThreadIndex(filePath, category)
+		const fileContent = await this.vaultHandler.readFile(filePath)
+		const memoTexts = splitFileIntoMemos(fileContent)
 		const memos = memoTexts
-			.map((text) => parseTextToMemo(text, category))
+			.map(text => parseTextToMemo(text, category))
 			.filter((memo): memo is MemoEntry => memo !== null)
-			.filter((memo) => memo.category === category); // カテゴリでフィルタリング
+			.filter(memo => memo.category === category) // カテゴリでフィルタリング
 
-		const memoMap = new Map(memos.map((m) => [m.id, m]));
-		return this.threadIndexManager.getThreadTree(rootId, index, memoMap);
+		const memoMap = new Map(memos.map(m => [m.id, m]))
+		return this.threadIndexManager.getThreadTree(rootId, index, memoMap)
 	}
 
-	//! 子メモIDリストを取得する。
+	// ! 子メモIDリストを取得する。
 	async getThreadChildren(
 		filePath: string,
 		category: string,
-		parentId: string
+		parentId: string,
 	): Promise<string[]> {
-		const index = await this.getThreadIndex(filePath, category);
-		return this.threadIndexManager.getChildren(parentId, index);
+		const index = await this.getThreadIndex(filePath, category)
+		return this.threadIndexManager.getChildren(parentId, index)
 	}
 
-	//! 親メモIDを取得する。
+	// ! 親メモIDを取得する。
 	async getThreadParent(
 		filePath: string,
 		category: string,
-		childId: string
+		childId: string,
 	): Promise<string | undefined> {
-		const index = await this.getThreadIndex(filePath, category);
-		return this.threadIndexManager.getParent(childId, index);
+		const index = await this.getThreadIndex(filePath, category)
+		return this.threadIndexManager.getParent(childId, index)
 	}
 
-	//! メモの深さを取得する。
+	// ! メモの深さを取得する。
 	async getThreadDepth(
 		filePath: string,
 		category: string,
-		memoId: string
+		memoId: string,
 	): Promise<number> {
-		const index = await this.getThreadIndex(filePath, category);
-		return this.threadIndexManager.getDepth(memoId, index);
+		const index = await this.getThreadIndex(filePath, category)
+		return this.threadIndexManager.getDepth(memoId, index)
 	}
 
-	//! 子孫数を取得する。
+	// ! 子孫数を取得する。
 	async getThreadDescendantCount(
 		filePath: string,
 		category: string,
-		memoId: string
+		memoId: string,
 	): Promise<number> {
-		const index = await this.getThreadIndex(filePath, category);
-		return this.threadIndexManager.getDescendantCount(memoId, index);
+		const index = await this.getThreadIndex(filePath, category)
+		return this.threadIndexManager.getDescendantCount(memoId, index)
 	}
 
-	//! 返信メモを作成する。
+	// ! 返信メモを作成する。
 	async addReply(
 		filePath: string,
 		category: string,
@@ -539,142 +539,142 @@ export class MemoManager {
 		content: string,
 		order: SortOrder = "asc",
 		template?: string,
-		attachments?: string[]
+		attachments?: string[],
 	): Promise<MemoEntry> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ファイルを読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
-				const memoTexts = splitFileIntoMemos(fileContent);
+				// ! ファイルを読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
 
-				//! 親メモを検索。
+				// ! 親メモを検索。
 				const parentMemo = memoTexts
-					.map((text) => parseTextToMemo(text, category))
+					.map(text => parseTextToMemo(text, category))
 					.filter((memo): memo is MemoEntry => memo !== null)
-					.find((memo) => memo.id === parentId);
+					.find(memo => memo.id === parentId)
 
-				//! 親メモが存在しない。
+				// ! 親メモが存在しない。
 				if (!parentMemo) {
-					throw new Error(`親メモが見つかりません: ${parentId}`);
+					throw new Error(`親メモが見つかりません: ${parentId}`)
 				}
 
-				//! 親メモのカテゴリと一致しない。
+				// ! 親メモのカテゴリと一致しない。
 				if (parentMemo.category !== category) {
 					throw new Error(
-						`親メモのカテゴリ(${parentMemo.category})と返信のカテゴリ(${category})が一致しません`
-					);
+						`親メモのカテゴリ(${parentMemo.category})と返信のカテゴリ(${category})が一致しません`,
+					)
 				}
 
-				//! 返信メモエントリを作成（parentIdを設定）。
+				// ! 返信メモエントリを作成（parentIdを設定）。
 				const memo = createMemoEntry(
 					category,
 					content,
 					undefined,
 					undefined,
 					attachments,
-					template
-				);
-				memo.parentId = parentId;
+					template,
+				)
+				memo.parentId = parentId
 
-				//! メモをテキスト形式に変換。
-				const memoText = memoToText(memo, template, false);
+				// ! メモをテキスト形式に変換。
+				const memoText = memoToText(memo, template, false)
 
-				//! 挿入位置を決定（昇順: bottom、降順: top）。
-				const insertAtTop = order === "desc";
-				const newContent = insertMemoIntoList(memoText, memoTexts, insertAtTop);
+				// ! 挿入位置を決定（昇順: bottom、降順: top）。
+				const insertAtTop = order === "desc"
+				const newContent = insertMemoIntoList(memoText, memoTexts, insertAtTop)
 
-				//! ファイル全体を書き込む。
-				await this.vaultHandler.writeFile(filePath, newContent);
+				// ! ファイル全体を書き込む。
+				await this.vaultHandler.writeFile(filePath, newContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success("返信を追加しました");
-				return memo;
+				notify.success("返信を追加しました")
+				return memo
 			})(),
-			{ filePath, category, parentId, context: "MemoManager.addReply" }
-		);
+			{ filePath, category, parentId, context: "MemoManager.addReply" },
+		)
 
 		if (!result.success || !result.data) {
 			throw new FileIOError("返信の追加に失敗しました", {
 				filePath,
 				category,
-			});
+			})
 		}
 
-		return result.data;
+		return result.data
 	}
 
-	//! メモを子孫と共に削除する（カスケード削除）。
+	// ! メモを子孫と共に削除する（カスケード削除）。
 	async deleteMemoWithDescendants(
 		filePath: string,
 		category: string,
-		memoId: string
+		memoId: string,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
 			(async () => {
-				//! ファイルを読み込む。
-				const fileContent = await this.vaultHandler.readFile(filePath);
-				const memoTexts = splitFileIntoMemos(fileContent);
+				// ! ファイルを読み込む。
+				const fileContent = await this.vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
 
-				//! メモをパース。
+				// ! メモをパース。
 				const memos = memoTexts
-					.map((text) => parseTextToMemo(text, category))
+					.map(text => parseTextToMemo(text, category))
 					.filter((memo): memo is MemoEntry => memo !== null)
-					.filter((memo) => memo.category === category);
+					.filter(memo => memo.category === category)
 
-				//! 削除対象のメモが存在するか確認。
-				const targetMemo = memos.find((memo) => memo.id === memoId);
+				// ! 削除対象のメモが存在するか確認。
+				const targetMemo = memos.find(memo => memo.id === memoId)
 				if (!targetMemo) {
-					throw new Error(`削除対象のメモが見つかりません: ${memoId}`);
+					throw new Error(`削除対象のメモが見つかりません: ${memoId}`)
 				}
 
-				//! スレッドインデックスを構築。
-				const index = this.threadIndexManager.getIndex(memos);
+				// ! スレッドインデックスを構築。
+				const index = this.threadIndexManager.getIndex(memos)
 
-				//! 削除対象のメモとその子孫をすべて収集。
-				const idsToDelete = new Set<string>([memoId]);
-				const queue: string[] = [memoId];
-				let head = 0;
+				// ! 削除対象のメモとその子孫をすべて収集。
+				const idsToDelete = new Set<string>([memoId])
+				const queue: string[] = [memoId]
+				let head = 0
 
 				while (head < queue.length) {
-					const currentId = queue[head++];
-					const children = index.childrenMap.get(currentId) || [];
+					const currentId = queue[head++]
+					const children = index.childrenMap.get(currentId) || []
 
 					for (const childId of children) {
-						idsToDelete.add(childId);
-						queue.push(childId);
+						idsToDelete.add(childId)
+						queue.push(childId)
 					}
 				}
 
-				//! 削除対象以外のメモだけを残す。
-				const remainingMemos = memoTexts.filter((text) => {
-					const memo = parseTextToMemo(text, category);
-					if (!memo) return true; // パース失敗したメモは残す（別カテゴリなど）
-					return !idsToDelete.has(memo.id);
-				});
+				// ! 削除対象以外のメモだけを残す。
+				const remainingMemos = memoTexts.filter(text => {
+					const memo = parseTextToMemo(text, category)
+					if (!memo) return true // パース失敗したメモは残す（別カテゴリなど）
+					return !idsToDelete.has(memo.id)
+				})
 
-				//! ファイルを更新。
-				const newContent = joinMemosToFileContent(remainingMemos);
-				await this.vaultHandler.writeFile(filePath, newContent);
+				// ! ファイルを更新。
+				const newContent = joinMemosToFileContent(remainingMemos)
+				await this.vaultHandler.writeFile(filePath, newContent)
 
-				//! キャッシュを無効化。
-				const cacheKey = generateCacheKey(filePath, category);
-				this.cacheManager.invalidateMemos(cacheKey);
+				// ! キャッシュを無効化。
+				const cacheKey = generateCacheKey(filePath, category)
+				this.cacheManager.invalidateMemos(cacheKey)
 
-				//! スレッドインデックスを無効化。
-				this.threadIndexManager.clear();
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
 
-				notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`);
-				return true;
+				notify.success(`メモと子孫${idsToDelete.size - 1}件を削除しました`)
+				return true
 			})(),
-			{ filePath, category, memoId, context: "MemoManager.deleteMemoWithDescendants" }
-		);
+			{ filePath, category, memoId, context: "MemoManager.deleteMemoWithDescendants" },
+		)
 
-		return result.success && result.data ? result.data : false;
+		return result.success && result.data ? result.data : false
 	}
 }

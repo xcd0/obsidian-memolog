@@ -1,1069 +1,1071 @@
-import { ItemView, WorkspaceLeaf, Notice, TFile, setIcon, EventRef } from "obsidian";
-import MemologPlugin from "../../main";
-import { MemoEntry, SortOrder, ViewMode } from "../types";
-import { MemoManager } from "../core/memo-manager";
-import { MemoList } from "./components/memo-list";
-import { InputForm } from "./components/input-form";
-import { ButtonBar } from "./components/button-bar";
-import { CategoryTabs } from "./components/category-tabs";
-import { CalendarView } from "./components/calendar-view";
-import { SearchBar } from "./components/search-bar";
-import { ThreadView } from "./components/thread-view";
-import { SearchEngine, SearchQuery } from "../core/search-engine";
-import { PathGenerator } from "../utils/path-generator";
-import { parseTextToMemo } from "../core/memo-helpers";
-import { Logger } from "../utils/logger";
+import { EventRef, ItemView, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian"
+import MemologPlugin from "../../main"
+import { parseTextToMemo } from "../core/memo-helpers"
+import { MemoManager } from "../core/memo-manager"
+import { SearchEngine, SearchQuery } from "../core/search-engine"
+import { MemoEntry, SortOrder, ViewMode } from "../types"
+import { Logger } from "../utils/logger"
+import { PathGenerator } from "../utils/path-generator"
+import { ButtonBar } from "./components/button-bar"
+import { CalendarView } from "./components/calendar-view"
+import { CategoryTabs } from "./components/category-tabs"
+import { InputForm } from "./components/input-form"
+import { MemoList } from "./components/memo-list"
+import { SearchBar } from "./components/search-bar"
+import { ThreadView } from "./components/thread-view"
 
-//! サイドバーのビュータイプ。
-export const VIEW_TYPE_MEMOLOG = "memolog-sidebar";
+// ! サイドバーのビュータイプ。
+export const VIEW_TYPE_MEMOLOG = "memolog-sidebar"
 
-//! memologサイドバーUI。
+// ! memologサイドバーUI。
 export class MemologSidebar extends ItemView {
-	//! プラグインインスタンス。
-	private _plugin: MemologPlugin;
+	// ! プラグインインスタンス。
+	private _plugin: MemologPlugin
 
-	//! メモマネージャー（将来ファイル保存時に使用）。
-	private _memoManager: MemoManager;
+	// ! メモマネージャー（将来ファイル保存時に使用）。
+	private _memoManager: MemoManager
 
-	//! UIコンポーネント。
-	private categoryTabs: CategoryTabs | null = null;
-	private calendarView: CalendarView | null = null;
-	private calendarAreaEl: HTMLElement | null = null;
-	private searchBar: SearchBar | null = null;
-	private memoList: MemoList | null = null;
-	private threadView: ThreadView | null = null; //! スレッドビュー。v0.0.14で追加。
-	private inputForm: InputForm | null = null;
-	private buttonBar: ButtonBar | null = null;
+	// ! UIコンポーネント。
+	private categoryTabs: CategoryTabs | null = null
+	private calendarView: CalendarView | null = null
+	private calendarAreaEl: HTMLElement | null = null
+	private searchBar: SearchBar | null = null
+	private memoList: MemoList | null = null
+	private threadView: ThreadView | null = null // ! スレッドビュー。v0.0.14で追加。
+	private inputForm: InputForm | null = null
+	private buttonBar: ButtonBar | null = null
 
-	//! UI要素への参照。
-	private listAreaEl: HTMLElement | null = null;
-	private inputAreaEl: HTMLElement | null = null;
-	private searchAreaEl: HTMLElement | null = null;
+	// ! UI要素への参照。
+	private listAreaEl: HTMLElement | null = null
+	private inputAreaEl: HTMLElement | null = null
+	private searchAreaEl: HTMLElement | null = null
 
-	//! 現在の状態。
-	private currentCategory: string = ""; //! ディレクトリ名を保存（"all"は特別扱い）。
-	private currentOrder: SortOrder = "asc";
-	private selectedDate: Date | null = null;
-	private currentDateRange: import("./components/button-bar").DateRangeFilter = "all"; //! 日付範囲フィルター。
-	private calendarVisible: boolean = false;
-	private searchVisible: boolean = false;
-	private currentSearchQuery: SearchQuery | null = null;
-	private showCompletedTodos: boolean = false; //! 完了済みTODOの表示状態（一時的）。
-	private viewMode: ViewMode = "main"; //! ビューモード（メイン/スレッド表示）。v0.0.15で追加。
-	private focusedThreadId: string | null = null; //! スレッドビューでフォーカスされているメモID。v0.0.15で追加。
+	// ! 現在の状態。
+	private currentCategory: string = "" // ! ディレクトリ名を保存（"all"は特別扱い）。
+	private currentOrder: SortOrder = "asc"
+	private selectedDate: Date | null = null
+	private currentDateRange: import("./components/button-bar").DateRangeFilter = "all" // ! 日付範囲フィルター。
+	private calendarVisible: boolean = false
+	private searchVisible: boolean = false
+	private currentSearchQuery: SearchQuery | null = null
+	private showCompletedTodos: boolean = false // ! 完了済みTODOの表示状態（一時的）。
+	private viewMode: ViewMode = "main" // ! ビューモード（メイン/スレッド表示）。v0.0.15で追加。
+	private focusedThreadId: string | null = null // ! スレッドビューでフォーカスされているメモID。v0.0.15で追加。
 
-	//! メモデータ。
-	private memos: MemoEntry[] = [];
+	// ! メモデータ。
+	private memos: MemoEntry[] = []
 
-	//! UI要素への参照（TODOボタン用）。
-	private todoToggleBtn: HTMLElement | null = null;
+	// ! UI要素への参照（TODOボタン用）。
+	private todoToggleBtn: HTMLElement | null = null
 
-	//! ファイル変更監視用のイベントリファレンス。
-	private fileModifyRef: EventRef | null = null;
+	// ! ファイル変更監視用のイベントリファレンス。
+	private fileModifyRef: EventRef | null = null
 
-	//! loadMemos()のロック（並行実行を防ぐ）。
-	private isLoadingMemos: boolean = false;
+	// ! loadMemos()のロック（並行実行を防ぐ）。
+	private isLoadingMemos: boolean = false
 
-	//! カレンダー用メモカウントキャッシュ（ファイルパス → { 更新日時, タイムスタンプ配列 }）。
-	private memoCountCache: Map<string, { mtime: number; timestamps: string[] }> = new Map();
+	// ! カレンダー用メモカウントキャッシュ（ファイルパス → { 更新日時, タイムスタンプ配列 }）。
+	private memoCountCache: Map<string, { mtime: number; timestamps: string[] }> = new Map()
 
 	constructor(leaf: WorkspaceLeaf, plugin: MemologPlugin) {
-		super(leaf);
-		this._plugin = plugin;
-		this._memoManager = new MemoManager(this.app);
+		super(leaf)
+		this._plugin = plugin
+		this._memoManager = new MemoManager(this.app)
 	}
 
-	//! プラグインインスタンスを取得する。
+	// ! プラグインインスタンスを取得する。
 	get plugin(): MemologPlugin {
-		return this._plugin;
+		return this._plugin
 	}
 
-	//! メモマネージャーを取得する。
+	// ! メモマネージャーを取得する。
 	get memoManager(): MemoManager {
-		return this._memoManager;
+		return this._memoManager
 	}
 
-	//! ビュータイプを返す。
+	// ! ビュータイプを返す。
 	override getViewType(): string {
-		return VIEW_TYPE_MEMOLOG;
+		return VIEW_TYPE_MEMOLOG
 	}
 
-	//! 表示名を返す。
+	// ! 表示名を返す。
 	override getDisplayText(): string {
-		return "memolog";
+		return "memolog"
 	}
 
-	//! アイコンを返す。
+	// ! アイコンを返す。
 	override getIcon(): string {
-		return "file-text";
+		return "file-text"
 	}
 
-	//! ビューを開いたときの処理。
+	// ! ビューを開いたときの処理。
 	override async onOpen(): Promise<void> {
-		const container = this.containerEl;
+		const container = this.containerEl
 
-		//! コンテナをクリア。
-		container.empty();
+		// ! コンテナをクリア。
+		container.empty()
 
-		//! 設定からソート順を読み込む。
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		this.currentOrder = settings.order;
+		// ! 設定からソート順を読み込む。
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		this.currentOrder = settings.order
 
-		//! メインコンテナを作成。
-		container.addClass("memolog-container");
+		// ! メインコンテナを作成。
+		container.addClass("memolog-container")
 
-		//! カテゴリタブ領域を作成（ハンバーガーメニューとソートボタンも含む）。
-		const categoryTabsArea = this.createCategoryTabsArea(container);
+		// ! カテゴリタブ領域を作成（ハンバーガーメニューとソートボタンも含む）。
+		const categoryTabsArea = this.createCategoryTabsArea(container)
 
-		//! カレンダー領域を作成。
-		const calendarArea = this.createCalendarArea(container);
+		// ! カレンダー領域を作成。
+		const calendarArea = this.createCalendarArea(container)
 
-		//! 検索バー領域を作成。
-		const searchArea = this.createSearchArea(container);
-		this.searchAreaEl = searchArea;
+		// ! 検索バー領域を作成。
+		const searchArea = this.createSearchArea(container)
+		this.searchAreaEl = searchArea
 
-		//! メモ表示領域を作成。
-		const listArea = this.createMemoListArea(container);
-		this.listAreaEl = listArea;
+		// ! メモ表示領域を作成。
+		const listArea = this.createMemoListArea(container)
+		this.listAreaEl = listArea
 
-		//! 入力欄を作成。
-		const inputArea = this.createInputArea(container);
-		this.inputAreaEl = inputArea;
+		// ! 入力欄を作成。
+		const inputArea = this.createInputArea(container)
+		this.inputAreaEl = inputArea
 
-		//! コンポーネントを初期化。
-		this.initializeComponents(categoryTabsArea, calendarArea, searchArea, listArea, inputArea);
+		// ! コンポーネントを初期化。
+		this.initializeComponents(categoryTabsArea, calendarArea, searchArea, listArea, inputArea)
 
-		//! 初期レイアウトを設定。
-		this.updateInputAreaPosition();
+		// ! 初期レイアウトを設定。
+		this.updateInputAreaPosition()
 
-		//! 初期データを読み込む。
-		await this.loadMemos();
+		// ! 初期データを読み込む。
+		await this.loadMemos()
 
-		//! ファイル変更イベントリスナーを登録。
-		this.registerFileWatcher();
+		// ! ファイル変更イベントリスナーを登録。
+		this.registerFileWatcher()
 	}
 
-	//! ビューを閉じたときの処理。
+	// ! ビューを閉じたときの処理。
 	// eslint-disable-next-line @typescript-eslint/require-await
 	override async onClose(): Promise<void> {
-		//! ファイル変更イベントリスナーを解除。
-		this.unregisterFileWatcher();
+		// ! ファイル変更イベントリスナーを解除。
+		this.unregisterFileWatcher()
 
-		//! キャッシュをクリア。
-		this.memoCountCache.clear();
+		// ! キャッシュをクリア。
+		this.memoCountCache.clear()
 
-		//! クリーンアップ処理。
-		this.containerEl.empty();
+		// ! クリーンアップ処理。
+		this.containerEl.empty()
 	}
 
-	//! カテゴリタブ領域を作成する（ハンバーガーメニュー、検索ボタン、設定ボタン、ソートボタンも含む）。
+	// ! カテゴリタブ領域を作成する（ハンバーガーメニュー、検索ボタン、設定ボタン、ソートボタンも含む）。
 	private createCategoryTabsArea(container: HTMLElement): HTMLElement {
-		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" });
+		const categoryTabsArea = container.createDiv({ cls: "memolog-category-tabs-area" })
 
-		//! 1行目: ツールバー（ハンバーガー、日付範囲フィルター、検索バー、検索ボタン、設定、ソート）。
-		const topRow = categoryTabsArea.createDiv({ cls: "memolog-toolbar-row" });
+		// ! 1行目: ツールバー（ハンバーガー、日付範囲フィルター、検索バー、検索ボタン、設定、ソート）。
+		const topRow = categoryTabsArea.createDiv({ cls: "memolog-toolbar-row" })
 
-		//! ハンバーガーメニューボタン。
-		topRow.createDiv({ cls: "memolog-hamburger-btn" });
+		// ! ハンバーガーメニューボタン。
+		topRow.createDiv({ cls: "memolog-hamburger-btn" })
 
-		//! 日付範囲フィルターボタン。
-		topRow.createDiv({ cls: "memolog-date-range-filters" });
+		// ! 日付範囲フィルターボタン。
+		topRow.createDiv({ cls: "memolog-date-range-filters" })
 
-		//! 検索バー配置用の空白エリア（SearchBarコンポーネントがここに入る）。
-		topRow.createDiv({ cls: "memolog-search-bar-placeholder" });
+		// ! 検索バー配置用の空白エリア（SearchBarコンポーネントがここに入る）。
+		topRow.createDiv({ cls: "memolog-search-bar-placeholder" })
 
-		//! TODO完了済み表示切り替えボタン（TODOリストカテゴリの場合のみ表示）。
-		topRow.createDiv({ cls: "memolog-todo-toggle-btn" });
+		// ! TODO完了済み表示切り替えボタン（TODOリストカテゴリの場合のみ表示）。
+		topRow.createDiv({ cls: "memolog-todo-toggle-btn" })
 
-		//! 検索ボタン。
-		topRow.createDiv({ cls: "memolog-search-btn" });
+		// ! 検索ボタン。
+		topRow.createDiv({ cls: "memolog-search-btn" })
 
-		//! 設定ボタン。
-		topRow.createDiv({ cls: "memolog-settings-btn" });
+		// ! 設定ボタン。
+		topRow.createDiv({ cls: "memolog-settings-btn" })
 
-		//! ソート順ボタン。
-		topRow.createDiv({ cls: "memolog-sort-btn-wrapper" });
+		// ! ソート順ボタン。
+		topRow.createDiv({ cls: "memolog-sort-btn-wrapper" })
 
-		//! 2行目: タブコンテナ。
-		const tabsRow = categoryTabsArea.createDiv({ cls: "memolog-tabs-row" });
-		const tabsContainer = tabsRow.createDiv({ cls: "memolog-category-tabs-wrapper" });
+		// ! 2行目: タブコンテナ。
+		const tabsRow = categoryTabsArea.createDiv({ cls: "memolog-tabs-row" })
+		const tabsContainer = tabsRow.createDiv({ cls: "memolog-category-tabs-wrapper" })
 
-		return tabsContainer;
+		return tabsContainer
 	}
 
-	//! カレンダー領域を作成する（ドロワーメニュー）。
+	// ! カレンダー領域を作成する（ドロワーメニュー）。
 	private createCalendarArea(container: HTMLElement): HTMLElement {
-		//! ドロワーオーバーレイ（背景）。
-		const drawerOverlay = container.createDiv({ cls: "memolog-drawer-overlay" });
-		drawerOverlay.style.display = "none";
+		// ! ドロワーオーバーレイ（背景）。
+		const drawerOverlay = container.createDiv({ cls: "memolog-drawer-overlay" })
+		drawerOverlay.style.display = "none"
 
-		//! ドロワーコンテンツ（左からスライドイン）。
-		const drawerContent = drawerOverlay.createDiv({ cls: "memolog-drawer-content" });
+		// ! ドロワーコンテンツ（左からスライドイン）。
+		const drawerContent = drawerOverlay.createDiv({ cls: "memolog-drawer-content" })
 
-		//! ドロワーヘッダー。
-		const drawerHeader = drawerContent.createDiv({ cls: "memolog-drawer-header" });
-		drawerHeader.createDiv({ cls: "memolog-drawer-title", text: "カレンダー" });
-		const closeBtn = drawerHeader.createDiv({ cls: "memolog-drawer-close-btn" });
-		setIcon(closeBtn, "x");
-		closeBtn.addEventListener("click", () => this.toggleCalendar());
+		// ! ドロワーヘッダー。
+		const drawerHeader = drawerContent.createDiv({ cls: "memolog-drawer-header" })
+		drawerHeader.createDiv({ cls: "memolog-drawer-title", text: "カレンダー" })
+		const closeBtn = drawerHeader.createDiv({ cls: "memolog-drawer-close-btn" })
+		setIcon(closeBtn, "x")
+		closeBtn.addEventListener("click", () => this.toggleCalendar())
 
-		//! カレンダーコンテンツエリア（スクロール可能）。
-		const calendarArea = drawerContent.createDiv({ cls: "memolog-drawer-calendar-area" });
+		// ! カレンダーコンテンツエリア（スクロール可能）。
+		const calendarArea = drawerContent.createDiv({ cls: "memolog-drawer-calendar-area" })
 
-		//! オーバーレイ背景クリックで閉じる。
-		drawerOverlay.addEventListener("click", (e) => {
+		// ! オーバーレイ背景クリックで閉じる。
+		drawerOverlay.addEventListener("click", e => {
 			if (e.target === drawerOverlay) {
-				this.toggleCalendar();
+				this.toggleCalendar()
 			}
-		});
+		})
 
-		this.calendarAreaEl = drawerOverlay;
-		return calendarArea;
+		this.calendarAreaEl = drawerOverlay
+		return calendarArea
 	}
 
-	//! 検索バー領域を作成する。
+	// ! 検索バー領域を作成する。
 	private createSearchArea(container: HTMLElement): HTMLElement {
-		const searchArea = container.createDiv({ cls: "memolog-search-area" });
-		searchArea.style.display = "none";
-		return searchArea;
+		const searchArea = container.createDiv({ cls: "memolog-search-area" })
+		searchArea.style.display = "none"
+		return searchArea
 	}
 
-	//! メモ表示領域を作成する。
+	// ! メモ表示領域を作成する。
 	private createMemoListArea(container: HTMLElement): HTMLElement {
-		const listArea = container.createDiv({ cls: "memolog-list-area" });
-		return listArea;
+		const listArea = container.createDiv({ cls: "memolog-list-area" })
+		return listArea
 	}
 
-	//! 入力欄を作成する。
+	// ! 入力欄を作成する。
 	private createInputArea(container: HTMLElement): HTMLElement {
-		const inputArea = container.createDiv({ cls: "memolog-input-area" });
-		return inputArea;
+		const inputArea = container.createDiv({ cls: "memolog-input-area" })
+		return inputArea
 	}
 
-	//! コンポーネントを初期化する。
+	// ! コンポーネントを初期化する。
 	private initializeComponents(
 		categoryTabsAreaEl: HTMLElement,
 		calendarAreaEl: HTMLElement,
 		searchAreaEl: HTMLElement,
 		listAreaEl: HTMLElement,
-		inputAreaEl: HTMLElement
+		inputAreaEl: HTMLElement,
 	): void {
-		//! 設定を取得。
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		// ! 設定を取得。
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! カテゴリタブエリアを取得してボタンを配置。
-		const categoryTabsArea = this.containerEl.querySelector(".memolog-category-tabs-area") as HTMLElement;
+		// ! カテゴリタブエリアを取得してボタンを配置。
+		const categoryTabsArea = this.containerEl.querySelector(".memolog-category-tabs-area") as HTMLElement
 		if (categoryTabsArea) {
 			const hamburgerBtn = categoryTabsArea.querySelector(
-				".memolog-hamburger-btn"
-			) as HTMLElement;
+				".memolog-hamburger-btn",
+			) as HTMLElement
 			const dateRangeFilters = categoryTabsArea.querySelector(
-				".memolog-date-range-filters"
-			) as HTMLElement;
+				".memolog-date-range-filters",
+			) as HTMLElement
 			const searchBtn = categoryTabsArea.querySelector(
-				".memolog-search-btn"
-			) as HTMLElement;
+				".memolog-search-btn",
+			) as HTMLElement
 			const settingsBtn = categoryTabsArea.querySelector(
-				".memolog-settings-btn"
-			) as HTMLElement;
+				".memolog-settings-btn",
+			) as HTMLElement
 			const sortBtnWrapper = categoryTabsArea.querySelector(
-				".memolog-sort-btn-wrapper"
-			) as HTMLElement;
+				".memolog-sort-btn-wrapper",
+			) as HTMLElement
 			const todoToggleBtn = categoryTabsArea.querySelector(
-				".memolog-todo-toggle-btn"
-			) as HTMLElement;
+				".memolog-todo-toggle-btn",
+			) as HTMLElement
 
-			//! TODO完了済み表示切り替えボタンを初期化。
-			this.todoToggleBtn = todoToggleBtn;
-			this.initializeTodoToggleButton(todoToggleBtn);
+			// ! TODO完了済み表示切り替えボタンを初期化。
+			this.todoToggleBtn = todoToggleBtn
+			this.initializeTodoToggleButton(todoToggleBtn)
 
-			//! ボタンバーを初期化（ハンバーガー、日付範囲フィルター、検索、設定、ソートボタン）。
+			// ! ボタンバーを初期化（ハンバーガー、日付範囲フィルター、検索、設定、ソートボタン）。
 			this.buttonBar = new ButtonBar(categoryTabsArea, {
-				onSortOrderChange: (order) => {
-					void this.handleSortOrderChange(order);
+				onSortOrderChange: order => {
+					void this.handleSortOrderChange(order)
 				},
 				onCalendarClick: () => {
-					void this.toggleCalendar();
+					void this.toggleCalendar()
 				},
 				onSearchClick: () => {
-					void this.toggleSearch();
+					void this.toggleSearch()
 				},
 				onSettingsClick: () => {
-					this.openSettings();
+					this.openSettings()
 				},
-				onDateRangeChange: (filter) => {
-					void this.handleDateRangeChange(filter);
+				onDateRangeChange: filter => {
+					void this.handleDateRangeChange(filter)
 				},
-			});
-			this.buttonBar.renderInline(this.currentOrder, hamburgerBtn, dateRangeFilters, searchBtn, settingsBtn, sortBtnWrapper);
+			})
+			this.buttonBar.renderInline(
+				this.currentOrder,
+				hamburgerBtn,
+				dateRangeFilters,
+				searchBtn,
+				settingsBtn,
+				sortBtnWrapper,
+			)
 		}
 
-		//! カテゴリタブを初期化。
+		// ! カテゴリタブを初期化。
 		if (settings.categories.length > 0) {
 			this.categoryTabs = new CategoryTabs(
 				categoryTabsAreaEl,
 				settings.categories,
 				{
-					onCategoryChange: (categoryDirectory) => void this.handleCategoryTabChange(categoryDirectory),
+					onCategoryChange: categoryDirectory => void this.handleCategoryTabChange(categoryDirectory),
 				},
 				settings.showAllTab,
 				settings.showTrashTab,
-				settings.showPinnedTab
-			);
-			//! defaultCategoryからディレクトリ名を取得。
+				settings.showPinnedTab,
+			)
+			// ! defaultCategoryからディレクトリ名を取得。
 			const defaultCategoryConfig = settings.categories.find(
-				(c) => c.directory === settings.defaultCategory
-			);
-			this.currentCategory = defaultCategoryConfig?.directory || settings.categories[0].directory;
-			this.categoryTabs.render(this.currentCategory);
+				c => c.directory === settings.defaultCategory,
+			)
+			this.currentCategory = defaultCategoryConfig?.directory || settings.categories[0].directory
+			this.categoryTabs.render(this.currentCategory)
 		} else {
-			//! カテゴリが設定されていない場合はデフォルトカテゴリのディレクトリ名を使用。
+			// ! カテゴリが設定されていない場合はデフォルトカテゴリのディレクトリ名を使用。
 			const defaultCategoryConfig = settings.categories.find(
-				(c) => c.directory === settings.defaultCategory
-			);
-			this.currentCategory = defaultCategoryConfig?.directory || settings.defaultCategory;
+				c => c.directory === settings.defaultCategory,
+			)
+			this.currentCategory = defaultCategoryConfig?.directory || settings.defaultCategory
 		}
 
-		//! カレンダーを初期化。
+		// ! カレンダーを初期化。
 		this.calendarView = new CalendarView(calendarAreaEl, {
-			onDateSelect: (date) => void this.handleDateSelect(date),
-		});
-		this.calendarView.render();
+			onDateSelect: date => void this.handleDateSelect(date),
+		})
+		this.calendarView.render()
 
-		//! 検索バーを初期化。
+		// ! 検索バーを初期化。
 		this.searchBar = new SearchBar(searchAreaEl, {
-			onSearch: (query) => void this.handleSearch(query),
+			onSearch: query => void this.handleSearch(query),
 			onClear: () => void this.handleSearchClear(),
-		});
-		this.searchBar.render();
+		})
+		this.searchBar.render()
 
-		//! カテゴリリストを検索バーに設定。
+		// ! カテゴリリストを検索バーに設定。
 		if (settings.categories.length > 0) {
-			const categoryNames = settings.categories.map((c) => c.directory);
-			this.searchBar.setCategories(categoryNames);
+			const categoryNames = settings.categories.map(c => c.directory)
+			this.searchBar.setCategories(categoryNames)
 		}
 
-		//! メモリストを初期化。
+		// ! メモリストを初期化。
 		this.memoList = new MemoList(
 			this.app,
 			listAreaEl,
 			this.memos,
 			{
-				onDelete: (memoId) => void this.handleDelete(memoId),
+				onDelete: memoId => void this.handleDelete(memoId),
 				onSaveEdit: (memoId, newContent) => void this.handleSaveEdit(memoId, newContent),
-				onImagePaste: (file) => this.handleImagePaste(file),
+				onImagePaste: file => this.handleImagePaste(file),
 				onCategoryChange: (memoId, newCategory) => void this.handleCategoryChange(memoId, newCategory),
 				onTodoToggle: (memoId, completed) => void this.handleTodoToggle(memoId, completed),
-				onRestore: (memoId) => void this.handleRestore(memoId),
+				onRestore: memoId => void this.handleRestore(memoId),
 				onPinToggle: (memoId, isPinned) => void this.handlePinToggle(memoId, isPinned),
-				onReply: (parentMemoId) => this.handleReply(parentMemoId),
+				onReply: parentMemoId => this.handleReply(parentMemoId),
 				onThreadToggle: (memoId, isCollapsed) => void this.handleThreadToggle(memoId, isCollapsed),
-				onThreadClick: (memoId) => this.showThreadView(memoId), //! スレッドビューに遷移。v0.0.14で追加。
+				onThreadClick: memoId => this.showThreadView(memoId), // ! スレッドビューに遷移。v0.0.14で追加。
 			},
-			"", //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
+			"", // ! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
 			settings.categories,
-			false, //! 初期状態ではゴミ箱表示ではない。
+			false, // ! 初期状態ではゴミ箱表示ではない。
 			settings.pinnedMemoIds,
 			settings.collapsedThreads,
-			"main" //! 初期状態はメインビュー。v0.0.14で追加。
-		);
-		this.memoList.render();
+			"main", // ! 初期状態はメインビュー。v0.0.14で追加。
+		)
+		this.memoList.render()
 
-		//! 入力フォームを初期化。
+		// ! 入力フォームを初期化。
 		this.inputForm = new InputForm(inputAreaEl, {
 			onSubmit: (content, attachments) => void this.handleSubmit(content, attachments),
-			onImagePaste: (file) => this.handleImagePaste(file),
+			onImagePaste: file => this.handleImagePaste(file),
 			onCancelReply: () => {
-				//! 返信モードキャンセル時は何もしない（フォーム側で状態リセット済み）。
+				// ! 返信モードキャンセル時は何もしない（フォーム側で状態リセット済み）。
 			},
-		});
-		this.inputForm.render();
+		})
+		this.inputForm.render()
 	}
 
-	//! メモを読み込む。
+	// ! メモを読み込む。
 	private async loadMemos(): Promise<void> {
-		//! 既に読み込み中の場合はスキップ。
+		// ! 既に読み込み中の場合はスキップ。
 		if (this.isLoadingMemos) {
-			return;
+			return
 		}
 
-		this.isLoadingMemos = true;
+		this.isLoadingMemos = true
 
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! ゴミ箱タブとピン留めタブの場合は入力フォームを非表示に、それ以外は表示。
+			// ! ゴミ箱タブとピン留めタブの場合は入力フォームを非表示に、それ以外は表示。
 			if (this.inputAreaEl) {
-				this.inputAreaEl.style.display =
-					this.currentCategory === "trash" || this.currentCategory === "pinned" ? "none" : "";
+				this.inputAreaEl.style.display = this.currentCategory === "trash" || this.currentCategory === "pinned" ? "none" : ""
 			}
 
-			//! "pinned"が選択されている場合はピン留めメモのみ読み込む。
+			// ! "pinned"が選択されている場合はピン留めメモのみ読み込む。
 			if (this.currentCategory === "pinned") {
-				//! 全メモから読み込み。
-				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
+				// ! 全メモから読み込み。
+				const allMemos = await this.loadMemosForDateRange(undefined, undefined)
 
-				//! ピン留めメモのみ抽出。
-				this.memos = allMemos.filter((memo) => settings.pinnedMemoIds.includes(memo.id));
+				// ! ピン留めメモのみ抽出。
+				this.memos = allMemos.filter(memo => settings.pinnedMemoIds.includes(memo.id))
 
-				this.sortMemos();
+				this.sortMemos()
 			} else if (this.currentCategory === "trash") {
-				//! "trash"が選択されている場合は全カテゴリから削除フラグ付きメモを読み込む。
-				//! Vault内の全ファイルを取得。
-				const allFiles = this.app.vault.getMarkdownFiles();
-				const allMemos: MemoEntry[] = [];
+				// ! "trash"が選択されている場合は全カテゴリから削除フラグ付きメモを読み込む。
+				// ! Vault内の全ファイルを取得。
+				const allFiles = this.app.vault.getMarkdownFiles()
+				const allMemos: MemoEntry[] = []
 
-				//! rootDirectory配下のファイルのみをフィルタリング。
-				const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+				// ! rootDirectory配下のファイルのみをフィルタリング。
+				const memologFiles = allFiles.filter(file => file.path.startsWith(settings.rootDirectory + "/"))
 
 				for (const file of memologFiles) {
-					const filePath = file.path;
-					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					const filePath = file.path
+					const fileContent = await this.memoManager.vaultHandler.readFile(filePath)
+					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter(t => t.trim())
 					for (const text of memoTexts) {
-						const memo = parseTextToMemo(text, "");
+						const memo = parseTextToMemo(text, "")
 						if (memo && memo.trashedAt) {
-							//! 削除フラグが付いているメモのみ追加。
-							allMemos.push(memo);
+							// ! 削除フラグが付いているメモのみ追加。
+							allMemos.push(memo)
 						}
 					}
 				}
 
-				this.memos = allMemos;
-				this.sortMemos();
+				this.memos = allMemos
+				this.sortMemos()
 			} else if (this.currentCategory === "all") {
-				//! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。
+				// ! 日付範囲フィルターが設定されている場合は、そのフィルターに応じて読み込む。
 				if (this.currentDateRange && this.currentDateRange !== "all") {
-					let startDate: string | undefined;
-					let endDate: string | undefined;
+					let startDate: string | undefined
+					let endDate: string | undefined
 
 					if (this.currentDateRange === "today") {
-						//! 今日のメモのみ。
-						const today = new Date();
-						const todayStr = today.toISOString().split("T")[0];
-						startDate = todayStr;
-						endDate = todayStr;
+						// ! 今日のメモのみ。
+						const today = new Date()
+						const todayStr = today.toISOString().split("T")[0]
+						startDate = todayStr
+						endDate = todayStr
 					} else if (this.currentDateRange === "week") {
-						//! 過去一週間。
-						const today = new Date();
-						const weekAgo = new Date(today);
-						weekAgo.setDate(today.getDate() - 7);
-						startDate = weekAgo.toISOString().split("T")[0];
-						endDate = today.toISOString().split("T")[0];
+						// ! 過去一週間。
+						const today = new Date()
+						const weekAgo = new Date(today)
+						weekAgo.setDate(today.getDate() - 7)
+						startDate = weekAgo.toISOString().split("T")[0]
+						endDate = today.toISOString().split("T")[0]
 					}
-					//! "all"の場合はstartDate, endDateともにundefinedのまま（全期間）。
+					// ! "all"の場合はstartDate, endDateともにundefinedのまま（全期間）。
 
-					this.memos = await this.loadMemosForDateRange(startDate, endDate);
-					this.sortMemos();
+					this.memos = await this.loadMemosForDateRange(startDate, endDate)
+					this.sortMemos()
 				} else if (this.selectedDate) {
-					//! カレンダーで日付が選択されている場合は、その日付のメモを読み込む。
-					this.memos = [];
-					const processedFiles = new Set<string>(); //! 処理済みファイルパスを記録。
+					// ! カレンダーで日付が選択されている場合は、その日付のメモを読み込む。
+					this.memos = []
+					const processedFiles = new Set<string>() // ! 処理済みファイルパスを記録。
 
 					for (const cat of settings.categories) {
 						const filePath = settings.pathFormat
 							? PathGenerator.generateCustomPath(
-									settings.rootDirectory,
-									cat.directory,
-									settings.pathFormat,
-									settings.useDirectoryCategory,
-									this.selectedDate
-								)
+								settings.rootDirectory,
+								cat.directory,
+								settings.pathFormat,
+								settings.useDirectoryCategory,
+								this.selectedDate,
+							)
 							: PathGenerator.generateFilePath(
-									settings.rootDirectory,
-									cat.directory,
-									settings.saveUnit,
-									settings.useDirectoryCategory,
-									this.selectedDate
-								);
+								settings.rootDirectory,
+								cat.directory,
+								settings.saveUnit,
+								settings.useDirectoryCategory,
+								this.selectedDate,
+							)
 
-						//! 既に処理済みのファイルはスキップ（重複読み込み防止）。
+						// ! 既に処理済みのファイルはスキップ（重複読み込み防止）。
 						if (processedFiles.has(filePath)) {
-							continue;
+							continue
 						}
-						processedFiles.add(filePath);
+						processedFiles.add(filePath)
 
-						const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+						const fileExists = this.memoManager.vaultHandler.fileExists(filePath)
 
 						if (fileExists) {
-							//! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
-							//! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
-							const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-							const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+							// ! useDirectoryCategoryの設定に関わらず、ファイル全体を読み込む。
+							// ! getMemos()でカテゴリフィルタリングを行わない（空文字を渡す）。
+							const fileContent = await this.memoManager.vaultHandler.readFile(filePath)
+							const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter(t => t.trim())
 							for (const text of memoTexts) {
-								const memo = parseTextToMemo(text, "");
+								const memo = parseTextToMemo(text, "")
 								if (memo) {
-									this.memos.push(memo);
+									this.memos.push(memo)
 								}
 							}
 						}
 					}
 
-					//! ソート順に応じて並べ替え。
-					this.sortMemos();
+					// ! ソート順に応じて並べ替え。
+					this.sortMemos()
 				} else {
-					//! 日付範囲フィルターもカレンダー選択もない場合は、「全期間」と同じ挙動。
-					this.memos = await this.loadMemosForDateRange();
-					this.sortMemos();
+					// ! 日付範囲フィルターもカレンダー選択もない場合は、「全期間」と同じ挙動。
+					this.memos = await this.loadMemosForDateRange()
+					this.sortMemos()
 				}
 			} else {
-				//! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
-				const categoryDirectory = this.currentCategory;
+				// ! 特定のカテゴリのメモを読み込む（currentCategoryはディレクトリ名）。
+				const categoryDirectory = this.currentCategory
 
-				//! 日付範囲フィルターが設定されている場合は、その範囲のメモを読み込む。
+				// ! 日付範囲フィルターが設定されている場合は、その範囲のメモを読み込む。
 				if (this.currentDateRange === "all" && !this.selectedDate) {
-					//! "all"の場合は、Vault内の全ファイルからカテゴリに一致するメモを読み込む。
-					const allFiles = this.app.vault.getMarkdownFiles();
-					const allMemos: MemoEntry[] = [];
+					// ! "all"の場合は、Vault内の全ファイルからカテゴリに一致するメモを読み込む。
+					const allFiles = this.app.vault.getMarkdownFiles()
+					const allMemos: MemoEntry[] = []
 
-					//! rootDirectory配下のファイルのみをフィルタリング。
-					const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+					// ! rootDirectory配下のファイルのみをフィルタリング。
+					const memologFiles = allFiles.filter(file => file.path.startsWith(settings.rootDirectory + "/"))
 
 					for (const file of memologFiles) {
-						const filePath = file.path;
-						const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+						const filePath = file.path
+						const fileContent = await this.memoManager.vaultHandler.readFile(filePath)
+						const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter(t => t.trim())
 						for (const text of memoTexts) {
-							const memo = parseTextToMemo(text, "");
+							const memo = parseTextToMemo(text, "")
 							if (memo && memo.category === categoryDirectory && !memo.trashedAt) {
-								//! カテゴリが一致し、削除されていないメモのみ追加。
-								allMemos.push(memo);
+								// ! カテゴリが一致し、削除されていないメモのみ追加。
+								allMemos.push(memo)
 							}
 						}
 					}
 
-					this.memos = allMemos;
-					this.sortMemos();
+					this.memos = allMemos
+					this.sortMemos()
 				} else if (this.currentDateRange && this.currentDateRange !== "all" && !this.selectedDate) {
-					const allMemos: MemoEntry[] = [];
+					const allMemos: MemoEntry[] = []
 
-					//! 日付範囲を計算。
-					let startDate: Date;
-					const endDate: Date = new Date();
-					endDate.setHours(23, 59, 59, 999); //! 今日の終わり。
+					// ! 日付範囲を計算。
+					let startDate: Date
+					const endDate: Date = new Date()
+					endDate.setHours(23, 59, 59, 999) // ! 今日の終わり。
 
 					if (this.currentDateRange === "today") {
-						startDate = new Date();
-						startDate.setHours(0, 0, 0, 0); //! 今日の始まり。
+						startDate = new Date()
+						startDate.setHours(0, 0, 0, 0) // ! 今日の始まり。
 					} else if (this.currentDateRange === "week") {
-						startDate = new Date();
-						startDate.setDate(endDate.getDate() - 6);
-						startDate.setHours(0, 0, 0, 0); //! 6日前の始まり(今日を含めて7日間)。
+						startDate = new Date()
+						startDate.setDate(endDate.getDate() - 6)
+						startDate.setHours(0, 0, 0, 0) // ! 6日前の始まり(今日を含めて7日間)。
 					} else {
-						//! "all"の場合は、過去2年分のデータを読み込む（パフォーマンス考慮）。
-						startDate = new Date();
-						startDate.setFullYear(endDate.getFullYear() - 2);
-						startDate.setHours(0, 0, 0, 0);
+						// ! "all"の場合は、過去2年分のデータを読み込む（パフォーマンス考慮）。
+						startDate = new Date()
+						startDate.setFullYear(endDate.getFullYear() - 2)
+						startDate.setHours(0, 0, 0, 0)
 					}
 
-					//! 日付範囲内の各日付に対してファイルを読み込む。
-					const currentDate = new Date(startDate);
-					currentDate.setHours(0, 0, 0, 0);
+					// ! 日付範囲内の各日付に対してファイルを読み込む。
+					const currentDate = new Date(startDate)
+					currentDate.setHours(0, 0, 0, 0)
 					while (currentDate <= endDate) {
 						const filePath = settings.pathFormat
 							? PathGenerator.generateCustomPath(
-									settings.rootDirectory,
-									categoryDirectory,
-									settings.pathFormat,
-									settings.useDirectoryCategory,
-									currentDate
-								)
-							: PathGenerator.generateFilePath(
-									settings.rootDirectory,
-									categoryDirectory,
-									settings.saveUnit,
-									settings.useDirectoryCategory,
-									currentDate
-								);
-
-						//! ファイルが存在する場合のみ読み込む。
-						if (this.memoManager.vaultHandler.fileExists(filePath)) {
-							const memos = await this.memoManager.getMemos(filePath, categoryDirectory);
-							allMemos.push(...memos);
-						}
-
-						//! 次の日へ。
-						currentDate.setDate(currentDate.getDate() + 1);
-					}
-
-					//! メモのタイムスタンプで日付範囲フィルタリング。
-					const filteredMemos = allMemos.filter((memo) => {
-						const memoDate = new Date(memo.timestamp);
-						return memoDate >= startDate && memoDate <= endDate;
-					});
-
-					//! 重複を除外(同じメモIDが複数のファイルに含まれている場合)。
-					this.memos = filteredMemos.filter(
-						(memo, index, self) => self.findIndex((m) => m.id === memo.id) === index
-					);
-
-					this.sortMemos();
-				} else {
-					//! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。
-					const targetDate = this.selectedDate || new Date();
-					const filePath = settings.pathFormat
-						? PathGenerator.generateCustomPath(
 								settings.rootDirectory,
 								categoryDirectory,
 								settings.pathFormat,
 								settings.useDirectoryCategory,
-								targetDate
+								currentDate,
 							)
-						: PathGenerator.generateFilePath(
+							: PathGenerator.generateFilePath(
 								settings.rootDirectory,
 								categoryDirectory,
 								settings.saveUnit,
 								settings.useDirectoryCategory,
-								targetDate
-							);
+								currentDate,
+							)
 
-					//! ファイルが存在するか確認。
-					const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+						// ! ファイルが存在する場合のみ読み込む。
+						if (this.memoManager.vaultHandler.fileExists(filePath)) {
+							const memos = await this.memoManager.getMemos(filePath, categoryDirectory)
+							allMemos.push(...memos)
+						}
+
+						// ! 次の日へ。
+						currentDate.setDate(currentDate.getDate() + 1)
+					}
+
+					// ! メモのタイムスタンプで日付範囲フィルタリング。
+					const filteredMemos = allMemos.filter(memo => {
+						const memoDate = new Date(memo.timestamp)
+						return memoDate >= startDate && memoDate <= endDate
+					})
+
+					// ! 重複を除外(同じメモIDが複数のファイルに含まれている場合)。
+					this.memos = filteredMemos.filter(
+						(memo, index, self) => self.findIndex(m => m.id === memo.id) === index,
+					)
+
+					this.sortMemos()
+				} else {
+					// ! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。
+					const targetDate = this.selectedDate || new Date()
+					const filePath = settings.pathFormat
+						? PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							categoryDirectory,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							targetDate,
+						)
+						: PathGenerator.generateFilePath(
+							settings.rootDirectory,
+							categoryDirectory,
+							settings.saveUnit,
+							settings.useDirectoryCategory,
+							targetDate,
+						)
+
+					// ! ファイルが存在するか確認。
+					const fileExists = this.memoManager.vaultHandler.fileExists(filePath)
 
 					if (fileExists) {
-						//! メモを読み込む。
-						this.memos = await this.memoManager.getMemos(filePath, categoryDirectory);
+						// ! メモを読み込む。
+						this.memos = await this.memoManager.getMemos(filePath, categoryDirectory)
 
-						//! ソート順に応じて並べ替え。
-						this.sortMemos();
+						// ! ソート順に応じて並べ替え。
+						this.sortMemos()
 					} else {
-						//! ファイルが存在しない場合は空配列。
-						this.memos = [];
+						// ! ファイルが存在しない場合は空配列。
+						this.memos = []
 					}
 				}
 			}
 
-			//! 日付でフィルタリング。
-			let displayMemos = this.memos;
+			// ! 日付でフィルタリング。
+			let displayMemos = this.memos
 			if (this.selectedDate) {
-				displayMemos = this.filterMemosByDate(this.memos, this.selectedDate);
+				displayMemos = this.filterMemosByDate(this.memos, this.selectedDate)
 			}
 
-			//! 検索クエリが存在する場合は検索フィルターを適用。
+			// ! 検索クエリが存在する場合は検索フィルターを適用。
 			if (this.currentSearchQuery) {
-				const result = SearchEngine.search(displayMemos, this.currentSearchQuery);
-				displayMemos = result.matches;
+				const result = SearchEngine.search(displayMemos, this.currentSearchQuery)
+				displayMemos = result.matches
 			}
 
-			//! ゴミ箱タブの場合は削除されたメモのみ表示、それ以外は削除されていないメモのみ表示。
+			// ! ゴミ箱タブの場合は削除されたメモのみ表示、それ以外は削除されていないメモのみ表示。
 			if (this.currentCategory === "trash") {
-				//! ゴミ箱タブ: trashedAtが存在するメモのみ表示。
-				displayMemos = displayMemos.filter((memo) => memo.trashedAt);
+				// ! ゴミ箱タブ: trashedAtが存在するメモのみ表示。
+				displayMemos = displayMemos.filter(memo => memo.trashedAt)
 			} else {
-				//! 通常タブ: trashedAtが存在しないメモのみ表示。
-				displayMemos = displayMemos.filter((memo) => !memo.trashedAt);
+				// ! 通常タブ: trashedAtが存在しないメモのみ表示。
+				displayMemos = displayMemos.filter(memo => !memo.trashedAt)
 			}
 
-
-			//! ピン留めメモを追加（日付フィルタを無視して全期間から読み込み、allタブ以外はカテゴリフィルタを適用）。
+			// ! ピン留めメモを追加（日付フィルタを無視して全期間から読み込み、allタブ以外はカテゴリフィルタを適用）。
 			if (settings.pinnedMemoIds.length > 0 && this.currentCategory !== "trash" && this.currentCategory !== "pinned") {
-				//! 全メモから読み込み。
-				const allMemos = await this.loadMemosForDateRange(undefined, undefined);
+				// ! 全メモから読み込み。
+				const allMemos = await this.loadMemosForDateRange(undefined, undefined)
 
-				//! ピン留めメモを抽出（削除されていないメモのみ）。
-				const pinnedMemos = allMemos.filter((memo) =>
-					settings.pinnedMemoIds.includes(memo.id) && !memo.trashedAt
-				);
+				// ! ピン留めメモを抽出（削除されていないメモのみ）。
+				const pinnedMemos = allMemos.filter(memo => settings.pinnedMemoIds.includes(memo.id) && !memo.trashedAt)
 
-				//! allタブ以外の場合はカテゴリフィルタを適用。
-				const filteredPinnedMemos =
-					this.currentCategory === "all"
-						? pinnedMemos
-						: pinnedMemos.filter((memo) => memo.category === this.currentCategory);
+				// ! allタブ以外の場合はカテゴリフィルタを適用。
+				const filteredPinnedMemos = this.currentCategory === "all"
+					? pinnedMemos
+					: pinnedMemos.filter(memo => memo.category === this.currentCategory)
 
-				//! displayMemosに既に含まれているメモは除外。
-				const displayMemoIds = new Set(displayMemos.map((m) => m.id));
+				// ! displayMemosに既に含まれているメモは除外。
+				const displayMemoIds = new Set(displayMemos.map(m => m.id))
 				const uniquePinnedMemos = filteredPinnedMemos.filter(
-					(memo) => !displayMemoIds.has(memo.id)
-				);
+					memo => !displayMemoIds.has(memo.id),
+				)
 
-				//! ピン留めメモを追加（先頭固定ではなくマージ）。
-				displayMemos = [...displayMemos, ...uniquePinnedMemos];
+				// ! ピン留めメモを追加（先頭固定ではなくマージ）。
+				displayMemos = [...displayMemos, ...uniquePinnedMemos]
 
-				//! ソート順に応じて並べ替え。
+				// ! ソート順に応じて並べ替え。
 				displayMemos.sort((a, b) => {
 					if (this.currentOrder === "asc") {
-						return a.timestamp.localeCompare(b.timestamp);
+						return a.timestamp.localeCompare(b.timestamp)
 					} else {
-						return b.timestamp.localeCompare(a.timestamp);
+						return b.timestamp.localeCompare(a.timestamp)
 					}
-				});
+				})
 			}
 
-			//! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
+			// ! TODOリストカテゴリで、そのカテゴリが選択されている場合、完了済みメモを条件付きで非表示にする。
 			if (this.currentCategory !== "all") {
-				const settings = this.plugin.settingsManager.getGlobalSettings();
-				const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
+				const settings = this.plugin.settingsManager.getGlobalSettings()
+				const categoryConfig = settings.categories.find(c => c.directory === this.currentCategory)
 				if (categoryConfig?.useTodoList && !this.showCompletedTodos) {
-					//! showCompletedTodosがfalseの場合のみ、チェック済み（content が - [x] で始まる）のメモを除外。
-					displayMemos = displayMemos.filter((m) => !/^-\s*\[x\]\s+/.test(m.content));
+					// ! showCompletedTodosがfalseの場合のみ、チェック済み（content が - [x] で始まる）のメモを除外。
+					displayMemos = displayMemos.filter(m => !/^-\s*\[x\]\s+/.test(m.content))
 				}
 			}
 
-			//! TODO完了済み表示ボタンの表示/非表示を更新。
-			this.updateTodoToggleButtonVisibility();
+			// ! TODO完了済み表示ボタンの表示/非表示を更新。
+			this.updateTodoToggleButtonVisibility()
 
-			//! replyCountを計算して各メモに設定。v0.0.15で追加。
-			this.calculateReplyCount(displayMemos);
+			// ! replyCountを計算して各メモに設定。v0.0.15で追加。
+			this.calculateReplyCount(displayMemos)
 
-			//! メモリストを更新。
+			// ! メモリストを更新。
 			if (this.memoList) {
-				//! ゴミ箱表示フラグを設定。
-				this.memoList.setIsTrash(this.currentCategory === "trash");
-				//! ピン留めIDリストを更新。
-				this.memoList.updatePinnedMemoIds(settings.pinnedMemoIds);
-				//! 折りたたみ状態を更新。
-				this.memoList.updateCollapsedThreads(settings.collapsedThreads);
-				this.memoList.updateMemos(displayMemos);
-				//! 最新メモが表示されるようにスクロール。
-				this.memoList.scrollToLatest(this.currentOrder);
+				// ! ゴミ箱表示フラグを設定。
+				this.memoList.setIsTrash(this.currentCategory === "trash")
+				// ! ピン留めIDリストを更新。
+				this.memoList.updatePinnedMemoIds(settings.pinnedMemoIds)
+				// ! 折りたたみ状態を更新。
+				this.memoList.updateCollapsedThreads(settings.collapsedThreads)
+				this.memoList.updateMemos(displayMemos)
+				// ! 最新メモが表示されるようにスクロール。
+				this.memoList.scrollToLatest(this.currentOrder)
 			}
 
-			//! カレンダーのメモカウントを更新（全カテゴリのメモを集計）。
+			// ! カレンダーのメモカウントを更新（全カテゴリのメモを集計）。
 			if (this.calendarView) {
-				const timestamps = await this.getAllMemoTimestamps();
-				this.calendarView.updateMemoCounts(timestamps);
+				const timestamps = await this.getAllMemoTimestamps()
+				this.calendarView.updateMemoCounts(timestamps)
 			}
 		} catch (error) {
-			Logger.error("メモ読み込みエラー:", error);
-			new Notice("メモの読み込みに失敗しました");
-			this.memos = [];
+			Logger.error("メモ読み込みエラー:", error)
+			new Notice("メモの読み込みに失敗しました")
+			this.memos = []
 		} finally {
-			this.isLoadingMemos = false;
+			this.isLoadingMemos = false
 		}
 	}
 
-	//! 全カテゴリのメモのタイムスタンプを取得する（カレンダー用、キャッシュ機構付き）。
+	// ! 全カテゴリのメモのタイムスタンプを取得する（カレンダー用、キャッシュ機構付き）。
 	private async getAllMemoTimestamps(): Promise<string[]> {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		const timestamps: string[] = [];
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		const timestamps: string[] = []
 
-		//! Vault内の全てのMarkdownファイルを取得。
-		const allFiles = this.app.vault.getMarkdownFiles();
+		// ! Vault内の全てのMarkdownファイルを取得。
+		const allFiles = this.app.vault.getMarkdownFiles()
 
-		//! rootDirectory配下のファイルのみをフィルタリング。
-		const memologFiles = allFiles.filter((file) => file.path.startsWith(settings.rootDirectory + "/"));
+		// ! rootDirectory配下のファイルのみをフィルタリング。
+		const memologFiles = allFiles.filter(file => file.path.startsWith(settings.rootDirectory + "/"))
 
 		for (const file of memologFiles) {
-			const filePath = file.path;
+			const filePath = file.path
 
-			//! ファイルの更新日時を取得。
-			const currentMtime = file.stat.mtime;
+			// ! ファイルの更新日時を取得。
+			const currentMtime = file.stat.mtime
 
-			//! キャッシュをチェック。
-			const cached = this.memoCountCache.get(filePath);
+			// ! キャッシュをチェック。
+			const cached = this.memoCountCache.get(filePath)
 			if (cached && cached.mtime === currentMtime) {
-				//! キャッシュが有効な場合はキャッシュを使用。
-				timestamps.push(...cached.timestamps);
-				continue;
+				// ! キャッシュが有効な場合はキャッシュを使用。
+				timestamps.push(...cached.timestamps)
+				continue
 			}
 
-			//! キャッシュが無効またはない場合はファイルを読み込む。
-			const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-			const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
-			const fileTimestamps: string[] = [];
+			// ! キャッシュが無効またはない場合はファイルを読み込む。
+			const fileContent = await this.memoManager.vaultHandler.readFile(filePath)
+			const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter(t => t.trim())
+			const fileTimestamps: string[] = []
 
 			for (const text of memoTexts) {
-				const memo = parseTextToMemo(text, "");
+				const memo = parseTextToMemo(text, "")
 				if (memo) {
-					fileTimestamps.push(memo.timestamp);
+					fileTimestamps.push(memo.timestamp)
 				}
 			}
 
-			//! キャッシュを更新。
+			// ! キャッシュを更新。
 			this.memoCountCache.set(filePath, {
 				mtime: currentMtime,
 				timestamps: fileTimestamps,
-			});
+			})
 
-			timestamps.push(...fileTimestamps);
+			timestamps.push(...fileTimestamps)
 		}
 
-		return timestamps;
+		return timestamps
 	}
 
-	//! ファイル変更イベントリスナーを登録する。
+	// ! ファイル変更イベントリスナーを登録する。
 	private registerFileWatcher(): void {
 		this.fileModifyRef = this.app.metadataCache.on("changed", (file: TFile) => {
-			void this.handleFileModified(file);
-		});
+			void this.handleFileModified(file)
+		})
 	}
 
-	//! ファイル変更イベントリスナーを解除する。
+	// ! ファイル変更イベントリスナーを解除する。
 	private unregisterFileWatcher(): void {
 		if (this.fileModifyRef) {
-			this.app.metadataCache.offref(this.fileModifyRef);
-			this.fileModifyRef = null;
+			this.app.metadataCache.offref(this.fileModifyRef)
+			this.fileModifyRef = null
 		}
 	}
 
-	//! ファイルが変更されたときの処理。
+	// ! ファイルが変更されたときの処理。
 	private async handleFileModified(file: TFile): Promise<void> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! 変更されたファイルがmemologの管理下にあるか確認。
+			// ! 変更されたファイルがmemologの管理下にあるか確認。
 			if (!file.path.startsWith(settings.rootDirectory)) {
-				return;
+				return
 			}
 
-			//! .mdファイルでない場合は無視。
+			// ! .mdファイルでない場合は無視。
 			if (!file.path.endsWith(".md")) {
-				return;
+				return
 			}
 
-			//! メモを再読み込み。
-			await this.loadMemos();
+			// ! メモを再読み込み。
+			await this.loadMemos()
 		} catch (error) {
-			Logger.error("ファイル変更処理エラー:", error);
+			Logger.error("ファイル変更処理エラー:", error)
 		}
 	}
 
-	//! 日付でメモをフィルタリングする（ローカルタイムゾーンの日付で比較）。
+	// ! 日付でメモをフィルタリングする（ローカルタイムゾーンの日付で比較）。
 	private filterMemosByDate(memos: MemoEntry[], date: Date): MemoEntry[] {
-		//! ターゲット日付の年月日を取得。
-		const targetYear = date.getFullYear();
-		const targetMonth = date.getMonth();
-		const targetDay = date.getDate();
+		// ! ターゲット日付の年月日を取得。
+		const targetYear = date.getFullYear()
+		const targetMonth = date.getMonth()
+		const targetDay = date.getDate()
 
-		const filtered = memos.filter((memo) => {
-			//! メモのタイムスタンプをローカル日付に変換。
-			const memoDate = new Date(memo.timestamp);
-			const memoYear = memoDate.getFullYear();
-			const memoMonth = memoDate.getMonth();
-			const memoDay = memoDate.getDate();
+		const filtered = memos.filter(memo => {
+			// ! メモのタイムスタンプをローカル日付に変換。
+			const memoDate = new Date(memo.timestamp)
+			const memoYear = memoDate.getFullYear()
+			const memoMonth = memoDate.getMonth()
+			const memoDay = memoDate.getDate()
 
-			return targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay;
-		});
+			return targetYear === memoYear && targetMonth === memoMonth && targetDay === memoDay
+		})
 
-		return filtered;
+		return filtered
 	}
 
-	//! メモをソートする。
+	// ! メモをソートする。
 	private sortMemos(): void {
 		this.memos.sort((a, b) => {
-			const timeA = new Date(a.timestamp).getTime();
-			const timeB = new Date(b.timestamp).getTime();
-			return this.currentOrder === "asc" ? timeA - timeB : timeB - timeA;
-		});
+			const timeA = new Date(a.timestamp).getTime()
+			const timeB = new Date(b.timestamp).getTime()
+			return this.currentOrder === "asc" ? timeA - timeB : timeB - timeA
+		})
 	}
 
-	//! カテゴリタブ変更処理。
+	// ! カテゴリタブ変更処理。
 	private async handleCategoryTabChange(category: string): Promise<void> {
-		this.currentCategory = category;
-		await this.loadMemos();
+		this.currentCategory = category
+		await this.loadMemos()
 	}
 
-	//! 日付選択処理。
+	// ! 日付選択処理。
 	private async handleDateSelect(date: Date | null): Promise<void> {
-		this.selectedDate = date;
-		await this.loadMemos();
+		this.selectedDate = date
+		await this.loadMemos()
 	}
 
-	//! 画像ペースト処理（画像を保存してMarkdownリンクを返す）。
+	// ! 画像ペースト処理（画像を保存してMarkdownリンクを返す）。
 	private async handleImagePaste(file: File): Promise<string | null> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const category = this.currentCategory || settings.defaultCategory;
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
+			const category = this.currentCategory || settings.defaultCategory
 
-			//! 現在のメモが保存されるパスを取得（添付ファイルパスの計算に必要）。
+			// ! 現在のメモが保存されるパスを取得（添付ファイルパスの計算に必要）。
 			const memoFilePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						category,
-						settings.pathFormat,
-						settings.useDirectoryCategory
-					)
+					settings.rootDirectory,
+					category,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						category,
-						settings.saveUnit,
-						settings.useDirectoryCategory
-					);
+					settings.rootDirectory,
+					category,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+				)
 
-			//! PathGeneratorを使用して添付ファイルの完全なパスを生成。
+			// ! PathGeneratorを使用して添付ファイルの完全なパスを生成。
 			const filePath = PathGenerator.generateAttachmentPath(
 				settings.rootDirectory,
 				memoFilePath,
 				settings.attachmentPath,
 				settings.attachmentNameFormat,
-				file.name
-			);
+				file.name,
+			)
 
-			//! 添付ファイルディレクトリを作成。
-			const attachmentDir = filePath.substring(0, filePath.lastIndexOf("/"));
-			const dirExists = this.memoManager.vaultHandler.folderExists(attachmentDir);
+			// ! 添付ファイルディレクトリを作成。
+			const attachmentDir = filePath.substring(0, filePath.lastIndexOf("/"))
+			const dirExists = this.memoManager.vaultHandler.folderExists(attachmentDir)
 			if (!dirExists) {
-				await this.memoManager.vaultHandler.createFolder(attachmentDir);
+				await this.memoManager.vaultHandler.createFolder(attachmentDir)
 			}
 
-			//! ファイルを保存。
-			const arrayBuffer = await file.arrayBuffer();
-			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer);
+			// ! ファイルを保存。
+			const arrayBuffer = await file.arrayBuffer()
+			await this.memoManager.vaultHandler.createBinaryFile(filePath, arrayBuffer)
 
-			//! 標準Markdown形式で画像リンクを生成（alt属性は空）。
-			const markdownLink = `![](${filePath})`;
+			// ! 標準Markdown形式で画像リンクを生成（alt属性は空）。
+			const markdownLink = `![](${filePath})`
 
-			return markdownLink;
+			return markdownLink
 		} catch (error) {
-			Logger.error("Failed to save pasted image:", error);
-			new Notice("画像の保存に失敗しました");
-			return null;
+			Logger.error("Failed to save pasted image:", error)
+			new Notice("画像の保存に失敗しました")
+			return null
 		}
 	}
 
-	//! 返信ボタン処理。
+	// ! 返信ボタン処理。
 	private handleReply(parentMemoId: string): void {
 		try {
-			//! 親メモを検索。
-			const parentMemo = this.memos.find((m) => m.id === parentMemoId);
+			// ! 親メモを検索。
+			const parentMemo = this.memos.find(m => m.id === parentMemoId)
 			if (!parentMemo) {
-				new Notice("親メモが見つかりませんでした");
-				return;
+				new Notice("親メモが見つかりませんでした")
+				return
 			}
 
-			//! InputFormを返信モードにする。
+			// ! InputFormを返信モードにする。
 			if (this.inputForm) {
-				this.inputForm.enterReplyMode(parentMemoId, parentMemo.content);
+				this.inputForm.enterReplyMode(parentMemoId, parentMemo.content)
 			}
 		} catch (error) {
-			Logger.error("返信モード開始エラー:", error);
-			new Notice("返信モードの開始に失敗しました");
+			Logger.error("返信モード開始エラー:", error)
+			new Notice("返信モードの開始に失敗しました")
 		}
 	}
 
-	//! スレッド折りたたみトグル処理。
+	// ! スレッド折りたたみトグル処理。
 	private async handleThreadToggle(memoId: string, isCollapsed: boolean): Promise<void> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! 折りたたみ状態を更新。
-			let collapsedThreads = [...settings.collapsedThreads];
+			// ! 折りたたみ状態を更新。
+			let collapsedThreads = [...settings.collapsedThreads]
 			if (isCollapsed) {
-				//! 折りたたみ追加。
+				// ! 折りたたみ追加。
 				if (!collapsedThreads.includes(memoId)) {
-					collapsedThreads.push(memoId);
+					collapsedThreads.push(memoId)
 				}
 			} else {
-				//! 折りたたみ解除。
-				collapsedThreads = collapsedThreads.filter((id) => id !== memoId);
+				// ! 折りたたみ解除。
+				collapsedThreads = collapsedThreads.filter(id => id !== memoId)
 			}
 
-			//! 設定を保存。
+			// ! 設定を保存。
 			await this.plugin.settingsManager.updateGlobalSettings({
 				collapsedThreads,
-			});
+			})
 
-			//! MemoListの折りたたみ状態を更新。
+			// ! MemoListの折りたたみ状態を更新。
 			if (this.memoList) {
-				this.memoList.updateCollapsedThreads(collapsedThreads);
-				this.memoList.render();
+				this.memoList.updateCollapsedThreads(collapsedThreads)
+				this.memoList.render()
 			}
 		} catch (error) {
-			Logger.error("折りたたみ状態変更エラー:", error);
-			new Notice("折りたたみ状態の変更に失敗しました");
+			Logger.error("折りたたみ状態変更エラー:", error)
+			new Notice("折りたたみ状態の変更に失敗しました")
 		}
 	}
 
-	//! メモ送信処理。
+	// ! メモ送信処理。
 	private async handleSubmit(content: string, attachmentNames: string[]): Promise<void> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! "all"が選択されている場合はデフォルトカテゴリのディレクトリ名を取得。
-			let categoryDirectory = this.currentCategory;
+			// ! "all"が選択されている場合はデフォルトカテゴリのディレクトリ名を取得。
+			let categoryDirectory = this.currentCategory
 			if (categoryDirectory === "all") {
 				const defaultCategoryConfig = settings.categories.find(
-					(c) => c.directory === settings.defaultCategory
-				);
-				categoryDirectory = defaultCategoryConfig?.directory || settings.defaultCategory;
+					c => c.directory === settings.defaultCategory,
+				)
+				categoryDirectory = defaultCategoryConfig?.directory || settings.defaultCategory
 			}
 
-			//! ファイルパスを生成（directoryを使用）。
+			// ! ファイルパスを生成（directoryを使用）。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						categoryDirectory,
-						settings.pathFormat,
-						settings.useDirectoryCategory
-					)
+					settings.rootDirectory,
+					categoryDirectory,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						categoryDirectory,
-						settings.saveUnit,
-						settings.useDirectoryCategory
-					);
+					settings.rootDirectory,
+					categoryDirectory,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+				)
 
-			//! 添付ファイルをVaultにコピー。
-			const copiedAttachments: string[] = [];
+			// ! 添付ファイルをVaultにコピー。
+			const copiedAttachments: string[] = []
 			if (attachmentNames.length > 0 && this.inputForm) {
-				const selectedFiles = this.inputForm.getSelectedFiles();
-				const attachmentDir = `${settings.rootDirectory}/attachments`;
+				const selectedFiles = this.inputForm.getSelectedFiles()
+				const attachmentDir = `${settings.rootDirectory}/attachments`
 
-				//! 添付ファイルディレクトリを作成。
-				const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir);
+				// ! 添付ファイルディレクトリを作成。
+				const dirExists = this.memoManager.vaultHandler.fileExists(attachmentDir)
 				if (!dirExists) {
 					await this.app.vault.createFolder(attachmentDir).catch(() => {
-						//! ディレクトリが既に存在する場合は無視。
-					});
+						// ! ディレクトリが既に存在する場合は無視。
+					})
 				}
 
-				//! 各ファイルをコピー。
+				// ! 各ファイルをコピー。
 				for (const file of selectedFiles) {
-					const timestamp = Date.now();
-					const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-					const targetPath = `${attachmentDir}/${timestamp}_${sanitizedName}`;
+					const timestamp = Date.now()
+					const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+					const targetPath = `${attachmentDir}/${timestamp}_${sanitizedName}`
 
-					//! ファイルを読み込んでVaultに書き込み。
-					const arrayBuffer = await file.arrayBuffer();
-					await this.app.vault.createBinary(targetPath, arrayBuffer);
+					// ! ファイルを読み込んでVaultに書き込み。
+					const arrayBuffer = await file.arrayBuffer()
+					await this.app.vault.createBinary(targetPath, arrayBuffer)
 
-					copiedAttachments.push(targetPath);
+					copiedAttachments.push(targetPath)
 				}
 			}
 
-			//! 現在のカテゴリのTODOリスト設定を取得。
-			const categoryConfig = settings.categories.find((c) => c.directory === categoryDirectory);
-			const useTodoList = categoryConfig?.useTodoList ?? false;
+			// ! 現在のカテゴリのTODOリスト設定を取得。
+			const categoryConfig = settings.categories.find(c => c.directory === categoryDirectory)
+			const useTodoList = categoryConfig?.useTodoList ?? false
 
-			//! 返信モードかチェック。
+			// ! 返信モードかチェック。
 			if (this.inputForm && this.inputForm.isInReplyMode()) {
-				//! 返信モードの場合はaddReply APIを呼び出す。
-				const parentMemoId = this.inputForm.getReplyToMemoId();
+				// ! 返信モードの場合はaddReply APIを呼び出す。
+				const parentMemoId = this.inputForm.getReplyToMemoId()
 				if (!parentMemoId) {
-					new Notice("親メモIDが取得できませんでした");
-					return;
+					new Notice("親メモIDが取得できませんでした")
+					return
 				}
 
-				//! 親メモを検索してカテゴリを確認。
-				const parentMemo = this.memos.find((m) => m.id === parentMemoId);
+				// ! 親メモを検索してカテゴリを確認。
+				const parentMemo = this.memos.find(m => m.id === parentMemoId)
 				if (!parentMemo) {
-					new Notice("親メモが見つかりませんでした");
-					return;
+					new Notice("親メモが見つかりませんでした")
+					return
 				}
 
-				//! 親メモと同じカテゴリに返信を作成。
-				const parentMemoDate = new Date(parentMemo.timestamp);
+				// ! 親メモと同じカテゴリに返信を作成。
+				const parentMemoDate = new Date(parentMemo.timestamp)
 				const parentFilePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							parentMemo.category,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							parentMemoDate
-						)
+						settings.rootDirectory,
+						parentMemo.category,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						parentMemoDate,
+					)
 					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							parentMemo.category,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							parentMemoDate
-						);
+						settings.rootDirectory,
+						parentMemo.category,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						parentMemoDate,
+					)
 
 				await this.memoManager.addReply(
 					parentFilePath,
@@ -1072,15 +1074,15 @@ export class MemologSidebar extends ItemView {
 					content,
 					this.currentOrder,
 					settings.memoTemplate,
-					copiedAttachments
-				);
+					copiedAttachments,
+				)
 
-				//! 返信モードを終了。
-				this.inputForm.exitReplyMode();
+				// ! 返信モードを終了。
+				this.inputForm.exitReplyMode()
 
-				new Notice("返信を追加しました");
+				new Notice("返信を追加しました")
 			} else {
-				//! 通常のメモ追加。
+				// ! 通常のメモ追加。
 				await this.memoManager.addMemo(
 					filePath,
 					categoryDirectory,
@@ -1090,280 +1092,280 @@ export class MemologSidebar extends ItemView {
 					copiedAttachments,
 					undefined,
 					undefined,
-					useTodoList
-				);
+					useTodoList,
+				)
 
-				new Notice("メモを追加しました");
+				new Notice("メモを追加しました")
 			}
 
-			//! メモリストを再読み込み。
-			await this.loadMemos();
+			// ! メモリストを再読み込み。
+			await this.loadMemos()
 		} catch (error) {
-			Logger.error("メモ追加エラー:", error);
+			Logger.error("メモ追加エラー:", error)
 			if (error instanceof Error) {
-				Logger.error("Error message:", error.message);
-				Logger.error("Error stack:", error.stack);
+				Logger.error("Error message:", error.message)
+				Logger.error("Error stack:", error.stack)
 			}
-			new Notice("メモの追加に失敗しました");
+			new Notice("メモの追加に失敗しました")
 		}
 	}
 
-	//! メモ削除処理。
+	// ! メモ削除処理。
 	private async handleDelete(memoId: string): Promise<void> {
 		try {
-			//! 対象のメモを検索。
-			const memo = this.memos.find((m) => m.id === memoId);
+			// ! 対象のメモを検索。
+			const memo = this.memos.find(m => m.id === memoId)
 			if (!memo) {
-				new Notice("メモが見つかりませんでした");
-				return;
+				new Notice("メモが見つかりませんでした")
+				return
 			}
 
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			let deleted = false;
+			let deleted = false
 
-			//! ゴミ箱タブからの削除の場合は完全削除（元ファイルから削除）。
+			// ! ゴミ箱タブからの削除の場合は完全削除（元ファイルから削除）。
 			if (this.currentCategory === "trash") {
-				//! メモのタイムスタンプから日付とファイルパスを取得。
-				const memoDate = new Date(memo.timestamp);
+				// ! メモのタイムスタンプから日付とファイルパスを取得。
+				const memoDate = new Date(memo.timestamp)
 				const filePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							memo.category,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							memoDate
-						)
+						settings.rootDirectory,
+						memo.category,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						memoDate,
+					)
 					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							memo.category,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							memoDate
-						);
-				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+						settings.rootDirectory,
+						memo.category,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						memoDate,
+					)
+				deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId)
 			} else {
-				//! 通常のカテゴリからの削除。
-				//! メモのタイムスタンプから日付を取得。
-				const memoDate = new Date(memo.timestamp);
+				// ! 通常のカテゴリからの削除。
+				// ! メモのタイムスタンプから日付を取得。
+				const memoDate = new Date(memo.timestamp)
 
-				//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
+				// ! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
 				const filePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							memo.category,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							memoDate
-						)
+						settings.rootDirectory,
+						memo.category,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						memoDate,
+					)
 					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							memo.category,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							memoDate
-						);
+						settings.rootDirectory,
+						memo.category,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						memoDate,
+					)
 
-				//! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
+				// ! ゴミ箱機能が有効な場合はゴミ箱に移動、無効な場合は完全削除。
 				if (settings.enableTrash) {
-					//! ゴミ箱に移動（削除フラグを追加）。
+					// ! ゴミ箱に移動（削除フラグを追加）。
 					deleted = await this.memoManager.moveToTrash(
 						filePath,
 						memo.category,
 						memoId,
-						settings.rootDirectory
-					);
+						settings.rootDirectory,
+					)
 				} else {
-					//! 完全削除。
-					deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId);
+					// ! 完全削除。
+					deleted = await this.memoManager.deleteMemo(filePath, memo.category, memoId)
 				}
 			}
 
 			if (deleted) {
-				//! メモリストを再読み込み。
-				await this.loadMemos();
+				// ! メモリストを再読み込み。
+				await this.loadMemos()
 			}
 		} catch (error) {
-			Logger.error("メモ削除エラー:", error);
-			new Notice("メモの削除に失敗しました");
+			Logger.error("メモ削除エラー:", error)
+			new Notice("メモの削除に失敗しました")
 		}
 	}
 
-	//! メモ復活処理。
+	// ! メモ復活処理。
 	private async handleRestore(memoId: string): Promise<void> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! ゴミ箱から復活。
+			// ! ゴミ箱から復活。
 			const restored = await this.memoManager.restoreFromTrash(
 				memoId,
 				settings.rootDirectory,
 				settings.pathFormat,
 				settings.saveUnit,
-				settings.useDirectoryCategory
-			);
+				settings.useDirectoryCategory,
+			)
 
 			if (restored) {
-				//! メモリストを再読み込み。
-				await this.loadMemos();
+				// ! メモリストを再読み込み。
+				await this.loadMemos()
 			}
 		} catch (error) {
-			Logger.error("メモ復活エラー:", error);
-			new Notice("メモの復活に失敗しました");
+			Logger.error("メモ復活エラー:", error)
+			new Notice("メモの復活に失敗しました")
 		}
 	}
 
-	//! ピン留めトグル処理。
+	// ! ピン留めトグル処理。
 	private async handlePinToggle(memoId: string, isPinned: boolean): Promise<void> {
 		try {
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! ピン留め状態を更新。
-			let pinnedMemoIds = [...settings.pinnedMemoIds];
+			// ! ピン留め状態を更新。
+			let pinnedMemoIds = [...settings.pinnedMemoIds]
 			if (isPinned) {
-				//! ピン留め追加。
+				// ! ピン留め追加。
 				if (!pinnedMemoIds.includes(memoId)) {
-					pinnedMemoIds.push(memoId);
+					pinnedMemoIds.push(memoId)
 				}
 			} else {
-				//! ピン留め解除。
-				pinnedMemoIds = pinnedMemoIds.filter((id) => id !== memoId);
+				// ! ピン留め解除。
+				pinnedMemoIds = pinnedMemoIds.filter(id => id !== memoId)
 			}
 
-			//! 設定を保存。
+			// ! 設定を保存。
 			await this.plugin.settingsManager.updateGlobalSettings({
 				pinnedMemoIds,
-			});
+			})
 
-			//! メモリストを再描画（ピン留め状態を反映）。
-			await this.loadMemos();
+			// ! メモリストを再描画（ピン留め状態を反映）。
+			await this.loadMemos()
 		} catch (error) {
-			Logger.error("ピン留めエラー:", error);
-			new Notice("ピン留めの変更に失敗しました");
+			Logger.error("ピン留めエラー:", error)
+			new Notice("ピン留めの変更に失敗しました")
 		}
 	}
 
-	//! メモ編集保存処理。
+	// ! メモ編集保存処理。
 	private async handleSaveEdit(memoId: string, newContent: string): Promise<void> {
 		try {
-			//! 対象のメモを検索。
-			const memo = this.memos.find((m) => m.id === memoId);
+			// ! 対象のメモを検索。
+			const memo = this.memos.find(m => m.id === memoId)
 			if (!memo) {
-				new Notice("メモが見つかりませんでした");
-				return;
+				new Notice("メモが見つかりませんでした")
+				return
 			}
 
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
 
-			//! メモのタイムスタンプから日付を取得。
-			const memoDate = new Date(memo.timestamp);
+			// ! メモのタイムスタンプから日付を取得。
+			const memoDate = new Date(memo.timestamp)
 
-			//! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
+			// ! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						memo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate
-					)
+					settings.rootDirectory,
+					memo.category,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						memo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate
-					);
+					settings.rootDirectory,
+					memo.category,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 
-			//! メモを更新。
+			// ! メモを更新。
 			const updated = await this.memoManager.updateMemo(
 				filePath,
 				memo.category,
 				memoId,
-				newContent
-			);
+				newContent,
+			)
 
 			if (updated) {
-				//! メモリストを再読み込み。
-				await this.loadMemos();
+				// ! メモリストを再読み込み。
+				await this.loadMemos()
 			} else {
-				new Notice("メモの更新に失敗しました");
+				new Notice("メモの更新に失敗しました")
 			}
 		} catch (error) {
-			Logger.error("メモ更新エラー:", error);
-			new Notice("メモの更新に失敗しました");
+			Logger.error("メモ更新エラー:", error)
+			new Notice("メモの更新に失敗しました")
 		}
 	}
 
-	//! カテゴリ変更処理。
+	// ! カテゴリ変更処理。
 	private async handleCategoryChange(memoId: string, newCategory: string): Promise<void> {
 		try {
-			//! 対象のメモを検索。
-			const memo = this.memos.find((m) => m.id === memoId);
+			// ! 対象のメモを検索。
+			const memo = this.memos.find(m => m.id === memoId)
 			if (!memo) {
-				new Notice("メモが見つかりませんでした");
-				return;
+				new Notice("メモが見つかりませんでした")
+				return
 			}
 
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const oldCategory = memo.category;
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
+			const oldCategory = memo.category
 
-			//! 同じカテゴリの場合は何もしない。
+			// ! 同じカテゴリの場合は何もしない。
 			if (oldCategory === newCategory) {
-				return;
+				return
 			}
 
-			//! 日付を取得（メモのタイムスタンプから）。
-			const memoDate = new Date(memo.timestamp);
+			// ! 日付を取得（メモのタイムスタンプから）。
+			const memoDate = new Date(memo.timestamp)
 
-			//! 古いカテゴリのファイルパスを生成。
+			// ! 古いカテゴリのファイルパスを生成。
 			const oldFilePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						oldCategory,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate
-					)
+					settings.rootDirectory,
+					oldCategory,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						oldCategory,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate
-					);
+					settings.rootDirectory,
+					oldCategory,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 
-			//! 新しいカテゴリのファイルパスを生成。
+			// ! 新しいカテゴリのファイルパスを生成。
 			const newFilePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						newCategory,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate
-					)
+					settings.rootDirectory,
+					newCategory,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						newCategory,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate
-					);
+					settings.rootDirectory,
+					newCategory,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 
-			//! 古いファイルからメモを削除。
-			const deleted = await this.memoManager.deleteMemo(oldFilePath, oldCategory, memoId);
+			// ! 古いファイルからメモを削除。
+			const deleted = await this.memoManager.deleteMemo(oldFilePath, oldCategory, memoId)
 
 			if (!deleted) {
-				new Notice("メモの削除に失敗しました");
-				return;
+				new Notice("メモの削除に失敗しました")
+				return
 			}
 
-			//! 新しいファイルにメモを追加（既存のID、タイムスタンプ、テンプレートを保持）。
+			// ! 新しいファイルにメモを追加（既存のID、タイムスタンプ、テンプレートを保持）。
 			await this.memoManager.addMemo(
 				newFilePath,
 				newCategory,
@@ -1372,419 +1374,417 @@ export class MemologSidebar extends ItemView {
 				memo.template || settings.memoTemplate,
 				memo.attachments || [],
 				memo.id,
-				memo.timestamp
-			);
+				memo.timestamp,
+			)
 
-			//! メモリストを再読み込み。
-			await this.loadMemos();
+			// ! メモリストを再読み込み。
+			await this.loadMemos()
 
-			new Notice("カテゴリを変更しました");
+			new Notice("カテゴリを変更しました")
 		} catch (error) {
-			Logger.error("カテゴリ変更エラー:", error);
-			new Notice("カテゴリの変更に失敗しました");
+			Logger.error("カテゴリ変更エラー:", error)
+			new Notice("カテゴリの変更に失敗しました")
 		}
 	}
 
-	//! TODO完了状態変更処理。
+	// ! TODO完了状態変更処理。
 	private async handleTodoToggle(memoId: string, completed: boolean): Promise<void> {
 		try {
-			//! 対象のメモを検索。
-			const memo = this.memos.find((m) => m.id === memoId);
+			// ! 対象のメモを検索。
+			const memo = this.memos.find(m => m.id === memoId)
 			if (!memo) {
-				new Notice("メモが見つかりませんでした");
-				return;
+				new Notice("メモが見つかりませんでした")
+				return
 			}
 
-			//! 設定を取得。
-			const settings = this.plugin.settingsManager.getGlobalSettings();
-			const memoDate = new Date(memo.timestamp);
+			// ! 設定を取得。
+			const settings = this.plugin.settingsManager.getGlobalSettings()
+			const memoDate = new Date(memo.timestamp)
 
-			//! ファイルパスを生成。
+			// ! ファイルパスを生成。
 			const filePath = settings.pathFormat
 				? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						memo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						memoDate
-					)
+					settings.rootDirectory,
+					memo.category,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 				: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						memo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						memoDate
-					);
+					settings.rootDirectory,
+					memo.category,
+					settings.saveUnit,
+					settings.useDirectoryCategory,
+					memoDate,
+				)
 
-			//! TODO完了状態を更新。
-			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed);
+			// ! TODO完了状態を更新。
+			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed)
 
-			//! メモリストを再読み込み。
-			await this.loadMemos();
+			// ! メモリストを再読み込み。
+			await this.loadMemos()
 		} catch (error) {
-			Logger.error("TODO状態変更エラー:", error);
-			new Notice("TODO状態の変更に失敗しました");
+			Logger.error("TODO状態変更エラー:", error)
+			new Notice("TODO状態の変更に失敗しました")
 		}
 	}
 
-	//! ソート順変更処理。
+	// ! ソート順変更処理。
 	private async handleSortOrderChange(order: SortOrder): Promise<void> {
-		this.currentOrder = order;
+		this.currentOrder = order
 
-		//! メモを再読み込みして、ピン留めメモも含めて正しく表示する。
-		await this.loadMemos();
+		// ! メモを再読み込みして、ピン留めメモも含めて正しく表示する。
+		await this.loadMemos()
 
-		//! 入力エリアの位置を更新。
-		this.updateInputAreaPosition();
+		// ! 入力エリアの位置を更新。
+		this.updateInputAreaPosition()
 
-		//! 設定に保存。
+		// ! 設定に保存。
 		void this.plugin.settingsManager.updateGlobalSettings({
 			order: order,
-		});
+		})
 	}
 
-	//! 日付範囲フィルター変更処理。
+	// ! 日付範囲フィルター変更処理。
 	private async handleDateRangeChange(filter: import("./components/button-bar").DateRangeFilter): Promise<void> {
-		//! nullが来た時は"all"に変換（両方のボタンがOFFの状態）。
-		this.currentDateRange = filter ?? "all";
-		//! カレンダーの選択をクリア。
-		this.selectedDate = null;
-		await this.loadMemos();
+		// ! nullが来た時は"all"に変換（両方のボタンがOFFの状態）。
+		this.currentDateRange = filter ?? "all"
+		// ! カレンダーの選択をクリア。
+		this.selectedDate = null
+		await this.loadMemos()
 	}
 
-	//! サイドバーを更新する。
+	// ! サイドバーを更新する。
 	public refresh(): void {
-		void this.onOpen();
+		void this.onOpen()
 	}
 
-	//! ソート順に応じて入力エリアの位置を更新する。
+	// ! ソート順に応じて入力エリアの位置を更新する。
 	private updateInputAreaPosition(): void {
 		if (!this.listAreaEl || !this.inputAreaEl) {
-			return;
+			return
 		}
 
-		const parent = this.listAreaEl.parentElement;
+		const parent = this.listAreaEl.parentElement
 		if (!parent) {
-			return;
+			return
 		}
 
 		if (this.currentOrder === "desc") {
-			//! 降順: 入力エリアをメモリストの前に配置。
-			parent.insertBefore(this.inputAreaEl, this.listAreaEl);
-			//! 降順用のクラスを追加。
-			this.inputAreaEl.addClass("memolog-input-area-order-desc");
+			// ! 降順: 入力エリアをメモリストの前に配置。
+			parent.insertBefore(this.inputAreaEl, this.listAreaEl)
+			// ! 降順用のクラスを追加。
+			this.inputAreaEl.addClass("memolog-input-area-order-desc")
 		} else {
-			//! 昇順: 入力エリアをメモリストの後に配置。
+			// ! 昇順: 入力エリアをメモリストの後に配置。
 			if (this.listAreaEl.nextSibling !== this.inputAreaEl) {
-				parent.insertBefore(this.inputAreaEl, this.listAreaEl.nextSibling);
+				parent.insertBefore(this.inputAreaEl, this.listAreaEl.nextSibling)
 			}
-			//! 降順用のクラスを削除。
-			this.inputAreaEl.removeClass("memolog-input-area-order-desc");
+			// ! 降順用のクラスを削除。
+			this.inputAreaEl.removeClass("memolog-input-area-order-desc")
 		}
 	}
 
-	//! カレンダーの表示/非表示を切り替える。
+	// ! カレンダーの表示/非表示を切り替える。
 	private toggleCalendar(): void {
-		this.calendarVisible = !this.calendarVisible;
+		this.calendarVisible = !this.calendarVisible
 		if (this.calendarAreaEl) {
-			this.calendarAreaEl.style.display = this.calendarVisible ? "block" : "none";
+			this.calendarAreaEl.style.display = this.calendarVisible ? "block" : "none"
 		}
 	}
 
-	//! 検索バーの表示/非表示を切り替える。
+	// ! 検索バーの表示/非表示を切り替える。
 	private toggleSearch(): void {
-		this.searchVisible = !this.searchVisible;
+		this.searchVisible = !this.searchVisible
 		if (this.searchAreaEl) {
-			this.searchAreaEl.style.display = this.searchVisible ? "block" : "none";
+			this.searchAreaEl.style.display = this.searchVisible ? "block" : "none"
 		}
-		//! 検索バーを表示した時にフォーカスを当てる。
+		// ! 検索バーを表示した時にフォーカスを当てる。
 		if (this.searchVisible && this.searchBar) {
 			setTimeout(() => {
 				if (this.searchBar) {
-					this.searchBar.focus();
+					this.searchBar.focus()
 				}
-			}, 100);
+			}, 100)
 		}
 	}
 
-	//! TODO完了済み表示切り替えボタンを初期化する。
+	// ! TODO完了済み表示切り替えボタンを初期化する。
 	private initializeTodoToggleButton(container: HTMLElement): void {
-		//! 初期状態では非表示。
-		container.style.display = "none";
+		// ! 初期状態では非表示。
+		container.style.display = "none"
 
-		//! ボタンを作成。
+		// ! ボタンを作成。
 		const btn = container.createEl("button", {
 			cls: "memolog-btn memolog-btn-todo-toggle",
 			attr: { "aria-label": "完了済みTODOを表示" },
-		});
-		setIcon(btn, "square-check-big");
+		})
+		setIcon(btn, "square-check-big")
 
-		//! クリックイベント。
+		// ! クリックイベント。
 		btn.addEventListener("click", () => {
-			this.showCompletedTodos = !this.showCompletedTodos;
-			this.updateTodoToggleButtonState();
-			void this.loadMemos();
-		});
+			this.showCompletedTodos = !this.showCompletedTodos
+			this.updateTodoToggleButtonState()
+			void this.loadMemos()
+		})
 	}
 
-	//! TODO完了済み表示ボタンの状態を更新する。
+	// ! TODO完了済み表示ボタンの状態を更新する。
 	private updateTodoToggleButtonState(): void {
-		if (!this.todoToggleBtn) return;
+		if (!this.todoToggleBtn) return
 
-		const btn = this.todoToggleBtn.querySelector("button");
-		if (!btn) return;
+		const btn = this.todoToggleBtn.querySelector("button")
+		if (!btn) return
 
-		//! アイコンとaria-labelを更新。
-		btn.empty();
+		// ! アイコンとaria-labelを更新。
+		btn.empty()
 		if (this.showCompletedTodos) {
-			setIcon(btn, "square-check");
-			btn.setAttribute("aria-label", "完了済みTODOを非表示");
-			btn.addClass("memolog-btn-active");
+			setIcon(btn, "square-check")
+			btn.setAttribute("aria-label", "完了済みTODOを非表示")
+			btn.addClass("memolog-btn-active")
 		} else {
-			setIcon(btn, "square-check-big");
-			btn.setAttribute("aria-label", "完了済みTODOを表示");
-			btn.removeClass("memolog-btn-active");
+			setIcon(btn, "square-check-big")
+			btn.setAttribute("aria-label", "完了済みTODOを表示")
+			btn.removeClass("memolog-btn-active")
 		}
 	}
 
-	//! TODO完了済み表示ボタンの表示/非表示を更新する。
+	// ! TODO完了済み表示ボタンの表示/非表示を更新する。
 	private updateTodoToggleButtonVisibility(): void {
-		if (!this.todoToggleBtn) return;
+		if (!this.todoToggleBtn) return
 
-		//! 現在のカテゴリがTODOリストカテゴリかチェック。
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		const categoryConfig = settings.categories.find((c) => c.directory === this.currentCategory);
-		const isTodoCategory = categoryConfig?.useTodoList ?? false;
+		// ! 現在のカテゴリがTODOリストカテゴリかチェック。
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		const categoryConfig = settings.categories.find(c => c.directory === this.currentCategory)
+		const isTodoCategory = categoryConfig?.useTodoList ?? false
 
-		//! TODOリストカテゴリの場合のみ表示。
-		this.todoToggleBtn.style.display = isTodoCategory ? "" : "none";
+		// ! TODOリストカテゴリの場合のみ表示。
+		this.todoToggleBtn.style.display = isTodoCategory ? "" : "none"
 
-		//! カテゴリが切り替わったら状態をリセット。
+		// ! カテゴリが切り替わったら状態をリセット。
 		if (!isTodoCategory && this.showCompletedTodos) {
-			this.showCompletedTodos = false;
-			this.updateTodoToggleButtonState();
+			this.showCompletedTodos = false
+			this.updateTodoToggleButtonState()
 		}
 	}
 
-	//! 検索処理。
+	// ! 検索処理。
 	private async handleSearch(query: SearchQuery): Promise<void> {
-		this.currentSearchQuery = query;
+		this.currentSearchQuery = query
 
-		//! 日付範囲が指定されている場合は、日付範囲ボタンをクリアする。
+		// ! 日付範囲が指定されている場合は、日付範囲ボタンをクリアする。
 		if (query.startDate || query.endDate) {
-			this.currentDateRange = null;
+			this.currentDateRange = null
 			if (this.buttonBar) {
-				this.buttonBar.clearDateRange();
+				this.buttonBar.clearDateRange()
 			}
 		}
 
-		//! 日付範囲が指定されている場合は、その範囲のメモを読み込む。
-		let memosToSearch: MemoEntry[] = [];
+		// ! 日付範囲が指定されている場合は、その範囲のメモを読み込む。
+		let memosToSearch: MemoEntry[] = []
 
 		if (query.startDate || query.endDate) {
-			//! 日付範囲からメモを読み込む。
-			memosToSearch = await this.loadMemosForDateRange(query.startDate, query.endDate);
+			// ! 日付範囲からメモを読み込む。
+			memosToSearch = await this.loadMemosForDateRange(query.startDate, query.endDate)
 		} else {
-			//! 日付範囲が指定されていない場合は現在のメモを使用。
-			memosToSearch = this.memos;
+			// ! 日付範囲が指定されていない場合は現在のメモを使用。
+			memosToSearch = this.memos
 		}
 
-		//! 検索を実行。
-		const result = SearchEngine.search(memosToSearch, query);
+		// ! 検索を実行。
+		const result = SearchEngine.search(memosToSearch, query)
 
-		//! 検索結果を表示。
+		// ! 検索結果を表示。
 		if (this.memoList) {
-			this.memoList.updateMemos(result.matches);
+			this.memoList.updateMemos(result.matches)
 		}
 	}
 
-	//! 日付範囲のメモを読み込む。
+	// ! 日付範囲のメモを読み込む。
 	private async loadMemosForDateRange(
 		startDateStr?: string,
-		endDateStr?: string
+		endDateStr?: string,
 	): Promise<MemoEntry[]> {
-		const settings = this.plugin.settingsManager.getGlobalSettings();
-		const allMemos: MemoEntry[] = [];
-		const processedFiles = new Set<string>();
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		const allMemos: MemoEntry[] = []
+		const processedFiles = new Set<string>()
 
-		//! 開始日と終了日を決定。
-		const startDate = startDateStr ? new Date(startDateStr) : new Date(0);
+		// ! 開始日と終了日を決定。
+		const startDate = startDateStr ? new Date(startDateStr) : new Date(0)
 		const endDate = endDateStr
 			? new Date(endDateStr + "T23:59:59.999")
-			: new Date(Date.now() + 86400000);
+			: new Date(Date.now() + 86400000)
 
-		//! 日付範囲内の各日付に対してファイルを読み込む。
-		const currentDate = new Date(startDate);
-		currentDate.setHours(0, 0, 0, 0);
+		// ! 日付範囲内の各日付に対してファイルを読み込む。
+		const currentDate = new Date(startDate)
+		currentDate.setHours(0, 0, 0, 0)
 
 		while (currentDate <= endDate) {
-			//! 検索対象のカテゴリを決定。
-			//! "all", "pinned", "trash"の場合は全カテゴリを検索。
+			// ! 検索対象のカテゴリを決定。
+			// ! "all", "pinned", "trash"の場合は全カテゴリを検索。
 			const categoriesToSearch =
 				this.currentCategory === "all" || this.currentCategory === "pinned" || this.currentCategory === "trash"
 					? settings.categories
-					: [{ directory: this.currentCategory }];
+					: [{ directory: this.currentCategory }]
 
 			for (const cat of categoriesToSearch) {
 				const filePath = settings.pathFormat
 					? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							cat.directory,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							currentDate
-						)
+						settings.rootDirectory,
+						cat.directory,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						currentDate,
+					)
 					: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							cat.directory,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							currentDate
-						);
+						settings.rootDirectory,
+						cat.directory,
+						settings.saveUnit,
+						settings.useDirectoryCategory,
+						currentDate,
+					)
 
-				//! 既に処理済みのファイルはスキップ。
+				// ! 既に処理済みのファイルはスキップ。
 				if (processedFiles.has(filePath)) {
-					continue;
+					continue
 				}
-				processedFiles.add(filePath);
+				processedFiles.add(filePath)
 
-				//! ファイルが存在する場合は読み込む。
-				const fileExists = this.memoManager.vaultHandler.fileExists(filePath);
+				// ! ファイルが存在する場合は読み込む。
+				const fileExists = this.memoManager.vaultHandler.fileExists(filePath)
 
 				if (fileExists) {
-					const fileContent = await this.memoManager.vaultHandler.readFile(filePath);
-					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter((t) => t.trim());
+					const fileContent = await this.memoManager.vaultHandler.readFile(filePath)
+					const memoTexts = fileContent.split(/(?=<!-- memo-id:)/).filter(t => t.trim())
 					for (const text of memoTexts) {
-						const memo = parseTextToMemo(text, "");
+						const memo = parseTextToMemo(text, "")
 						if (memo) {
-							allMemos.push(memo);
+							allMemos.push(memo)
 						}
 					}
 				}
 			}
 
-			//! 次の日付へ。
-			currentDate.setDate(currentDate.getDate() + 1);
+			// ! 次の日付へ。
+			currentDate.setDate(currentDate.getDate() + 1)
 		}
 
-		return allMemos;
+		return allMemos
 	}
 
-	//! 検索クリア処理。
+	// ! 検索クリア処理。
 	private async handleSearchClear(): Promise<void> {
-		this.currentSearchQuery = null;
+		this.currentSearchQuery = null
 
-		//! メモリストを再読み込み。
-		await this.loadMemos();
+		// ! メモリストを再読み込み。
+		await this.loadMemos()
 	}
 
-	//! 設定画面を開く。
+	// ! 設定画面を開く。
 	private openSettings(): void {
-		//! Obsidianの設定画面を開くコマンドを実行。
+		// ! Obsidianの設定画面を開くコマンドを実行。
 		// @ts-expect-error - Obsidian internal API
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-		this.app.commands.executeCommandById("app:open-settings");
+		this.app.commands.executeCommandById("app:open-settings")
 
-		//! 設定画面が開くまで少し待ってから、プラグイン設定タブに移動。
+		// ! 設定画面が開くまで少し待ってから、プラグイン設定タブに移動。
 		setTimeout(() => {
 			// @ts-expect-error - Obsidian internal API
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-			const settingTab = this.app.setting;
+			const settingTab = this.app.setting
 			if (settingTab) {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				settingTab.openTabById(this.plugin.manifest.id);
+				settingTab.openTabById(this.plugin.manifest.id)
 			}
-		}, 100);
+		}, 100)
 	}
 
-	//! スレッドビューに遷移する。v0.0.14で追加。
+	// ! スレッドビューに遷移する。v0.0.14で追加。
 	private showThreadView(memoId: string): void {
-		//! 既にスレッドビューで同じメモが表示されている場合は何もしない。
+		// ! 既にスレッドビューで同じメモが表示されている場合は何もしない。
 		if (this.viewMode === "thread" && this.focusedThreadId === memoId) {
-			return;
+			return
 		}
 
-		this.viewMode = "thread";
-		this.focusedThreadId = memoId;
+		this.viewMode = "thread"
+		this.focusedThreadId = memoId
 
-		//! MemoListを非表示にし、ThreadViewを表示。
+		// ! MemoListを非表示にし、ThreadViewを表示。
 		if (this.listAreaEl) {
-			this.listAreaEl.style.display = "none";
+			this.listAreaEl.style.display = "none"
 		}
 
-		//! ThreadViewを作成または更新。
-		this.renderThreadView();
+		// ! ThreadViewを作成または更新。
+		this.renderThreadView()
 	}
 
-	//! メインビューに遷移する。v0.0.14で追加。
+	// ! メインビューに遷移する。v0.0.14で追加。
 	private showMainView(): void {
-		this.viewMode = "main";
-		this.focusedThreadId = null;
+		this.viewMode = "main"
+		this.focusedThreadId = null
 
-		//! ThreadViewを破棄。
+		// ! ThreadViewを破棄。
 		if (this.threadView) {
-			this.threadView.destroy();
-			this.threadView = null;
+			this.threadView.destroy()
+			this.threadView = null
 		}
 
-		//! MemoListを表示。
+		// ! MemoListを表示。
 		if (this.listAreaEl) {
-			this.listAreaEl.style.display = "";
+			this.listAreaEl.style.display = ""
 		}
 
-		//! メモをリロードして表示を更新。
-		void this.loadMemos();
+		// ! メモをリロードして表示を更新。
+		void this.loadMemos()
 	}
 
-	//! ThreadViewを描画する。v0.0.14で追加。
+	// ! ThreadViewを描画する。v0.0.14で追加。
 	private renderThreadView(): void {
-		if (!this.listAreaEl || !this.focusedThreadId) return;
+		if (!this.listAreaEl || !this.focusedThreadId) return
 
-		//! 設定を取得。
-		const settings = this.plugin.settingsManager.getGlobalSettings();
+		// ! 設定を取得。
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
-		//! ThreadViewコンテナを作成（既存の場合はクリア）。
+		// ! ThreadViewコンテナを作成（既存の場合はクリア）。
 		let threadViewContainer = this.containerEl.querySelector(
-			".memolog-thread-view-container"
-		) as HTMLElement;
+			".memolog-thread-view-container",
+		) as HTMLElement
 
 		if (!threadViewContainer) {
 			threadViewContainer = this.containerEl.createDiv({
 				cls: "memolog-thread-view-container",
-			});
-			//! listAreaElの後に挿入。
+			})
+			// ! listAreaElの後に挿入。
 			if (this.listAreaEl.nextSibling) {
-				this.containerEl.insertBefore(threadViewContainer, this.listAreaEl.nextSibling);
+				this.containerEl.insertBefore(threadViewContainer, this.listAreaEl.nextSibling)
 			} else {
-				this.containerEl.appendChild(threadViewContainer);
+				this.containerEl.appendChild(threadViewContainer)
 			}
 		}
 
-		//! ThreadViewハンドラーを構築。
+		// ! ThreadViewハンドラーを構築。
 		const threadViewHandlers = {
 			onDelete: (memoId: string) => void this.handleDelete(memoId),
 			onSaveEdit: (memoId: string, newContent: string) => void this.handleSaveEdit(memoId, newContent),
 			onImagePaste: (file: File) => this.handleImagePaste(file),
-			onCategoryChange: (memoId: string, newCategory: string) =>
-				void this.handleCategoryChange(memoId, newCategory),
+			onCategoryChange: (memoId: string, newCategory: string) => void this.handleCategoryChange(memoId, newCategory),
 			onTodoToggle: (memoId: string, completed: boolean) => void this.handleTodoToggle(memoId, completed),
 			onReply: (parentMemoId: string) => this.handleReply(parentMemoId),
-			onThreadToggle: (memoId: string, isCollapsed: boolean) =>
-				void this.handleThreadToggle(memoId, isCollapsed),
+			onThreadToggle: (memoId: string, isCollapsed: boolean) => void this.handleThreadToggle(memoId, isCollapsed),
 			onBack: () => {
-				this.showMainView();
+				this.showMainView()
 			},
 			onThreadCardClick: (memoId: string) => {
-				this.showThreadView(memoId);
+				this.showThreadView(memoId)
 			},
 			onNavigateToParent: (parentId: string) => {
-				this.showThreadView(parentId);
+				this.showThreadView(parentId)
 			},
-		};
+		}
 
-		//! ThreadViewを作成。
-		const sourcePath = ""; //! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
-		const collapsedThreads = settings.collapsedThreads || [];
+		// ! ThreadViewを作成。
+		const sourcePath = "" // ! メモのMarkdownレンダリング用ソースパス（空文字列でVaultルートを指定）。
+		const collapsedThreads = settings.collapsedThreads || []
 
 		this.threadView = new ThreadView(
 			this.app,
@@ -1794,27 +1794,27 @@ export class MemologSidebar extends ItemView {
 			threadViewHandlers,
 			sourcePath,
 			settings.categories,
-			collapsedThreads
-		);
+			collapsedThreads,
+		)
 
-		this.threadView.render();
+		this.threadView.render()
 	}
 
-	//! 各メモのreplyCount（直接の子メモ数）を計算して設定する。v0.0.15で追加。
+	// ! 各メモのreplyCount（直接の子メモ数）を計算して設定する。v0.0.15で追加。
 	private calculateReplyCount(memos: MemoEntry[]): void {
-		//! 親ID → 子メモ数のマップを作成。
-		const childCountMap = new Map<string, number>();
+		// ! 親ID → 子メモ数のマップを作成。
+		const childCountMap = new Map<string, number>()
 
 		for (const memo of memos) {
 			if (memo.parentId) {
-				const count = childCountMap.get(memo.parentId) || 0;
-				childCountMap.set(memo.parentId, count + 1);
+				const count = childCountMap.get(memo.parentId) || 0
+				childCountMap.set(memo.parentId, count + 1)
 			}
 		}
 
-		//! 各メモにreplyCountを設定。
+		// ! 各メモにreplyCountを設定。
 		for (const memo of memos) {
-			memo.replyCount = childCountMap.get(memo.id) || 0;
+			memo.replyCount = childCountMap.get(memo.id) || 0
 		}
 	}
 }

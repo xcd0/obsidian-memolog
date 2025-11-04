@@ -1,11 +1,11 @@
-import { BackupManager } from "../src/utils/backup-manager";
-import { App, TFile } from "obsidian";
+import { App, TFile } from "obsidian"
+import { BackupManager } from "../src/utils/backup-manager"
 
-//! BackupManagerのテスト。
+// ! BackupManagerのテスト。
 /* eslint-disable @typescript-eslint/unbound-method */
 describe("BackupManager", () => {
-	let app: App;
-	let backupManager: BackupManager;
+	let app: App
+	let backupManager: BackupManager
 
 	beforeEach(() => {
 		app = {
@@ -16,47 +16,47 @@ describe("BackupManager", () => {
 				},
 				getFiles: jest.fn(),
 			},
-		} as unknown as App;
+		} as unknown as App
 
-		backupManager = new BackupManager(app);
-	});
+		backupManager = new BackupManager(app)
+	})
 
 	describe("isGitRepository", () => {
 		test(".gitディレクトリが存在する場合はtrueを返す", async () => {
-			(app.vault.adapter.exists as jest.Mock).mockResolvedValue(true);
-			(app.vault.adapter.stat as jest.Mock).mockResolvedValue({ type: "folder" });
+			;(app.vault.adapter.exists as jest.Mock).mockResolvedValue(true)
+			;(app.vault.adapter.stat as jest.Mock).mockResolvedValue({ type: "folder" })
 
-			const result = await backupManager.isGitRepository();
+			const result = await backupManager.isGitRepository()
 
-			expect(result).toBe(true);
-			expect(app.vault.adapter.exists).toHaveBeenCalledWith(".git");
-		});
+			expect(result).toBe(true)
+			expect(app.vault.adapter.exists).toHaveBeenCalledWith(".git")
+		})
 
 		test(".gitディレクトリが存在しない場合はfalseを返す", async () => {
-			(app.vault.adapter.exists as jest.Mock).mockResolvedValue(false);
+			;(app.vault.adapter.exists as jest.Mock).mockResolvedValue(false)
 
-			const result = await backupManager.isGitRepository();
+			const result = await backupManager.isGitRepository()
 
-			expect(result).toBe(false);
-		});
+			expect(result).toBe(false)
+		})
 
 		test(".gitがファイルの場合はfalseを返す", async () => {
-			(app.vault.adapter.exists as jest.Mock).mockResolvedValue(true);
-			(app.vault.adapter.stat as jest.Mock).mockResolvedValue({ type: "file" });
+			;(app.vault.adapter.exists as jest.Mock).mockResolvedValue(true)
+			;(app.vault.adapter.stat as jest.Mock).mockResolvedValue({ type: "file" })
 
-			const result = await backupManager.isGitRepository();
+			const result = await backupManager.isGitRepository()
 
-			expect(result).toBe(false);
-		});
+			expect(result).toBe(false)
+		})
 
 		test("エラーが発生した場合はfalseを返す", async () => {
-			(app.vault.adapter.exists as jest.Mock).mockRejectedValue(new Error("Test error"));
+			;(app.vault.adapter.exists as jest.Mock).mockRejectedValue(new Error("Test error"))
 
-			const result = await backupManager.isGitRepository();
+			const result = await backupManager.isGitRepository()
 
-			expect(result).toBe(false);
-		});
-	});
+			expect(result).toBe(false)
+		})
+	})
 
 	describe("listBackups", () => {
 		test("バックアップファイルのリストを返す", () => {
@@ -65,41 +65,37 @@ describe("BackupManager", () => {
 				{ name: "backup-2025-01-02.zip" } as TFile,
 				{ name: "regular-file.md" } as TFile,
 				{ name: "backup-2025-01-03.txt" } as TFile,
-			];
+			]
+			;(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles)
 
-			(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles);
+			const result = backupManager.listBackups("backup-")
 
-			const result = backupManager.listBackups("backup-");
-
-			expect(result).toHaveLength(2);
-			expect(result[0].name).toBe("backup-2025-01-01.zip");
-			expect(result[1].name).toBe("backup-2025-01-02.zip");
-		});
+			expect(result).toHaveLength(2)
+			expect(result[0].name).toBe("backup-2025-01-01.zip")
+			expect(result[1].name).toBe("backup-2025-01-02.zip")
+		})
 
 		test("カスタムプレフィックスでフィルタリングできる", () => {
 			const mockFiles = [
 				{ name: "custom-backup-1.zip" } as TFile,
 				{ name: "backup-1.zip" } as TFile,
 				{ name: "custom-backup-2.zip" } as TFile,
-			];
+			]
+			;(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles)
 
-			(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles);
+			const result = backupManager.listBackups("custom-backup-")
 
-			const result = backupManager.listBackups("custom-backup-");
-
-			expect(result).toHaveLength(2);
-			expect(result[0].name).toBe("custom-backup-1.zip");
-		});
+			expect(result).toHaveLength(2)
+			expect(result[0].name).toBe("custom-backup-1.zip")
+		})
 
 		test("バックアップファイルがない場合は空配列を返す", () => {
-			const mockFiles = [{ name: "regular-file.md" } as TFile];
+			const mockFiles = [{ name: "regular-file.md" } as TFile]
+			;(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles)
 
-			(app.vault.getFiles as jest.Mock).mockReturnValue(mockFiles);
+			const result = backupManager.listBackups()
 
-			const result = backupManager.listBackups();
-
-			expect(result).toHaveLength(0);
-		});
-	});
-
-});
+			expect(result).toHaveLength(0)
+		})
+	})
+})

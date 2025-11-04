@@ -46,22 +46,22 @@
 describe("日付範囲フィルター", () => {
 	it("今日のメモのみをフィルタリングする", () => {
 		// Arrange: テストデータの準備。
-		const today = new Date("2025-10-31T12:00:00Z");
-		const yesterday = new Date("2025-10-30T12:00:00Z");
+		const today = new Date("2025-10-31T12:00:00Z")
+		const yesterday = new Date("2025-10-30T12:00:00Z")
 		const testMemos = [
 			createTestMemo("memo-1", yesterday.toISOString(), "昨日のメモ"),
 			createTestMemo("memo-2", today.toISOString(), "今日のメモ"),
-		];
-		const filter = createTodayFilter(today);
+		]
+		const filter = createTodayFilter(today)
 
 		// Act: フィルタリング実行。
-		const result = applyDateFilter(testMemos, filter);
+		const result = applyDateFilter(testMemos, filter)
 
 		// Assert: 今日のメモのみが含まれることを検証。
-		expect(result).toHaveLength(1);
-		expect(result[0].id).toBe("memo-2");
-	});
-});
+		expect(result).toHaveLength(1)
+		expect(result[0].id).toBe("memo-2")
+	})
+})
 ```
 
 #### 2. ヘルパー関数の作成
@@ -69,33 +69,33 @@ describe("日付範囲フィルター", () => {
 ```typescript
 // test/helpers/memo-test-helpers.ts
 
-//! テストメモ作成ヘルパー。
+// ! テストメモ作成ヘルパー。
 export function createTestMemo(
 	id: string,
 	timestamp: string,
 	content: string,
-	category = "test"
+	category = "test",
 ): MemoEntry {
-	return { id, timestamp, content, category };
+	return { id, timestamp, content, category }
 }
 
-//! 日付フィルター作成ヘルパー。
+// ! 日付フィルター作成ヘルパー。
 export function createTodayFilter(baseDate: Date): DateFilter {
-	const start = new Date(baseDate);
-	start.setHours(0, 0, 0, 0);
-	const end = new Date(baseDate);
-	end.setHours(23, 59, 59, 999);
-	return { start, end };
+	const start = new Date(baseDate)
+	start.setHours(0, 0, 0, 0)
+	const end = new Date(baseDate)
+	end.setHours(23, 59, 59, 999)
+	return { start, end }
 }
 
-//! 一週間フィルター作成ヘルパー。
+// ! 一週間フィルター作成ヘルパー。
 export function createWeekFilter(baseDate: Date): DateFilter {
-	const start = new Date(baseDate);
-	start.setDate(baseDate.getDate() - 6);
-	start.setHours(0, 0, 0, 0);
-	const end = new Date(baseDate);
-	end.setHours(23, 59, 59, 999);
-	return { start, end };
+	const start = new Date(baseDate)
+	start.setDate(baseDate.getDate() - 6)
+	start.setHours(0, 0, 0, 0)
+	const end = new Date(baseDate)
+	end.setHours(23, 59, 59, 999)
+	return { start, end }
 }
 ```
 
@@ -104,84 +104,88 @@ export function createWeekFilter(baseDate: Date): DateFilter {
 ```typescript
 // test/helpers/test-constants.ts
 
-//! 日時計算用定数。
-export const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-export const MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
-export const MILLISECONDS_PER_MINUTE = 1000 * 60;
+// ! 日時計算用定数。
+export const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
+export const MILLISECONDS_PER_HOUR = 1000 * 60 * 60
+export const MILLISECONDS_PER_MINUTE = 1000 * 60
 
-//! 日付範囲定数。
-export const DAYS_IN_WEEK = 7;
-export const DAYS_IN_MONTH = 30; //! 平均。
-export const DAYS_IN_YEAR = 365; //! 平年。
-export const DAYS_IN_LEAP_YEAR = 366; //! 閏年。
+// ! 日付範囲定数。
+export const DAYS_IN_WEEK = 7
+export const DAYS_IN_MONTH = 30 // ! 平均。
+export const DAYS_IN_YEAR = 365 // ! 平年。
+export const DAYS_IN_LEAP_YEAR = 366 // ! 閏年。
 
-//! テスト用固定日時。
-export const TEST_DATE_2025_10_31 = new Date("2025-10-31T12:00:00Z");
-export const TEST_DATE_2024_02_29 = new Date("2024-02-29T12:00:00Z"); //! 閏年。
+// ! テスト用固定日時。
+export const TEST_DATE_2025_10_31 = new Date("2025-10-31T12:00:00Z")
+export const TEST_DATE_2024_02_29 = new Date("2024-02-29T12:00:00Z") // ! 閏年。
 ```
 
 #### 4. 1つのテストで1つのことだけをテストする
 
 修正前(複数の検証):
+
 ```typescript
 it("日付フィルタリングが正しく動作する", () => {
 	// ... 準備 ...
-	expect(filtered).toHaveLength(2);
-	expect(filtered[0].id).toBe("memo-1");
-	expect(filtered.map(m => m.id)).toEqual(["memo-1", "memo-2"]);
-	expect(oldMemos.length).toBe(0);
-});
+	expect(filtered).toHaveLength(2)
+	expect(filtered[0].id).toBe("memo-1")
+	expect(filtered.map(m => m.id)).toEqual(["memo-1", "memo-2"])
+	expect(oldMemos.length).toBe(0)
+})
 ```
 
 修正後(1つの検証に分割):
+
 ```typescript
 it("フィルタリング後のメモ数が正しい", () => {
 	// Arrange
-	const testMemos = createTestMemosForToday();
-	const filter = createTodayFilter(TEST_DATE_2025_10_31);
+	const testMemos = createTestMemosForToday()
+	const filter = createTodayFilter(TEST_DATE_2025_10_31)
 
 	// Act
-	const result = applyDateFilter(testMemos, filter);
+	const result = applyDateFilter(testMemos, filter)
 
 	// Assert
-	expect(result).toHaveLength(EXPECTED_MEMO_COUNT);
-});
+	expect(result).toHaveLength(EXPECTED_MEMO_COUNT)
+})
 
 it("フィルタリング結果に今日のメモのみが含まれる", () => {
 	// Arrange
-	const testMemos = createTestMemosForToday();
-	const filter = createTodayFilter(TEST_DATE_2025_10_31);
+	const testMemos = createTestMemosForToday()
+	const filter = createTodayFilter(TEST_DATE_2025_10_31)
 
 	// Act
-	const result = applyDateFilter(testMemos, filter);
+	const result = applyDateFilter(testMemos, filter)
 
 	// Assert
-	const resultIds = result.map(m => m.id);
-	expect(resultIds).toEqual(["memo-today-1", "memo-today-2"]);
-});
+	const resultIds = result.map(m => m.id)
+	expect(resultIds).toEqual(["memo-today-1", "memo-today-2"])
+})
 
 it("フィルタリング結果に過去のメモが含まれない", () => {
 	// Arrange
-	const testMemos = createTestMemosWithOldData();
-	const filter = createTodayFilter(TEST_DATE_2025_10_31);
+	const testMemos = createTestMemosWithOldData()
+	const filter = createTodayFilter(TEST_DATE_2025_10_31)
 
 	// Act
-	const result = applyDateFilter(testMemos, filter);
+	const result = applyDateFilter(testMemos, filter)
 
 	// Assert
-	const hasOldMemos = result.some(m => isOldMemo(m));
-	expect(hasOldMemos).toBe(false);
-});
+	const hasOldMemos = result.some(m => isOldMemo(m))
+	expect(hasOldMemos).toBe(false)
+})
 ```
 
 #### 5. テスト名を振る舞いベースにする
 
 修正前(実装詳細):
+
 ```typescript
 it("toISOString().split('T')[0]はUTC日付を返す", () => { ... });
 ```
 
 修正後(振る舞い):
+
 ```typescript
 it("日付文字列がUTC基準で生成される", () => { ... });
 ```
@@ -189,24 +193,26 @@ it("日付文字列がUTC基準で生成される", () => { ... });
 #### 6. コンソールログの削除
 
 修正前:
+
 ```typescript
 it("フィルタリングのテスト", () => {
-	console.log("=== テスト開始 ===");
+	console.log("=== テスト開始 ===")
 	// ...
-	console.log("結果:", result);
-});
+	console.log("結果:", result)
+})
 ```
 
 修正後:
+
 ```typescript
 it("フィルタリングのテスト", () => {
 	// コンソールログは削除。
 	// 必要な場合は、環境変数で制御。
 	if (process.env.DEBUG_TEST) {
-		console.log("=== テスト開始 ===");
+		console.log("=== テスト開始 ===")
 	}
 	// ...
-});
+})
 ```
 
 ## フェーズ2: 共通テストユーティリティの作成
@@ -233,103 +239,103 @@ test/
 #### memo-test-helpers.ts
 
 ```typescript
-import { MemoEntry } from "../../src/types";
+import { MemoEntry } from "../../src/types"
 
-//! テストメモ作成ヘルパー。
+// ! テストメモ作成ヘルパー。
 export function createTestMemo(
 	id: string,
 	timestamp: string,
 	content: string,
-	category = "test"
+	category = "test",
 ): MemoEntry {
-	return { id, timestamp, content, category };
+	return { id, timestamp, content, category }
 }
 
-//! 複数のテストメモ作成ヘルパー。
+// ! 複数のテストメモ作成ヘルパー。
 export function createTestMemos(count: number, baseDate: Date): MemoEntry[] {
 	return Array.from({ length: count }, (_, i) => {
-		const timestamp = new Date(baseDate.getTime() + i * 1000).toISOString();
-		return createTestMemo(`memo-${i}`, timestamp, `メモ${i}`);
-	});
+		const timestamp = new Date(baseDate.getTime() + i * 1000).toISOString()
+		return createTestMemo(`memo-${i}`, timestamp, `メモ${i}`)
+	})
 }
 
-//! 特定日付範囲のメモ作成ヘルパー。
+// ! 特定日付範囲のメモ作成ヘルパー。
 export function createMemosInDateRange(
 	startDate: Date,
 	endDate: Date,
-	count: number
+	count: number,
 ): MemoEntry[] {
-	const memos: MemoEntry[] = [];
-	const timeSpan = endDate.getTime() - startDate.getTime();
-	const interval = timeSpan / count;
+	const memos: MemoEntry[] = []
+	const timeSpan = endDate.getTime() - startDate.getTime()
+	const interval = timeSpan / count
 
 	for (let i = 0; i < count; i++) {
-		const timestamp = new Date(startDate.getTime() + i * interval).toISOString();
-		memos.push(createTestMemo(`memo-${i}`, timestamp, `メモ${i}`));
+		const timestamp = new Date(startDate.getTime() + i * interval).toISOString()
+		memos.push(createTestMemo(`memo-${i}`, timestamp, `メモ${i}`))
 	}
 
-	return memos;
+	return memos
 }
 ```
 
 #### date-test-helpers.ts
 
 ```typescript
-import { MILLISECONDS_PER_DAY } from "./test-constants";
+import { MILLISECONDS_PER_DAY } from "./test-constants"
 
-//! 日付の開始時刻を取得(00:00:00.000)。
+// ! 日付の開始時刻を取得(00:00:00.000)。
 export function getStartOfDay(date: Date): Date {
-	const result = new Date(date);
-	result.setHours(0, 0, 0, 0);
-	return result;
+	const result = new Date(date)
+	result.setHours(0, 0, 0, 0)
+	return result
 }
 
-//! 日付の終了時刻を取得(23:59:59.999)。
+// ! 日付の終了時刻を取得(23:59:59.999)。
 export function getEndOfDay(date: Date): Date {
-	const result = new Date(date);
-	result.setHours(23, 59, 59, 999);
-	return result;
+	const result = new Date(date)
+	result.setHours(23, 59, 59, 999)
+	return result
 }
 
-//! N日前の日付を取得。
+// ! N日前の日付を取得。
 export function getDaysAgo(baseDate: Date, days: number): Date {
-	return new Date(baseDate.getTime() - days * MILLISECONDS_PER_DAY);
+	return new Date(baseDate.getTime() - days * MILLISECONDS_PER_DAY)
 }
 
-//! N日後の日付を取得。
+// ! N日後の日付を取得。
 export function getDaysLater(baseDate: Date, days: number): Date {
-	return new Date(baseDate.getTime() + days * MILLISECONDS_PER_DAY);
+	return new Date(baseDate.getTime() + days * MILLISECONDS_PER_DAY)
 }
 
-//! 2つの日付の日数差を取得。
+// ! 2つの日付の日数差を取得。
 export function getDaysDifference(date1: Date, date2: Date): number {
-	const diff = Math.abs(date2.getTime() - date1.getTime());
-	return Math.floor(diff / MILLISECONDS_PER_DAY);
+	const diff = Math.abs(date2.getTime() - date1.getTime())
+	return Math.floor(diff / MILLISECONDS_PER_DAY)
 }
 ```
 
 #### mock-helpers.ts
 
 ```typescript
-import { App, TFile, TFolder } from "obsidian";
+import { App, TFile, TFolder } from "obsidian"
 
-//! TFileのモック作成ヘルパー。
+// ! TFileのモック作成ヘルパー。
 export function createMockTFile(path: string): TFile {
-	const name = path.split("/").pop() || "";
+	const name = path.split("/").pop() || ""
 	return Object.create(TFile.prototype, {
 		path: { value: path },
 		name: { value: name },
-	}) as TFile;
+	}) as TFile
 }
 
-//! TFolderのモック作成ヘルパー。
+// ! TFolderのモック作成ヘルパー。
 export function createMockTFolder(path: string): TFolder {
 	return Object.create(TFolder.prototype, {
 		path: { value: path },
-	}) as TFolder;
+	}) as TFolder
 }
 
-//! Appのモック作成ヘルパー。
+// ! Appのモック作成ヘルパー。
 export function createMockApp(overrides?: Partial<App>): App {
 	return {
 		vault: {
@@ -350,7 +356,7 @@ export function createMockApp(overrides?: Partial<App>): App {
 			},
 		},
 		...overrides,
-	} as unknown as App;
+	} as unknown as App
 }
 ```
 
@@ -361,104 +367,104 @@ export function createMockApp(overrides?: Partial<App>): App {
 #### 実装方針
 
 1. **テストの分類**
-	- 正常系: 基本的なフィルタリング動作。
-	- 境界値: 日をまたぐ、月をまたぐ、年をまたぐ。
-	- 異常系: 不正な日付、nullフィルター。
+   - 正常系: 基本的なフィルタリング動作。
+   - 境界値: 日をまたぐ、月をまたぐ、年をまたぐ。
+   - 異常系: 不正な日付、nullフィルター。
 
 2. **テストの構成**
-	- describe: 機能単位でグループ化。
-	- it: 1つの振る舞いのみを検証。
-	- AAA: Arrange-Act-Assertを明確に分離。
+   - describe: 機能単位でグループ化。
+   - it: 1つの振る舞いのみを検証。
+   - AAA: Arrange-Act-Assertを明確に分離。
 
 3. **ヘルパー関数の活用**
-	- createTestMemo: テストメモの作成。
-	- createTodayFilter: 今日フィルターの作成。
-	- createWeekFilter: 一週間フィルターの作成。
+   - createTestMemo: テストメモの作成。
+   - createTodayFilter: 今日フィルターの作成。
+   - createWeekFilter: 一週間フィルターの作成。
 
 #### サンプルコード構成
 
 ```typescript
-import { createTestMemo, createMemosInDateRange } from "../helpers/memo-test-helpers";
-import { getStartOfDay, getEndOfDay, getDaysAgo } from "../helpers/date-test-helpers";
-import { TEST_DATE_2025_10_31, DAYS_IN_WEEK } from "../helpers/test-constants";
+import { getDaysAgo, getEndOfDay, getStartOfDay } from "../helpers/date-test-helpers"
+import { createMemosInDateRange, createTestMemo } from "../helpers/memo-test-helpers"
+import { DAYS_IN_WEEK, TEST_DATE_2025_10_31 } from "../helpers/test-constants"
 
 describe("日付範囲フィルター - 改善版", () => {
 	describe("今日フィルター", () => {
 		it("今日のメモのみを返す", () => {
 			// Arrange
-			const today = TEST_DATE_2025_10_31;
-			const yesterday = getDaysAgo(today, 1);
+			const today = TEST_DATE_2025_10_31
+			const yesterday = getDaysAgo(today, 1)
 			const testMemos = [
 				createTestMemo("memo-1", yesterday.toISOString(), "昨日"),
 				createTestMemo("memo-2", today.toISOString(), "今日"),
-			];
-			const startDate = getStartOfDay(today);
-			const endDate = getEndOfDay(today);
+			]
+			const startDate = getStartOfDay(today)
+			const endDate = getEndOfDay(today)
 
 			// Act
 			const filtered = testMemos.filter(memo => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
+				const memoDate = new Date(memo.timestamp)
+				return memoDate >= startDate && memoDate <= endDate
+			})
 
 			// Assert
-			expect(filtered).toHaveLength(1);
-			expect(filtered[0].id).toBe("memo-2");
-		});
+			expect(filtered).toHaveLength(1)
+			expect(filtered[0].id).toBe("memo-2")
+		})
 
 		// 他のテストケース...
-	});
+	})
 
 	describe("一週間フィルター", () => {
 		it("過去7日間のメモを返す", () => {
 			// Arrange
-			const today = TEST_DATE_2025_10_31;
-			const startDate = getStartOfDay(getDaysAgo(today, DAYS_IN_WEEK - 1));
-			const endDate = getEndOfDay(today);
+			const today = TEST_DATE_2025_10_31
+			const startDate = getStartOfDay(getDaysAgo(today, DAYS_IN_WEEK - 1))
+			const endDate = getEndOfDay(today)
 			const testMemos = createMemosInDateRange(
 				getDaysAgo(today, 10),
 				today,
-				15
-			);
+				15,
+			)
 
 			// Act
 			const filtered = testMemos.filter(memo => {
-				const memoDate = new Date(memo.timestamp);
-				return memoDate >= startDate && memoDate <= endDate;
-			});
+				const memoDate = new Date(memo.timestamp)
+				return memoDate >= startDate && memoDate <= endDate
+			})
 
 			// Assert
-			expect(filtered.length).toBeGreaterThan(0);
+			expect(filtered.length).toBeGreaterThan(0)
 			filtered.forEach(memo => {
-				const memoDate = new Date(memo.timestamp);
-				expect(memoDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
-				expect(memoDate.getTime()).toBeLessThanOrEqual(endDate.getTime());
-			});
-		});
+				const memoDate = new Date(memo.timestamp)
+				expect(memoDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime())
+				expect(memoDate.getTime()).toBeLessThanOrEqual(endDate.getTime())
+			})
+		})
 
 		// 他のテストケース...
-	});
+	})
 
 	describe("境界値テスト", () => {
 		it("日付境界(00:00:00)のメモが含まれる", () => {
 			// Arrange
-			const today = TEST_DATE_2025_10_31;
-			const startOfDay = getStartOfDay(today);
-			const testMemo = createTestMemo("memo-1", startOfDay.toISOString(), "境界");
-			const startDate = getStartOfDay(today);
-			const endDate = getEndOfDay(today);
+			const today = TEST_DATE_2025_10_31
+			const startOfDay = getStartOfDay(today)
+			const testMemo = createTestMemo("memo-1", startOfDay.toISOString(), "境界")
+			const startDate = getStartOfDay(today)
+			const endDate = getEndOfDay(today)
 
 			// Act
-			const memoDate = new Date(testMemo.timestamp);
-			const isInRange = memoDate >= startDate && memoDate <= endDate;
+			const memoDate = new Date(testMemo.timestamp)
+			const isInRange = memoDate >= startDate && memoDate <= endDate
 
 			// Assert
-			expect(isInRange).toBe(true);
-		});
+			expect(isInRange).toBe(true)
+		})
 
 		// 他のテストケース...
-	});
-});
+	})
+})
 ```
 
 ### 対象ファイル2: settings-improved.test.ts
@@ -466,16 +472,16 @@ describe("日付範囲フィルター - 改善版", () => {
 #### 実装方針
 
 1. **モックの分離**
-	- モック作成ロジックをmock-helpers.tsに移動。
-	- テストコード内ではモックの使用のみに集中。
+   - モック作成ロジックをmock-helpers.tsに移動。
+   - テストコード内ではモックの使用のみに集中。
 
 2. **AAAパターンの徹底**
-	- 各テストでArrange-Act-Assertを明確に分離。
-	- 空行で視覚的に区切る。
+   - 各テストでArrange-Act-Assertを明確に分離。
+   - 空行で視覚的に区切る。
 
 3. **テスト名の改善**
-	- 「〜できる」形式で統一。
-	- 期待される振る舞いが明確に分かる名前。
+   - 「〜できる」形式で統一。
+   - 期待される振る舞いが明確に分かる名前。
 
 ## フェーズ4: CI/CDへの統合
 
@@ -525,39 +531,39 @@ jobs:
 ### 評価基準
 
 1. **テストの可読性**
-	- AAA パターンが明確か。
-	- テスト名が振る舞いを表しているか。
-	- コメントがなくても意図が分かるか。
+   - AAA パターンが明確か。
+   - テスト名が振る舞いを表しているか。
+   - コメントがなくても意図が分かるか。
 
 2. **テストの保守性**
-	- ヘルパー関数が効果的に使われているか。
-	- マジックナンバーが排除されているか。
-	- テストデータの重複がないか。
+   - ヘルパー関数が効果的に使われているか。
+   - マジックナンバーが排除されているか。
+   - テストデータの重複がないか。
 
 3. **テストの実行速度**
-	- 単体テストが高速に実行されるか(1テスト1秒以内)。
-	- テスト全体の実行時間が許容範囲か。
+   - 単体テストが高速に実行されるか(1テスト1秒以内)。
+   - テスト全体の実行時間が許容範囲か。
 
 4. **テストカバレッジ**
-	- 主要な機能がカバーされているか。
-	- 境界値がテストされているか。
-	- 異常系がテストされているか。
+   - 主要な機能がカバーされているか。
+   - 境界値がテストされているか。
+   - 異常系がテストされているか。
 
 ### 改善のサイクル
 
 1. **週次レビュー**
-	- 新規作成した改善版テストをレビューする。
-	- 問題点を洗い出し、修正する。
+   - 新規作成した改善版テストをレビューする。
+   - 問題点を洗い出し、修正する。
 
 2. **月次評価**
-	- テストカバレッジを確認する。
-	- テスト実行時間を測定する。
-	- テスト方針書の見直しを行う。
+   - テストカバレッジを確認する。
+   - テスト実行時間を測定する。
+   - テスト方針書の見直しを行う。
 
 3. **四半期ごとの振り返り**
-	- 改善版テストの効果を評価する。
-	- 既存テストとの比較を行う。
-	- 次の改善計画を策定する。
+   - 改善版テストの効果を評価する。
+   - 既存テストとの比較を行う。
+   - 次の改善計画を策定する。
 
 ## まとめ
 

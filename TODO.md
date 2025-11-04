@@ -6,28 +6,32 @@
 ---
 
 ## 凡例
+
 - [ ] 未着手
 - [!] 進行中
 - [x] 完了
 - [?] 保留・要検討
 
 ## 作業方針
+
 - t-wada さんのTDD手法を徹底し、必ずテストを先に書いてから実装に着手する。
 - TODOを新規追加する際は、「先に作成するテスト」と「テストを通す実装」の両方をセットで記述する。
 
 ## 現在の作業サマリー
+
 - **v0.0.14 スレッド対応機能**: 完了済み
 - **v0.0.15 Twitter/X形式スレッド表示**: メインビューにルートメモのみ表示、カードクリックでスレッドビューに遷移する形式に変更
 
 ## 現在中止中のTODO
+
 - 現在中止すべきタスクはありません。
 
 ---
 
 ## v0.0.14 スレッド対応タスク
 
-
 ### スレッド対応データモデル
+
 - [x] MemoEntry 型に `parentId` / `replyCount` を追加するユニットテストを先に作成
 - [x] 上記テストを通すために MemoEntry 型へ `parentId` / `replyCount` を追加
 - [x] スレッド木構造 (`ThreadNode` / `ThreadTree`) の型定義用テストを作成
@@ -38,6 +42,7 @@
 - [x] 更新されたテストをすべて通過させるよう実装を調整
 
 ### ThreadIndex とキャッシュ管理
+
 - [x] `buildThreadIndex` / `buildThreadTree` の期待されるマップ構造を検証するテストを先に作成
 - [x] テストを通す `buildThreadIndex` / `buildThreadTree` の実装で `childrenMap` `parentMap` `depthMap` `descendantCountMap` を生成
 - [x] ThreadIndexManager の再構築・キャッシュ更新動作を定義するテストを作成
@@ -47,6 +52,7 @@
 - [x] スレッドインデックス計算とキャッシュ無効化のテストケースを追加し、既存テスト群に組み込む
 
 ### スレッド対応 CRUD 強化
+
 - [x] 返信作成APIの期待挙動（親メモと同一カテゴリ保存・`parentId` 設定・インデックス更新）を定義するテストを作成
 - [x] テストを満たす返信作成APIを実装
 - [x] メモ削除時の子孫メモ再帰削除を検証するテストを先に用意
@@ -57,6 +63,7 @@
 - [x] 追加したテストすべてが緑になるよう実装の整合性を保つ
 
 ### UI/UX スレッド機能
+
 - [x] MemoCard の返信ボタン・返信数バッジ・インデント表示の UI 実装を追加
   - MemoCardHandlersにonReplyハンドラーを追加
   - コンストラクタにthreadDepthとreplyCount引数を追加
@@ -87,6 +94,7 @@
 ## v0.0.15 Twitter/X形式スレッド表示
 
 ### 目標（Twitter/Xの表示をイメージ）
+
 - **メインビュー**: ルートメモ（parentId === undefined）のみをタイムライン形式で表示
   - 各カードに返信数バッジを表示（「〇件の返信」）
   - カードクリック→スレッドビューに遷移
@@ -100,12 +108,14 @@
   - 返信メモがヒットした場合、そのメモのスレッドビューに遷移
 
 ### 型定義とデータモデル
+
 - [x] ViewMode型（"main" | "thread"）をテストで先に定義
 - [x] テストを通すViewMode型をtypes/index.tsに追加
 - [x] Sidebarの状態に`viewMode`と`focusedThreadId`を追加するテストを作成
 - [x] テストを通すように状態プロパティを実装
 
 ### ThreadViewコンポーネント
+
 - [x] ThreadViewの基本構造をテストで先に定義（コンストラクタ、render、destroy）
 - [x] テスト駆動でThreadViewコンポーネントを新規作成（src/ui/components/thread-view.ts）
 - [x] ThreadViewがルートメモとその子孫を階層表示するロジックのテストを作成
@@ -118,18 +128,21 @@
 - [x] テストを通す親メモ表示機能を実装（focusedMemoのparentIdがあれば表示）
 
 ### MemoListの変更
+
 - [x] MemoListがルートメモのみをフィルタリングする動作のテストを作成
 - [x] テストを通すようMemoList.render()を変更し、viewMode === "main"時はparentId === undefinedのメモのみ表示
 - [x] 検索結果に返信メモが含まれる場合の動作テストを作成（返信メモがヒットしてもルートメモを表示）
 - [x] テストを通すようフィルタリングロジックを実装
 
 ### MemoCardの変更
+
 - [x] MemoCardがクリック時にスレッドビューに遷移するテストを作成
 - [x] テストを通すonThreadClickハンドラーをMemoCardHandlersに追加
 - [x] カード全体またはスレッド遷移ボタンのクリックでonThreadClickを呼び出すテストを作成
 - [x] テストを通すUI実装（カードクリックまたは専用ボタン）
 
 ### Sidebarの統合
+
 - [x] Sidebarのビューモード切り替え（main ⇔ thread）ロジックのテストを作成
 - [x] テストを通すshowThreadView(memoId)とshowMainView()メソッドを実装
 - [x] ThreadViewとMemoListの表示切り替え処理のテストを作成
@@ -138,11 +151,13 @@
 - [x] テストを通すようhandleReply()を調整し、スレッドビュー時もfocusedThreadIdを考慮
 
 ### UIスタイルの調整
+
 - [x] ThreadView用のCSSスタイルを追加（メインビューと視覚的に区別できるデザイン）
 - [x] 戻るボタンのスタイル実装
 - [x] MemoCardのインデント表示をThreadViewでのみ適用するようCSS調整
 
 ### 既存機能の互換性
+
 - [x] 返信作成、編集、削除、カスケード削除がスレッドビューでも動作するテストを作成
 - [x] テストを通すよう既存ハンドラーをviewModeに対応させる
 - [x] 折りたたみ機能がスレッドビューで動作するテストを作成
@@ -151,6 +166,7 @@
 - [x] テストを通すようピン留め動作を調整
 
 ### 統合テスト
+
 - [x] メインビュー → スレッドビュー → メインビューの遷移フローをテスト
 - [x] スレッドビューでの返信投稿 → メインビューに戻った時の表示更新をテスト
 - [x] 検索でヒットした返信メモからスレッドビューへの遷移をテスト
@@ -161,6 +177,7 @@
 ## v0.0.15 完了サマリー
 
 ### 実装ファイル
+
 - src/types/memo.ts: ViewMode型を追加
 - src/ui/components/thread-view.ts: ThreadViewコンポーネント実装
 - src/ui/components/memo-list.ts: viewModeに応じたフィルタリング実装
@@ -169,6 +186,7 @@
 - styles.css: ThreadView用CSSスタイル追加
 
 ### テストファイル
+
 - test/sidebar-integration.test.ts: Sidebarビューモード統合テスト (12テスト)
 - test/memo-card-thread-click.test.ts: MemoCardスレッド遷移テスト (14テスト)
 - test/thread-view.test.ts: ThreadViewコンポーネントテスト (12テスト)
@@ -178,6 +196,7 @@
 合計: 76テスト、全て成功
 
 ### 次のバージョン候補
+
 - v0.0.16: パフォーマンス最適化（仮想スクロール、遅延ロード等）
 - v0.0.17: 検索機能の強化（スレッド内検索、ハイライト等）
 - v0.0.18: エクスポート機能（スレッド単位でのMarkdownエクスポート等）

@@ -1,121 +1,121 @@
-//! テンプレート管理機能。
+// ! テンプレート管理機能。
 
-import { ValidationError } from "./error-handler";
+import { ValidationError } from "./error-handler"
 
-//! テンプレート定義。
+// ! テンプレート定義。
 export interface Template {
-	//! テンプレート名。
-	name: string;
+	// ! テンプレート名。
+	name: string
 
-	//! テンプレート内容。
-	content: string;
+	// ! テンプレート内容。
+	content: string
 
-	//! テンプレート説明。
-	description?: string;
+	// ! テンプレート説明。
+	description?: string
 
-	//! カテゴリ固有テンプレートかどうか。
-	category?: string;
+	// ! カテゴリ固有テンプレートかどうか。
+	category?: string
 }
 
-//! テンプレート変数。
+// ! テンプレート変数。
 export interface TemplateVariables {
-	//! 日付関連。
-	year?: string;
-	month?: string;
-	day?: string;
-	hour?: string;
-	minute?: string;
-	second?: string;
-	date?: string; //! フルフォーマット日付。
-	time?: string; //! 時刻。
+	// ! 日付関連。
+	year?: string
+	month?: string
+	day?: string
+	hour?: string
+	minute?: string
+	second?: string
+	date?: string // ! フルフォーマット日付。
+	time?: string // ! 時刻。
 
-	//! メモ関連。
-	category?: string;
-	content?: string;
-	id?: string;
+	// ! メモ関連。
+	category?: string
+	content?: string
+	id?: string
 
-	//! カスタム変数。
-	[key: string]: string | undefined;
+	// ! カスタム変数。
+	[key: string]: string | undefined
 }
 
-//! テンプレート検証結果。
+// ! テンプレート検証結果。
 export interface TemplateValidationResult {
-	//! 有効かどうか。
-	valid: boolean;
+	// ! 有効かどうか。
+	valid: boolean
 
-	//! エラーメッセージ。
-	errors: string[];
+	// ! エラーメッセージ。
+	errors: string[]
 
-	//! 警告メッセージ。
-	warnings: string[];
+	// ! 警告メッセージ。
+	warnings: string[]
 
-	//! 使用されている変数リスト。
-	usedVariables: string[];
+	// ! 使用されている変数リスト。
+	usedVariables: string[]
 }
 
-//! テンプレートマネージャー。
+// ! テンプレートマネージャー。
 export class TemplateManager {
-	private templates: Map<string, Template> = new Map();
-	private defaultTemplate: string = "## %Y-%m-%d %H:%M\n{{content}}";
+	private templates: Map<string, Template> = new Map()
+	private defaultTemplate: string = "## %Y-%m-%d %H:%M\n{{content}}"
 
-	//! デフォルトテンプレートを設定する。
+	// ! デフォルトテンプレートを設定する。
 	setDefaultTemplate(template: string): void {
-		const validation = TemplateManager.validate(template);
+		const validation = TemplateManager.validate(template)
 		if (!validation.valid) {
 			throw new ValidationError("Invalid template", {
 				errors: validation.errors,
-			});
+			})
 		}
-		this.defaultTemplate = template;
+		this.defaultTemplate = template
 	}
 
-	//! デフォルトテンプレートを取得する。
+	// ! デフォルトテンプレートを取得する。
 	getDefaultTemplate(): string {
-		return this.defaultTemplate;
+		return this.defaultTemplate
 	}
 
-	//! テンプレートを追加する。
+	// ! テンプレートを追加する。
 	addTemplate(template: Template): void {
-		const validation = TemplateManager.validate(template.content);
+		const validation = TemplateManager.validate(template.content)
 		if (!validation.valid) {
 			throw new ValidationError(`Invalid template: ${template.name}`, {
 				errors: validation.errors,
-			});
+			})
 		}
-		this.templates.set(template.name, template);
+		this.templates.set(template.name, template)
 	}
 
-	//! テンプレートを取得する。
+	// ! テンプレートを取得する。
 	getTemplate(name: string): Template | undefined {
-		return this.templates.get(name);
+		return this.templates.get(name)
 	}
 
-	//! 全テンプレートを取得する。
+	// ! 全テンプレートを取得する。
 	getAllTemplates(): Template[] {
-		return Array.from(this.templates.values());
+		return Array.from(this.templates.values())
 	}
 
-	//! カテゴリ固有のテンプレートを取得する。
+	// ! カテゴリ固有のテンプレートを取得する。
 	getTemplateForCategory(category: string): Template | undefined {
-		return Array.from(this.templates.values()).find((t) => t.category === category);
+		return Array.from(this.templates.values()).find(t => t.category === category)
 	}
 
-	//! テンプレートを削除する。
+	// ! テンプレートを削除する。
 	removeTemplate(name: string): boolean {
-		return this.templates.delete(name);
+		return this.templates.delete(name)
 	}
 
-	//! テンプレートを展開する。
+	// ! テンプレートを展開する。
 	static expand(template: string, variables: TemplateVariables): string {
-		let result = template;
+		let result = template
 
-		//! 日付変数を自動生成。
-		const now = new Date();
+		// ! 日付変数を自動生成。
+		const now = new Date()
 
-		//! 月名と曜日の配列。
-		const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-		const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
-		const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"];
+		// ! 月名と曜日の配列。
+		const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
+		const dayNames = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"]
+		const dayNamesShort = ["日", "月", "火", "水", "木", "金", "土"]
 
 		const autoVariables: TemplateVariables = {
 			year: now.getFullYear().toString(),
@@ -127,9 +127,9 @@ export class TemplateManager {
 			date: now.toISOString().split("T")[0],
 			time: now.toTimeString().split(" ")[0],
 			...variables,
-		};
+		}
 
-		//! % 形式の変数を置換 (%Y, %m, %d, 等)。
+		// ! % 形式の変数を置換 (%Y, %m, %d, 等)。
 		result = result
 			.replace(/%Y/g, autoVariables.year || "")
 			.replace(/%y/g, autoVariables.year?.slice(-2) || "")
@@ -144,61 +144,61 @@ export class TemplateManager {
 			.replace(/%I/g, (now.getHours() % 12 || 12).toString().padStart(2, "0"))
 			.replace(/%M/g, autoVariables.minute || "")
 			.replace(/%S/g, autoVariables.second || "")
-			.replace(/%s/g, Math.floor(now.getTime() / 1000).toString());
+			.replace(/%s/g, Math.floor(now.getTime() / 1000).toString())
 
-		//! {{ }} 形式の変数を置換。
+		// ! {{ }} 形式の変数を置換。
 		result = result.replace(/\{\{(\w+)\}\}/g, (_, varName: string) => {
-			return autoVariables[varName as keyof TemplateVariables] || "";
-		});
+			return autoVariables[varName as keyof TemplateVariables] || ""
+		})
 
-		return result;
+		return result
 	}
 
-	//! テンプレートを検証する。
+	// ! テンプレートを検証する。
 	static validate(template: string): TemplateValidationResult {
-		const errors: string[] = [];
-		const warnings: string[] = [];
-		const usedVariables: string[] = [];
+		const errors: string[] = []
+		const warnings: string[] = []
+		const usedVariables: string[] = []
 
-		//! 閉じ括弧のチェック。
-		const openCount = (template.match(/\{\{/g) || []).length;
-		const closeCount = (template.match(/\}\}/g) || []).length;
+		// ! 閉じ括弧のチェック。
+		const openCount = (template.match(/\{\{/g) || []).length
+		const closeCount = (template.match(/\}\}/g) || []).length
 		if (openCount !== closeCount) {
-			errors.push("Unmatched braces: {{ and }} count mismatch");
+			errors.push("Unmatched braces: {{ and }} count mismatch")
 		}
 
-		//! {{}} 変数を抽出。
-		const bracketVars = template.match(/\{\{(\w+)\}\}/g);
+		// ! {{}} 変数を抽出。
+		const bracketVars = template.match(/\{\{(\w+)\}\}/g)
 		if (bracketVars) {
 			for (const match of bracketVars) {
-				const varName = match.slice(2, -2);
+				const varName = match.slice(2, -2)
 				if (!usedVariables.includes(varName)) {
-					usedVariables.push(varName);
+					usedVariables.push(varName)
 				}
 			}
 		}
 
-		//! % 変数を抽出。
-		const percentVars = template.match(/%[YymdHMSBbAaus]/g);
+		// ! % 変数を抽出。
+		const percentVars = template.match(/%[YymdHMSBbAaus]/g)
 		if (percentVars) {
 			for (const match of percentVars) {
 				if (!usedVariables.includes(match)) {
-					usedVariables.push(match);
+					usedVariables.push(match)
 				}
 			}
 		}
 
-		//! 不明な % 変数をチェック。
-		const unknownPercent = template.match(/%[^YymdHMSBbAausI\s]/g);
+		// ! 不明な % 変数をチェック。
+		const unknownPercent = template.match(/%[^YymdHMSBbAausI\s]/g)
 		if (unknownPercent) {
 			warnings.push(
-				`Unknown percent variables: ${unknownPercent.join(", ")}`
-			);
+				`Unknown percent variables: ${unknownPercent.join(", ")}`,
+			)
 		}
 
-		//! ネストした{{ }}をチェック。
+		// ! ネストした{{ }}をチェック。
 		if (/\{\{[^}]*\{\{/.test(template)) {
-			errors.push("Nested braces are not allowed");
+			errors.push("Nested braces are not allowed")
 		}
 
 		return {
@@ -206,22 +206,22 @@ export class TemplateManager {
 			errors,
 			warnings,
 			usedVariables,
-		};
+		}
 	}
 
-	//! テンプレートプレビューを生成する。
+	// ! テンプレートプレビューを生成する。
 	static preview(template: string, variables?: TemplateVariables): string {
 		const sampleVariables: TemplateVariables = {
 			category: "work",
 			content: "サンプルメモの内容",
 			id: "sample-id-12345",
 			...variables,
-		};
+		}
 
-		return TemplateManager.expand(template, sampleVariables);
+		return TemplateManager.expand(template, sampleVariables)
 	}
 
-	//! 利用可能な変数リストを取得する。
+	// ! 利用可能な変数リストを取得する。
 	static getAvailableVariables(): { name: string; description: string }[] {
 		return [
 			{ name: "%Y", description: "年 (4桁)" },
@@ -241,6 +241,6 @@ export class TemplateManager {
 			{ name: "{{category}}", description: "カテゴリ名" },
 			{ name: "{{content}}", description: "メモ内容" },
 			{ name: "{{id}}", description: "メモID" },
-		];
+		]
 	}
 }

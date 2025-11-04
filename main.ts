@@ -1,87 +1,87 @@
-import { Plugin } from "obsidian";
-import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./src/ui/sidebar";
-import { SettingsManager } from "./src/core/settings";
-import { MemologSettingTab } from "./src/ui/settings-tab";
-import { Logger } from "./src/utils/logger";
+import { Plugin } from "obsidian"
+import { SettingsManager } from "./src/core/settings"
+import { MemologSettingTab } from "./src/ui/settings-tab"
+import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./src/ui/sidebar"
+import { Logger } from "./src/utils/logger"
 
-//! memologプラグインのメインクラス。
+// ! memologプラグインのメインクラス。
 export default class MemologPlugin extends Plugin {
-	//! 設定マネージャー。
-	public settingsManager!: SettingsManager;
+	// ! 設定マネージャー。
+	public settingsManager!: SettingsManager
 
-	//! プラグイン読み込み時の処理。
+	// ! プラグイン読み込み時の処理。
 	override async onload() {
-		//! 設定マネージャーを初期化。
-		this.settingsManager = new SettingsManager(this.app);
-		await this.settingsManager.loadGlobalSettings();
+		// ! 設定マネージャーを初期化。
+		this.settingsManager = new SettingsManager(this.app)
+		await this.settingsManager.loadGlobalSettings()
 
-		//! ログレベルを初期化。
-		const settings = this.settingsManager.getGlobalSettings();
-		Logger.setLogLevel(settings.logLevel);
+		// ! ログレベルを初期化。
+		const settings = this.settingsManager.getGlobalSettings()
+		Logger.setLogLevel(settings.logLevel)
 
-		//! サイドバービューを登録。
-		this.registerView(VIEW_TYPE_MEMOLOG, (leaf) => new MemologSidebar(leaf, this));
+		// ! サイドバービューを登録。
+		this.registerView(VIEW_TYPE_MEMOLOG, leaf => new MemologSidebar(leaf, this))
 
-		//! 設定タブを登録。
-		this.addSettingTab(new MemologSettingTab(this.app, this));
+		// ! 設定タブを登録。
+		this.addSettingTab(new MemologSettingTab(this.app, this))
 
-		//! サイドバーを開くコマンドを登録。
+		// ! サイドバーを開くコマンドを登録。
 		this.addCommand({
 			id: "open-memolog-sidebar",
 			name: "memologサイドバーを開く",
 			callback: () => {
-				void this.activateView();
+				void this.activateView()
 			},
-		});
+		})
 
-		//! リボンアイコンを追加。
+		// ! リボンアイコンを追加。
 		this.addRibbonIcon("file-text", "memolog", () => {
-			void this.activateView();
-		});
+			void this.activateView()
+		})
 
-		//! 初回起動時にサイドバーを開く。
+		// ! 初回起動時にサイドバーを開く。
 		this.app.workspace.onLayoutReady(() => {
-			void this.activateView();
-		});
+			void this.activateView()
+		})
 	}
 
-	//! プラグインアンロード時の処理。
+	// ! プラグインアンロード時の処理。
 	override onunload() {
-		//! ビューをデタッチ。
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_MEMOLOG);
+		// ! ビューをデタッチ。
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_MEMOLOG)
 	}
 
-	//! サイドバーをアクティブにする。
+	// ! サイドバーをアクティブにする。
 	async activateView() {
-		const { workspace } = this.app;
+		const { workspace } = this.app
 
-		let leaf = workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG)[0];
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG)[0]
 
 		if (!leaf) {
-			//! 右サイドバーに新しいリーフを作成。
-			const newLeaf = workspace.getRightLeaf(false);
+			// ! 右サイドバーに新しいリーフを作成。
+			const newLeaf = workspace.getRightLeaf(false)
 			if (newLeaf) {
 				await newLeaf.setViewState({
 					type: VIEW_TYPE_MEMOLOG,
 					active: true,
-				});
-				leaf = newLeaf;
+				})
+				leaf = newLeaf
 			}
 		}
 
-		//! ビューをアクティブにする。
+		// ! ビューをアクティブにする。
 		if (leaf) {
-			void workspace.revealLeaf(leaf);
+			void workspace.revealLeaf(leaf)
 		}
 	}
 
-	//! サイドバーを再描画する。
+	// ! サイドバーを再描画する。
 	refreshSidebar(): void {
-		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG);
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOLOG)
 		for (const leaf of leaves) {
-			const view = leaf.view;
+			const view = leaf.view
 			if (view instanceof MemologSidebar) {
-				view.refresh();
+				view.refresh()
 			}
 		}
 	}

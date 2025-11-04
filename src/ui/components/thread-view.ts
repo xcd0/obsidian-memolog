@@ -1,33 +1,33 @@
-import { MemoEntry, CategoryConfig } from "../../types";
-import { MemoCard, MemoCardHandlers } from "./memo-card";
-import { App, setIcon } from "obsidian";
+import { App, setIcon } from "obsidian"
+import { CategoryConfig, MemoEntry } from "../../types"
+import { MemoCard, MemoCardHandlers } from "./memo-card"
 
-//! ThreadViewハンドラー型定義。
+// ! ThreadViewハンドラー型定義。
 export interface ThreadViewHandlers extends MemoCardHandlers {
-	//! メインビューに戻る。
-	onBack?: () => void;
+	// ! メインビューに戻る。
+	onBack?: () => void
 
-	//! 子メモをクリックしてフォーカスを変更。
-	onThreadCardClick?: (memoId: string) => void;
+	// ! 子メモをクリックしてフォーカスを変更。
+	onThreadCardClick?: (memoId: string) => void
 
-	//! 親メモに遷移。
-	onNavigateToParent?: (parentId: string) => void;
+	// ! 親メモに遷移。
+	onNavigateToParent?: (parentId: string) => void
 }
 
-//! スレッドビューコンポーネント。v0.0.14で追加。
+// ! スレッドビューコンポーネント。v0.0.14で追加。
 export class ThreadView {
-	private app: App;
-	private container: HTMLElement;
-	private memos: MemoEntry[];
-	private focusedMemoId: string;
-	private handlers: ThreadViewHandlers;
-	private sourcePath: string;
-	private categories: CategoryConfig[];
-	private collapsedThreads: Set<string>;
+	private app: App
+	private container: HTMLElement
+	private memos: MemoEntry[]
+	private focusedMemoId: string
+	private handlers: ThreadViewHandlers
+	private sourcePath: string
+	private categories: CategoryConfig[]
+	private collapsedThreads: Set<string>
 
-	//! UI要素への参照。
-	private headerEl: HTMLElement | null = null;
-	private contentEl: HTMLElement | null = null;
+	// ! UI要素への参照。
+	private headerEl: HTMLElement | null = null
+	private contentEl: HTMLElement | null = null
 
 	constructor(
 		app: App,
@@ -37,91 +37,91 @@ export class ThreadView {
 		handlers: ThreadViewHandlers = {},
 		sourcePath = "",
 		categories: CategoryConfig[] = [],
-		collapsedThreads: string[] = []
+		collapsedThreads: string[] = [],
 	) {
-		this.app = app;
-		this.container = container;
-		this.memos = memos;
-		this.focusedMemoId = focusedMemoId;
-		this.handlers = handlers;
-		this.sourcePath = sourcePath;
-		this.categories = categories;
-		this.collapsedThreads = new Set(collapsedThreads);
+		this.app = app
+		this.container = container
+		this.memos = memos
+		this.focusedMemoId = focusedMemoId
+		this.handlers = handlers
+		this.sourcePath = sourcePath
+		this.categories = categories
+		this.collapsedThreads = new Set(collapsedThreads)
 	}
 
-	//! スレッドビューを描画する。
+	// ! スレッドビューを描画する。
 	render(): void {
-		//! コンテナをクリア。
-		this.container.empty();
+		// ! コンテナをクリア。
+		this.container.empty()
 
-		//! ヘッダーエリア（戻るボタン + 親メモナビゲーション）を作成。
-		this.renderHeader();
+		// ! ヘッダーエリア（戻るボタン + 親メモナビゲーション）を作成。
+		this.renderHeader()
 
-		//! コンテンツエリアを作成。
-		this.contentEl = this.container.createDiv({ cls: "memolog-thread-content" });
+		// ! コンテンツエリアを作成。
+		this.contentEl = this.container.createDiv({ cls: "memolog-thread-content" })
 
-		//! フォーカスメモを取得。
-		const focusedMemo = this.memos.find((m) => m.id === this.focusedMemoId);
+		// ! フォーカスメモを取得。
+		const focusedMemo = this.memos.find(m => m.id === this.focusedMemoId)
 		if (!focusedMemo) {
-			this.renderNotFound();
-			return;
+			this.renderNotFound()
+			return
 		}
 
-		//! スレッドツリーを描画。
-		this.renderThreadTree(focusedMemo);
+		// ! スレッドツリーを描画。
+		this.renderThreadTree(focusedMemo)
 	}
 
-	//! ヘッダーを描画する（戻るボタン + 親メモナビゲーション）。
+	// ! ヘッダーを描画する（戻るボタン + 親メモナビゲーション）。
 	private renderHeader(): void {
-		this.headerEl = this.container.createDiv({ cls: "memolog-thread-header" });
+		this.headerEl = this.container.createDiv({ cls: "memolog-thread-header" })
 
-		//! 戻るボタン。
-		const backBtn = this.headerEl.createDiv({ cls: "memolog-thread-back-btn" });
-		setIcon(backBtn, "arrow-left");
-		backBtn.createSpan({ text: "戻る" });
+		// ! 戻るボタン。
+		const backBtn = this.headerEl.createDiv({ cls: "memolog-thread-back-btn" })
+		setIcon(backBtn, "arrow-left")
+		backBtn.createSpan({ text: "戻る" })
 		backBtn.addEventListener("click", () => {
 			if (this.handlers.onBack) {
-				this.handlers.onBack();
+				this.handlers.onBack()
 			}
-		});
+		})
 
-		//! フォーカスメモの親がいる場合、親へのナビゲーションを表示。
-		const focusedMemo = this.memos.find((m) => m.id === this.focusedMemoId);
+		// ! フォーカスメモの親がいる場合、親へのナビゲーションを表示。
+		const focusedMemo = this.memos.find(m => m.id === this.focusedMemoId)
 		if (focusedMemo?.parentId) {
-			const parentNav = this.headerEl.createDiv({ cls: "memolog-thread-parent-nav" });
-			setIcon(parentNav, "arrow-up");
-			parentNav.createSpan({ text: "親メモへ" });
+			const parentNav = this.headerEl.createDiv({ cls: "memolog-thread-parent-nav" })
+			setIcon(parentNav, "arrow-up")
+			parentNav.createSpan({ text: "親メモへ" })
 			parentNav.addEventListener("click", () => {
 				if (this.handlers.onNavigateToParent && focusedMemo.parentId) {
-					this.handlers.onNavigateToParent(focusedMemo.parentId);
+					this.handlers.onNavigateToParent(focusedMemo.parentId)
 				}
-			});
+			})
 		}
 	}
 
-	//! スレッドツリーを描画する（フォーカスメモ + その返信）。
+	// ! スレッドツリーを描画する（フォーカスメモ + その返信）。
 	private renderThreadTree(focusedMemo: MemoEntry): void {
-		if (!this.contentEl) return;
+		if (!this.contentEl) return
 
-		//! フォーカスメモを強調表示して描画。
-		this.renderFocusedMemo(focusedMemo);
+		// ! フォーカスメモを強調表示して描画。
+		this.renderFocusedMemo(focusedMemo)
 
-		//! フォーカスメモの返信を階層表示。
-		this.renderReplies(this.focusedMemoId, 0);
+		// ! フォーカスメモの返信を階層表示。
+		this.renderReplies(this.focusedMemoId, 0)
 	}
 
-	//! フォーカスメモを描画する（強調表示）。
+	// ! フォーカスメモを描画する（強調表示）。
 	private renderFocusedMemo(memo: MemoEntry): void {
-		if (!this.contentEl) return;
+		if (!this.contentEl) return
 
-		const focusedContainer = this.contentEl.createDiv({ cls: "memolog-thread-focused" });
+		const focusedContainer = this.contentEl.createDiv({ cls: "memolog-thread-focused" })
 
-		//! MemoCardHandlersを構築。
-		const cardHandlers: MemoCardHandlers = { ...this.handlers };
-		//! ThreadView専用ハンドラーを除外。
-		delete (cardHandlers as ThreadViewHandlers).onBack;
-		delete (cardHandlers as ThreadViewHandlers).onThreadCardClick;
-		delete (cardHandlers as ThreadViewHandlers).onNavigateToParent;
+		// ! MemoCardHandlersを構築。
+		const cardHandlers: MemoCardHandlers = { ...this.handlers }
+		// ! ThreadView専用ハンドラーを除外。
+		delete (cardHandlers as ThreadViewHandlers).onBack
+		delete (cardHandlers as ThreadViewHandlers).onThreadCardClick
+		delete (cardHandlers as ThreadViewHandlers).onNavigateToParent
 
 		const card = new MemoCard(
 			this.app,
@@ -130,52 +130,52 @@ export class ThreadView {
 			cardHandlers,
 			this.sourcePath,
 			this.categories,
-			false, //! ゴミ箱ではない。
-			false, //! ピン留めなし。
-			0, //! スレッド深さ0。
+			false, // ! ゴミ箱ではない。
+			false, // ! ピン留めなし。
+			0, // ! スレッド深さ0。
 			memo.replyCount || 0,
-			false //! 折りたたみなし。
-		);
-		card.render();
+			false, // ! 折りたたみなし。
+		)
+		card.render()
 	}
 
-	//! 返信を再帰的に描画する。
+	// ! 返信を再帰的に描画する。
 	private renderReplies(parentId: string, depth: number): void {
-		if (!this.contentEl) return;
+		if (!this.contentEl) return
 
-		//! 親メモの子を取得。
-		const children = this.memos.filter((m) => m.parentId === parentId);
+		// ! 親メモの子を取得。
+		const children = this.memos.filter(m => m.parentId === parentId)
 
-		//! 折りたたまれているかチェック。
-		const isCollapsed = this.collapsedThreads.has(parentId);
+		// ! 折りたたまれているかチェック。
+		const isCollapsed = this.collapsedThreads.has(parentId)
 		if (isCollapsed) {
-			return;
+			return
 		}
 
 		for (const child of children) {
 			const replyContainer = this.contentEl.createDiv({
 				cls: "memolog-thread-reply",
-			});
+			})
 
-			//! クリックイベントを追加。
-			replyContainer.addEventListener("click", (e) => {
-				//! ボタンクリックは除外。
+			// ! クリックイベントを追加。
+			replyContainer.addEventListener("click", e => {
+				// ! ボタンクリックは除外。
 				if ((e.target as HTMLElement).closest("button")) {
-					return;
+					return
 				}
 				if (this.handlers.onThreadCardClick) {
-					this.handlers.onThreadCardClick(child.id);
+					this.handlers.onThreadCardClick(child.id)
 				}
-			});
+			})
 
-			//! MemoCardHandlersを構築。
+			// ! MemoCardHandlersを構築。
 			const cardHandlers: MemoCardHandlers = {
 				...this.handlers,
-			};
-			//! ThreadView専用ハンドラーを除外。
-			delete (cardHandlers as ThreadViewHandlers).onBack;
-			delete (cardHandlers as ThreadViewHandlers).onThreadCardClick;
-			delete (cardHandlers as ThreadViewHandlers).onNavigateToParent;
+			}
+			// ! ThreadView専用ハンドラーを除外。
+			delete (cardHandlers as ThreadViewHandlers).onBack
+			delete (cardHandlers as ThreadViewHandlers).onThreadCardClick
+			delete (cardHandlers as ThreadViewHandlers).onNavigateToParent
 
 			const card = new MemoCard(
 				this.app,
@@ -184,49 +184,49 @@ export class ThreadView {
 				cardHandlers,
 				this.sourcePath,
 				this.categories,
-				false, //! ゴミ箱ではない。
-				false, //! ピン留めなし。
-				depth + 1, //! インデント深さ。
+				false, // ! ゴミ箱ではない。
+				false, // ! ピン留めなし。
+				depth + 1, // ! インデント深さ。
 				child.replyCount || 0,
-				this.collapsedThreads.has(child.id) //! 折りたたみ状態。
-			);
-			card.render();
+				this.collapsedThreads.has(child.id), // ! 折りたたみ状態。
+			)
+			card.render()
 
-			//! 再帰的に子の返信を描画。
-			this.renderReplies(child.id, depth + 1);
+			// ! 再帰的に子の返信を描画。
+			this.renderReplies(child.id, depth + 1)
 		}
 	}
 
-	//! メモが見つからない場合のメッセージを表示。
+	// ! メモが見つからない場合のメッセージを表示。
 	private renderNotFound(): void {
-		if (!this.contentEl) return;
+		if (!this.contentEl) return
 
 		this.contentEl.createDiv({
 			cls: "memolog-thread-not-found",
 			text: "メモが見つかりません",
-		});
+		})
 	}
 
-	//! クリーンアップ。
+	// ! クリーンアップ。
 	destroy(): void {
-		this.container.empty();
+		this.container.empty()
 	}
 
-	//! メモリストを更新する。
+	// ! メモリストを更新する。
 	updateMemos(memos: MemoEntry[]): void {
-		this.memos = memos;
-		this.render();
+		this.memos = memos
+		this.render()
 	}
 
-	//! フォーカスメモIDを変更する。
+	// ! フォーカスメモIDを変更する。
 	setFocusedMemoId(memoId: string): void {
-		this.focusedMemoId = memoId;
-		this.render();
+		this.focusedMemoId = memoId
+		this.render()
 	}
 
-	//! 折りたたみ状態を更新する。
+	// ! 折りたたみ状態を更新する。
 	updateCollapsedThreads(collapsedThreads: string[]): void {
-		this.collapsedThreads = new Set(collapsedThreads);
-		this.render();
+		this.collapsedThreads = new Set(collapsedThreads)
+		this.render()
 	}
 }

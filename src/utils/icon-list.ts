@@ -1,42 +1,42 @@
-//! Lucide Icons リスト（Obsidianで利用可能なアイコン）。
+// ! Lucide Icons リスト（Obsidianで利用可能なアイコン）。
 
-import { getIconIds } from "obsidian";
+import { getIconIds } from "obsidian"
 
-//! アイコンカテゴリ。
+// ! アイコンカテゴリ。
 export interface IconCategory {
-	name: string;
-	icons: string[];
+	name: string
+	icons: string[]
 }
 
-//! Obsidianから動的に取得した全アイコンリスト（キャッシュ）。
-let cachedAllIcons: string[] | null = null;
+// ! Obsidianから動的に取得した全アイコンリスト（キャッシュ）。
+let cachedAllIcons: string[] | null = null
 
-//! Obsidianのlucideアイコンを動的に取得する。
+// ! Obsidianのlucideアイコンを動的に取得する。
 function getAllIconsFromObsidian(): string[] {
-	//! 既にキャッシュがある場合は返す。
+	// ! 既にキャッシュがある場合は返す。
 	if (cachedAllIcons) {
-		return cachedAllIcons;
+		return cachedAllIcons
 	}
 
 	try {
-		//! Obsidian APIの getIconIds() を使用。
-		const iconIds = getIconIds();
-		console.log(`[memolog] Loaded ${iconIds.length} icons from obsidian.getIconIds()`);
+		// ! Obsidian APIの getIconIds() を使用。
+		const iconIds = getIconIds()
+		console.log(`[memolog] Loaded ${iconIds.length} icons from obsidian.getIconIds()`)
 		if (iconIds && iconIds.length > 0) {
-			cachedAllIcons = iconIds.sort();
-			return cachedAllIcons;
+			cachedAllIcons = iconIds.sort()
+			return cachedAllIcons
 		}
 	} catch (error) {
-		console.warn("[memolog] Failed to load icons using obsidian.getIconIds():", error);
+		console.warn("[memolog] Failed to load icons using obsidian.getIconIds():", error)
 	}
 
-	//! 動的取得に失敗した場合は、静的リストにフォールバック。
-	console.warn("[memolog] Using fallback icon list");
-	cachedAllIcons = Array.from(new Set(ICON_CATEGORIES.flatMap((cat) => cat.icons))).sort();
-	return cachedAllIcons;
+	// ! 動的取得に失敗した場合は、静的リストにフォールバック。
+	console.warn("[memolog] Using fallback icon list")
+	cachedAllIcons = Array.from(new Set(ICON_CATEGORIES.flatMap(cat => cat.icons))).sort()
+	return cachedAllIcons
 }
 
-//! よく使うアイコン。
+// ! よく使うアイコン。
 export const COMMON_ICONS = [
 	"file-text",
 	"sticky-note",
@@ -210,9 +210,9 @@ export const COMMON_ICONS = [
 	"meh",
 	"thumbs-up",
 	"thumbs-down",
-];
+]
 
-//! カテゴリ別アイコンリスト。
+// ! カテゴリ別アイコンリスト。
 export const ICON_CATEGORIES: IconCategory[] = [
 	{
 		name: "よく使う",
@@ -805,42 +805,42 @@ export const ICON_CATEGORIES: IconCategory[] = [
 			"airplay",
 		],
 	},
-];
+]
 
-//! 全アイコンリストを取得する（動的取得）。
+// ! 全アイコンリストを取得する（動的取得）。
 export function getAllIcons(): string[] {
-	return getAllIconsFromObsidian();
+	return getAllIconsFromObsidian()
 }
 
-//! アイコン検索関数。
+// ! アイコン検索関数。
 export function searchIcons(query: string, limit = 50): string[] {
-	const allIcons = getAllIcons();
+	const allIcons = getAllIcons()
 
 	if (!query || query.trim() === "") {
-		return allIcons.slice(0, limit);
+		return allIcons.slice(0, limit)
 	}
 
-	const normalizedQuery = query.toLowerCase().trim();
+	const normalizedQuery = query.toLowerCase().trim()
 
-	//! 完全一致を優先。
-	const exactMatches = allIcons.filter((icon) => icon === normalizedQuery);
+	// ! 完全一致を優先。
+	const exactMatches = allIcons.filter(icon => icon === normalizedQuery)
 
-	//! 前方一致。
+	// ! 前方一致。
 	const prefixMatches = allIcons.filter(
-		(icon) => icon.startsWith(normalizedQuery) && icon !== normalizedQuery
-	);
+		icon => icon.startsWith(normalizedQuery) && icon !== normalizedQuery,
+	)
 
-	//! 部分一致。
+	// ! 部分一致。
 	const partialMatches = allIcons.filter(
-		(icon) => icon.includes(normalizedQuery) && !icon.startsWith(normalizedQuery)
-	);
+		icon => icon.includes(normalizedQuery) && !icon.startsWith(normalizedQuery),
+	)
 
-	//! 結果を結合して返す。
-	return [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit);
+	// ! 結果を結合して返す。
+	return [...exactMatches, ...prefixMatches, ...partialMatches].slice(0, limit)
 }
 
-//! カテゴリからアイコンを取得。
+// ! カテゴリからアイコンを取得。
 export function getIconsByCategory(categoryName: string): string[] {
-	const category = ICON_CATEGORIES.find((cat) => cat.name === categoryName);
-	return category ? category.icons : [];
+	const category = ICON_CATEGORIES.find(cat => cat.name === categoryName)
+	return category ? category.icons : []
 }

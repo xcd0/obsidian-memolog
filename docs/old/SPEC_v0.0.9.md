@@ -41,11 +41,11 @@ v0.0.8までは、グローバル設定の`useDirectoryCategory`フラグで全�
 
 各カテゴリは以下のストレージモードを選択できる：
 
-| モード | 値 | 説明 | ファイルパス例 |
-|--------|-----|------|---------------|
-| **ルート保存** | `"root"` | memologルートディレクトリに直接保存 | `memolog/2025/10/28.md` |
-| **カテゴリディレクトリ** | `"category-dir"` | カテゴリ専用ディレクトリに保存 | `memolog/work/2025/10/28.md` |
-| **Daily Notes連携** | `"daily-notes"` | ObsidianのDaily Notesに保存 | `DailyNotes/2025-10-28.md` |
+| モード                   | 値               | 説明                                | ファイルパス例               |
+| ------------------------ | ---------------- | ----------------------------------- | ---------------------------- |
+| **ルート保存**           | `"root"`         | memologルートディレクトリに直接保存 | `memolog/2025/10/28.md`      |
+| **カテゴリディレクトリ** | `"category-dir"` | カテゴリ専用ディレクトリに保存      | `memolog/work/2025/10/28.md` |
+| **Daily Notes連携**      | `"daily-notes"`  | ObsidianのDaily Notesに保存         | `DailyNotes/2025-10-28.md`   |
 
 ### 2.2 ファイル構造の違い
 
@@ -94,74 +94,74 @@ DailyNotes/
 ### 3.1 CategoryConfigの拡張
 
 ```typescript
-//! カテゴリ設定。
+// ! カテゴリ設定。
 export interface CategoryConfig {
-    //! カテゴリ表示名。
-    name: string;
+	// ! カテゴリ表示名。
+	name: string
 
-    //! 実際の保存フォルダ名（storageMode='category-dir'の場合に使用）。
-    directory: string;
+	// ! 実際の保存フォルダ名（storageMode='category-dir'の場合に使用）。
+	directory: string
 
-    //! UI上で使用するカラーコード。
-    color: string;
+	// ! UI上で使用するカラーコード。
+	color: string
 
-    //! アイコン名（Obsidianのアイコンセット）。
-    icon: string;
+	// ! アイコン名（Obsidianのアイコンセット）。
+	icon: string
 
-    //! アイコンを表示するか（デフォルト: true）。
-    showIcon?: boolean;
+	// ! アイコンを表示するか（デフォルト: true）。
+	showIcon?: boolean
 
-    //! ストレージモード（v0.0.9で追加）。
-    storageMode: StorageMode;
+	// ! ストレージモード（v0.0.9で追加）。
+	storageMode: StorageMode
 
-    //! このカテゴリ専用のテンプレート（オプション）。
-    template?: string;
+	// ! このカテゴリ専用のテンプレート（オプション）。
+	template?: string
 
-    //! このカテゴリ専用のソート順（オプション）。
-    order?: "asc" | "desc";
+	// ! このカテゴリ専用のソート順（オプション）。
+	order?: "asc" | "desc"
 
-    //! このカテゴリ専用のファイルパス書式（オプション）。
-    pathFormat?: string;
+	// ! このカテゴリ専用のファイルパス書式（オプション）。
+	pathFormat?: string
 }
 
-//! ストレージモード。
-export type StorageMode = "root" | "category-dir" | "daily-notes";
+// ! ストレージモード。
+export type StorageMode = "root" | "category-dir" | "daily-notes"
 ```
 
 ### 3.2 GlobalSettingsの変更
 
 ```typescript
 export interface GlobalSettings {
-    //! ディレクトリでカテゴリを分離するかどうか（非推奨: v0.0.9以降はCategoryConfig.storageModeを使用）。
-    //! @deprecated v0.0.9以降は各カテゴリのstorageModeを使用してください。
-    useDirectoryCategory: boolean;
+	// ! ディレクトリでカテゴリを分離するかどうか（非推奨: v0.0.9以降はCategoryConfig.storageModeを使用）。
+	// ! @deprecated v0.0.9以降は各カテゴリのstorageModeを使用してください。
+	useDirectoryCategory: boolean
 
-    //! カテゴリ情報配列。
-    categories: CategoryConfig[];
+	// ! カテゴリ情報配列。
+	categories: CategoryConfig[]
 
-    // ... その他の設定は変更なし
+	// ... その他の設定は変更なし
 }
 ```
 
 ### 3.3 後方互換性の処理
 
 ```typescript
-//! v0.0.8以前の設定を読み込む際の互換性処理。
+// ! v0.0.8以前の設定を読み込む際の互換性処理。
 function migrateSettings(settings: GlobalSettings): GlobalSettings {
-    //! useDirectoryCategoryがtrueで、カテゴリにstorageModeがない場合。
-    if (settings.useDirectoryCategory) {
-        settings.categories = settings.categories.map(cat => ({
-            ...cat,
-            storageMode: cat.storageMode || "category-dir"
-        }));
-    } else {
-        settings.categories = settings.categories.map(cat => ({
-            ...cat,
-            storageMode: cat.storageMode || "root"
-        }));
-    }
+	// ! useDirectoryCategoryがtrueで、カテゴリにstorageModeがない場合。
+	if (settings.useDirectoryCategory) {
+		settings.categories = settings.categories.map(cat => ({
+			...cat,
+			storageMode: cat.storageMode || "category-dir",
+		}))
+	} else {
+		settings.categories = settings.categories.map(cat => ({
+			...cat,
+			storageMode: cat.storageMode || "root",
+		}))
+	}
 
-    return settings;
+	return settings
 }
 ```
 
@@ -174,6 +174,7 @@ function migrateSettings(settings: GlobalSettings): GlobalSettings {
 #### シナリオ1: `root` → `category-dir`
 
 **移行前**:
+
 ```
 memolog/2025/10/28.md
 <!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z, category: "work" -->
@@ -190,6 +191,7 @@ memolog/2025/10/28.md
 ```
 
 **移行後**:
+
 ```
 memolog/work/2025/10/28.md
 <!-- memo-id: w1, timestamp: 2025-10-28T09:00:00Z, category: "work" -->
@@ -243,61 +245,61 @@ memolog/hobby/2025/10/28.md
 ### 4.3 移行処理の実装クラス
 
 ```typescript
-//! ストレージモード移行マネージャー。
+// ! ストレージモード移行マネージャー。
 export class StorageMigrationManager {
-    //! 移行前チェック。
-    async validateMigration(
-        category: string,
-        fromMode: StorageMode,
-        toMode: StorageMode
-    ): Promise<MigrationValidationResult>;
+	// ! 移行前チェック。
+	async validateMigration(
+		category: string,
+		fromMode: StorageMode,
+		toMode: StorageMode,
+	): Promise<MigrationValidationResult>
 
-    //! バックアップ作成。
-    async createBackup(
-        categories: string[]
-    ): Promise<string>; // バックアップディレクトリパスを返す
+	// ! バックアップ作成。
+	async createBackup(
+		categories: string[],
+	): Promise<string> // バックアップディレクトリパスを返す
 
-    //! 移行実行。
-    async migrate(
-        category: string,
-        fromMode: StorageMode,
-        toMode: StorageMode,
-        options: MigrationOptions
-    ): Promise<MigrationResult>;
+	// ! 移行実行。
+	async migrate(
+		category: string,
+		fromMode: StorageMode,
+		toMode: StorageMode,
+		options: MigrationOptions,
+	): Promise<MigrationResult>
 
-    //! 移行検証。
-    async verifyMigration(
-        category: string,
-        expectedMemoCount: number
-    ): Promise<boolean>;
+	// ! 移行検証。
+	async verifyMigration(
+		category: string,
+		expectedMemoCount: number,
+	): Promise<boolean>
 
-    //! ロールバック。
-    async rollback(
-        backupPath: string,
-        category: string
-    ): Promise<void>;
+	// ! ロールバック。
+	async rollback(
+		backupPath: string,
+		category: string,
+	): Promise<void>
 }
 
-//! 移行オプション。
+// ! 移行オプション。
 export interface MigrationOptions {
-    //! 旧ファイルを削除するか（デフォルト: false）。
-    deleteOldFiles: boolean;
+	// ! 旧ファイルを削除するか（デフォルト: false）。
+	deleteOldFiles: boolean
 
-    //! バックアップを作成するか（デフォルト: true）。
-    createBackup: boolean;
+	// ! バックアップを作成するか（デフォルト: true）。
+	createBackup: boolean
 
-    //! ドライラン（実際には変更しない）。
-    dryRun: boolean;
+	// ! ドライラン（実際には変更しない）。
+	dryRun: boolean
 }
 
-//! 移行結果。
+// ! 移行結果。
 export interface MigrationResult {
-    success: boolean;
-    migratedMemoCount: number;
-    createdFiles: string[];
-    deletedFiles: string[];
-    errors: string[];
-    backupPath?: string;
+	success: boolean
+	migratedMemoCount: number
+	createdFiles: string[]
+	deletedFiles: string[]
+	errors: string[]
+	backupPath?: string
 }
 ```
 
@@ -456,36 +458,36 @@ export interface MigrationResult {
 
 ```typescript
 export class PathGenerator {
-    //! ファイルパスを生成する（v0.0.9: storageModeに対応）。
-    static generateFilePath(
-        rootDirectory: string,
-        category: CategoryConfig,  // CategoryConfigを直接受け取る
-        saveUnit: SaveUnit,
-        date: Date,
-        pathFormat?: string
-    ): string {
-        const format = pathFormat || category.pathFormat || "%Y/%m/%d";
+	// ! ファイルパスを生成する（v0.0.9: storageModeに対応）。
+	static generateFilePath(
+		rootDirectory: string,
+		category: CategoryConfig, // CategoryConfigを直接受け取る
+		saveUnit: SaveUnit,
+		date: Date,
+		pathFormat?: string,
+	): string {
+		const format = pathFormat || category.pathFormat || "%Y/%m/%d"
 
-        switch (category.storageMode) {
-            case "root":
-                // memolog/2025/10/28.md
-                return `${rootDirectory}/${this.formatPath(format, date)}.md`;
+		switch (category.storageMode) {
+			case "root":
+				// memolog/2025/10/28.md
+				return `${rootDirectory}/${this.formatPath(format, date)}.md`
 
-            case "category-dir":
-                // memolog/work/2025/10/28.md
-                return `${rootDirectory}/${category.directory}/${this.formatPath(format, date)}.md`;
+			case "category-dir":
+				// memolog/work/2025/10/28.md
+				return `${rootDirectory}/${category.directory}/${this.formatPath(format, date)}.md`
 
-            case "daily-notes":
-                // DailyNotes/2025-10-28.md (Obsidianの設定から取得)
-                return this.getDailyNotePath(date);
-        }
-    }
+			case "daily-notes":
+				// DailyNotes/2025-10-28.md (Obsidianの設定から取得)
+				return this.getDailyNotePath(date)
+		}
+	}
 
-    //! Daily Notesのパスを取得（Obsidian APIから）。
-    private static getDailyNotePath(date: Date): string {
-        // Obsidian APIのdailyNotesプラグイン設定を参照
-        // 実装時にObsidian.app.vault.adapter経由で取得
-    }
+	// ! Daily Notesのパスを取得（Obsidian APIから）。
+	private static getDailyNotePath(date: Date): string {
+		// Obsidian APIのdailyNotesプラグイン設定を参照
+		// 実装時にObsidian.app.vault.adapter経由で取得
+	}
 }
 ```
 
@@ -545,6 +547,7 @@ export class PathGenerator {
 **リスク**: 移行処理中のエラーでデータが失われる可能性
 
 **対策**:
+
 - デフォルトでバックアップを作成
 - トランザクション的な処理（全て成功するか全て失敗）
 - ロールバック機能
@@ -555,6 +558,7 @@ export class PathGenerator {
 **リスク**: 大量メモの移行に時間がかかる
 
 **対策**:
+
 - バッチ処理（100件ずつ処理）
 - 進捗表示
 - バックグラウンド処理
@@ -564,6 +568,7 @@ export class PathGenerator {
 **リスク**: v0.0.8以前の設定が正しく移行されない
 
 **対策**:
+
 - 設定マイグレーション処理
 - デフォルト値の明示
 - 警告メッセージ
@@ -591,13 +596,13 @@ export class PathGenerator {
 
 ## 10. 用語集
 
-| 用語 | 説明 |
-|------|------|
-| ストレージモード | カテゴリのファイル保存方式（root/category-dir/daily-notes） |
-| ルート保存 | memologルートディレクトリに直接保存する方式 |
-| カテゴリディレクトリ | カテゴリ専用ディレクトリに保存する方式 |
-| データ移行 | ストレージモード変更時に既存メモを移動する処理 |
-| ドライラン | 実際には変更せず、処理結果をプレビューする機能 |
+| 用語                 | 説明                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| ストレージモード     | カテゴリのファイル保存方式（root/category-dir/daily-notes） |
+| ルート保存           | memologルートディレクトリに直接保存する方式                 |
+| カテゴリディレクトリ | カテゴリ専用ディレクトリに保存する方式                      |
+| データ移行           | ストレージモード変更時に既存メモを移動する処理              |
+| ドライラン           | 実際には変更せず、処理結果をプレビューする機能              |
 
 ---
 
@@ -605,65 +610,61 @@ export class PathGenerator {
 
 ```typescript
 async function migrate(
-    category: CategoryConfig,
-    fromMode: StorageMode,
-    toMode: StorageMode
+	category: CategoryConfig,
+	fromMode: StorageMode,
+	toMode: StorageMode,
 ): Promise<MigrationResult> {
-    // 1. バックアップ作成
-    const backupPath = await createBackup([category.directory]);
+	// 1. バックアップ作成
+	const backupPath = await createBackup([category.directory])
 
-    try {
-        // 2. 全メモを収集
-        const allMemos = await collectAllMemos(category, fromMode);
+	try {
+		// 2. 全メモを収集
+		const allMemos = await collectAllMemos(category, fromMode)
 
-        // 3. タイムスタンプでソート
-        allMemos.sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
+		// 3. タイムスタンプでソート
+		allMemos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
 
-        // 4. 日付単位でグループ化
-        const memosByDate = groupBy(allMemos, memo =>
-            memo.timestamp.substring(0, 10) // "2025-10-28"
-        );
+		// 4. 日付単位でグループ化
+		const memosByDate = groupBy(allMemos, memo => memo.timestamp.substring(0, 10) // "2025-10-28"
+		)
 
-        // 5. 新しいファイル生成
-        const createdFiles: string[] = [];
-        for (const [dateStr, memos] of Object.entries(memosByDate)) {
-            const date = new Date(dateStr);
-            const filePath = PathGenerator.generateFilePath(
-                settings.rootDirectory,
-                { ...category, storageMode: toMode },
-                settings.saveUnit,
-                date
-            );
+		// 5. 新しいファイル生成
+		const createdFiles: string[] = []
+		for (const [dateStr, memos] of Object.entries(memosByDate)) {
+			const date = new Date(dateStr)
+			const filePath = PathGenerator.generateFilePath(
+				settings.rootDirectory,
+				{ ...category, storageMode: toMode },
+				settings.saveUnit,
+				date,
+			)
 
-            await createFileWithMemos(filePath, category, memos);
-            createdFiles.push(filePath);
-        }
+			await createFileWithMemos(filePath, category, memos)
+			createdFiles.push(filePath)
+		}
 
-        // 6. 検証
-        const newMemoCount = await countMemos(category, toMode);
-        if (newMemoCount !== allMemos.length) {
-            throw new Error("メモ数が一致しません");
-        }
+		// 6. 検証
+		const newMemoCount = await countMemos(category, toMode)
+		if (newMemoCount !== allMemos.length) {
+			throw new Error("メモ数が一致しません")
+		}
 
-        // 7. 旧ファイル削除
-        const deletedFiles = await deleteOldFiles(category, fromMode);
+		// 7. 旧ファイル削除
+		const deletedFiles = await deleteOldFiles(category, fromMode)
 
-        return {
-            success: true,
-            migratedMemoCount: allMemos.length,
-            createdFiles,
-            deletedFiles,
-            errors: [],
-            backupPath
-        };
-
-    } catch (error) {
-        // ロールバック
-        await rollback(backupPath, category);
-        throw error;
-    }
+		return {
+			success: true,
+			migratedMemoCount: allMemos.length,
+			createdFiles,
+			deletedFiles,
+			errors: [],
+			backupPath,
+		}
+	} catch (error) {
+		// ロールバック
+		await rollback(backupPath, category)
+		throw error
+	}
 }
 ```
 
@@ -675,33 +676,34 @@ async function migrate(
 
 ```json
 {
-  "categories": [
-    {
-      "name": "仕事",
-      "directory": "work",
-      "storageMode": "category-dir",
-      "color": "#3b82f6",
-      "icon": "briefcase"
-    },
-    {
-      "name": "個人メモ",
-      "directory": "personal",
-      "storageMode": "root",
-      "color": "#22c55e",
-      "icon": "sticky-note"
-    },
-    {
-      "name": "日記",
-      "directory": "diary",
-      "storageMode": "daily-notes",
-      "color": "#f59e0b",
-      "icon": "book"
-    }
-  ]
+	"categories": [
+		{
+			"name": "仕事",
+			"directory": "work",
+			"storageMode": "category-dir",
+			"color": "#3b82f6",
+			"icon": "briefcase"
+		},
+		{
+			"name": "個人メモ",
+			"directory": "personal",
+			"storageMode": "root",
+			"color": "#22c55e",
+			"icon": "sticky-note"
+		},
+		{
+			"name": "日記",
+			"directory": "diary",
+			"storageMode": "daily-notes",
+			"color": "#f59e0b",
+			"icon": "book"
+		}
+	]
 }
 ```
 
 この設定により：
+
 - 「仕事」メモは `memolog/work/2025/10/28.md` に保存
 - 「個人メモ」は `memolog/2025/10/28.md` に保存
 - 「日記」は `DailyNotes/2025-10-28.md` に保存
@@ -722,17 +724,17 @@ async function migrate(
 
 ```typescript
 interface GlobalSettings {
-    //! ゴミ箱機能を有効化するか。
-    enableTrash: boolean;
+	// ! ゴミ箱機能を有効化するか。
+	enableTrash: boolean
 
-    //! ゴミ箱ファイルパス（rootDirectoryからの相対パス、拡張子なし）。
-    trashFilePath: string;  // デフォルト: "_trash"
+	// ! ゴミ箱ファイルパス（rootDirectoryからの相対パス、拡張子なし）。
+	trashFilePath: string // デフォルト: "_trash"
 
-    //! ゴミ箱の保持期間（日数）。
-    trashRetentionDays: number;  // デフォルト: 30
+	// ! ゴミ箱の保持期間（日数）。
+	trashRetentionDays: number // デフォルト: 30
 
-    //! ゴミ箱タブを表示するか。
-    showTrashTab: boolean;
+	// ! ゴミ箱タブを表示するか。
+	showTrashTab: boolean
 }
 ```
 
@@ -745,6 +747,7 @@ interface GlobalSettings {
 #### 11.1.4 設定画面
 
 専用の「ゴミ箱」タブを追加:
+
 - ゴミ箱機能の有効化/無効化
 - ゴミ箱ファイルパスの設定
 - 保持期間の設定
@@ -755,11 +758,13 @@ interface GlobalSettings {
 #### 11.2.1 変換ダイアログの機能強化
 
 **バックアップのみ実行ボタン**
+
 - 変換を実行せず、バックアップのみ作成するオプション
 - 安全性を重視したユーザー向けの選択肢
 - ボタン配置: 「バックアップして変換」→「バックアップのみ」→「バックアップせずに変換」→「キャンセル」
 
 **変換予定の全件表示**
+
 - 従来: 最初の5件のみリスト表示
 - 改善: 全件をスクロール可能なテーブル形式で表示
   - 固定ヘッダー（変換前/変換後）
@@ -769,20 +774,24 @@ interface GlobalSettings {
 #### 11.2.2 特別なファイルの除外
 
 **除外対象**
+
 1. `index.md` - rootディレクトリ直下のインデックスファイル
 2. `_*.md` - rootディレクトリ直下のアンダースコアで始まるファイル（ゴミ箱ファイルなど）
 3. 古いパス書式にマッチしないファイル（日付情報が抽出できないファイル）
 
 **除外ロジック**
+
 - rootディレクトリ直下のファイルのみチェック（サブディレクトリ内は通常通り処理）
 - `analyzePath()` と `analyzeMemoSplit()` の両方で実装
 
 #### 11.2.3 Git検出ロジックの修正
 
 **問題**
+
 - 従来の `getAbstractFileByPath(".git")` では隠しファイルを検出できない
 
 **解決策**
+
 ```typescript
 async isGitRepository(): Promise<boolean> {
     try {
@@ -808,20 +817,24 @@ async isGitRepository(): Promise<boolean> {
 #### 11.3.1 ファイルパス書式プリセット追加
 
 追加プリセット:
+
 - `%C/%Y-%m-%d.md` - カテゴリ/年-月-日.md形式
 - `%C/%Y%m%d.md` - カテゴリ/年月日.md形式
 
 用途:
+
 - カテゴリごとにディレクトリを分けつつ、日単位でファイルを管理
 - ファイル名のシンプル化（ハイフンあり/なし）
 
 #### 11.3.2 添付ファイル保存先プリセット追加
 
 追加プリセット:
+
 - `./attachments/%Y-%m-%d` - attachments/年-月-日形式（相対パス）
 - `./attachments/%Y%m%d` - attachments/年月日形式（相対パス）
 
 用途:
+
 - 日付ごとに添付ファイルをグルーピング
 - 相対パスによるメモファイルと同階層での管理
 
@@ -830,6 +843,7 @@ async isGitRepository(): Promise<boolean> {
 ## 12. 変更履歴
 
 ### 2025-10-30 (午前)
+
 - ゴミ箱機能の実装
 - パス変換ダイアログの改善（バックアップのみ実行、全件表示）
 - 特別なファイルの除外ロジック追加
@@ -837,6 +851,7 @@ async isGitRepository(): Promise<boolean> {
 - 設定画面プリセットの拡充
 
 ### 2025-10-30 (午後)
+
 - ゴミ箱タブへの削除投稿表示機能の修正
   - Vault内の全ファイルから直接読み込むように変更
   - 日付ループの非効率な処理を改善

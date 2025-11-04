@@ -100,58 +100,84 @@
   - 返信メモがヒットした場合、そのメモのスレッドビューに遷移
 
 ### 型定義とデータモデル
-- [ ] ViewMode型（"main" | "thread"）をテストで先に定義
-- [ ] テストを通すViewMode型をtypes/index.tsに追加
-- [ ] Sidebarの状態に`viewMode`と`focusedThreadId`を追加するテストを作成
-- [ ] テストを通すように状態プロパティを実装
+- [x] ViewMode型（"main" | "thread"）をテストで先に定義
+- [x] テストを通すViewMode型をtypes/index.tsに追加
+- [x] Sidebarの状態に`viewMode`と`focusedThreadId`を追加するテストを作成
+- [x] テストを通すように状態プロパティを実装
 
 ### ThreadViewコンポーネント
-- [ ] ThreadViewの基本構造をテストで先に定義（コンストラクタ、render、destroy）
-- [ ] テスト駆動でThreadViewコンポーネントを新規作成（src/ui/components/thread-view.ts）
-- [ ] ThreadViewがルートメモとその子孫を階層表示するロジックのテストを作成
-- [ ] テストを通すrenderThreadTree()メソッドを実装（インデント表示、折りたたみ機能を含む）
-- [ ] ThreadView内のメモカードクリックで、そのメモを新しいルートとして再表示するテストを作成
-- [ ] テストを通すonThreadCardClick()ハンドラーを実装し、focusedThreadIdを更新してre-render
-- [ ] ThreadViewに戻るボタンを追加するテストを作成（メインビューに戻る）
-- [ ] テストを通す戻るボタンUI実装とonBackハンドラー追加
-- [ ] ThreadViewに親メモへ戻るボタンを追加するテストを作成（スレッド階層を上に戻る）
-- [ ] テストを通す親メモ表示機能を実装（focusedMemoのparentIdがあれば表示）
+- [x] ThreadViewの基本構造をテストで先に定義（コンストラクタ、render、destroy）
+- [x] テスト駆動でThreadViewコンポーネントを新規作成（src/ui/components/thread-view.ts）
+- [x] ThreadViewがルートメモとその子孫を階層表示するロジックのテストを作成
+- [x] テストを通すrenderThreadTree()メソッドを実装（インデント表示、折りたたみ機能を含む）
+- [x] ThreadView内のメモカードクリックで、そのメモを新しいルートとして再表示するテストを作成
+- [x] テストを通すonThreadCardClick()ハンドラーを実装し、focusedThreadIdを更新してre-render
+- [x] ThreadViewに戻るボタンを追加するテストを作成（メインビューに戻る）
+- [x] テストを通す戻るボタンUI実装とonBackハンドラー追加
+- [x] ThreadViewに親メモへ戻るボタンを追加するテストを作成（スレッド階層を上に戻る）
+- [x] テストを通す親メモ表示機能を実装（focusedMemoのparentIdがあれば表示）
 
 ### MemoListの変更
-- [ ] MemoListがルートメモのみをフィルタリングする動作のテストを作成
-- [ ] テストを通すようMemoList.render()を変更し、viewMode === "main"時はparentId === undefinedのメモのみ表示
-- [ ] 検索結果に返信メモが含まれる場合の動作テストを作成（返信メモがヒットしてもルートメモを表示）
-- [ ] テストを通すようフィルタリングロジックを実装
+- [x] MemoListがルートメモのみをフィルタリングする動作のテストを作成
+- [x] テストを通すようMemoList.render()を変更し、viewMode === "main"時はparentId === undefinedのメモのみ表示
+- [x] 検索結果に返信メモが含まれる場合の動作テストを作成（返信メモがヒットしてもルートメモを表示）
+- [x] テストを通すようフィルタリングロジックを実装
 
 ### MemoCardの変更
-- [ ] MemoCardがクリック時にスレッドビューに遷移するテストを作成
-- [ ] テストを通すonThreadClickハンドラーをMemoCardHandlersに追加
-- [ ] カード全体またはスレッド遷移ボタンのクリックでonThreadClickを呼び出すテストを作成
-- [ ] テストを通すUI実装（カードクリックまたは専用ボタン）
+- [x] MemoCardがクリック時にスレッドビューに遷移するテストを作成
+- [x] テストを通すonThreadClickハンドラーをMemoCardHandlersに追加
+- [x] カード全体またはスレッド遷移ボタンのクリックでonThreadClickを呼び出すテストを作成
+- [x] テストを通すUI実装（カードクリックまたは専用ボタン）
 
 ### Sidebarの統合
-- [ ] Sidebarのビューモード切り替え（main ⇔ thread）ロジックのテストを作成
-- [ ] テストを通すshowThreadView(memoId)とshowMainView()メソッドを実装
-- [ ] ThreadViewとMemoListの表示切り替え処理のテストを作成
-- [ ] テストを通すDOM切り替えロジックを実装
-- [ ] スレッドビュー時の返信ボタン動作テストを作成（スレッドビュー内で返信を投稿）
-- [ ] テストを通すようhandleReply()を調整し、スレッドビュー時もfocusedThreadIdを考慮
+- [x] Sidebarのビューモード切り替え（main ⇔ thread）ロジックのテストを作成
+- [x] テストを通すshowThreadView(memoId)とshowMainView()メソッドを実装
+- [x] ThreadViewとMemoListの表示切り替え処理のテストを作成
+- [x] テストを通すDOM切り替えロジックを実装
+- [x] スレッドビュー時の返信ボタン動作テストを作成（スレッドビュー内で返信を投稿）
+- [x] テストを通すようhandleReply()を調整し、スレッドビュー時もfocusedThreadIdを考慮
 
 ### UIスタイルの調整
-- [ ] ThreadView用のCSSスタイルを追加（メインビューと視覚的に区別できるデザイン）
-- [ ] 戻るボタンのスタイル実装
-- [ ] MemoCardのインデント表示をThreadViewでのみ適用するようCSS調整
+- [x] ThreadView用のCSSスタイルを追加（メインビューと視覚的に区別できるデザイン）
+- [x] 戻るボタンのスタイル実装
+- [x] MemoCardのインデント表示をThreadViewでのみ適用するようCSS調整
 
 ### 既存機能の互換性
-- [ ] 返信作成、編集、削除、カスケード削除がスレッドビューでも動作するテストを作成
-- [ ] テストを通すよう既存ハンドラーをviewModeに対応させる
-- [ ] 折りたたみ機能がスレッドビューで動作するテストを作成
-- [ ] テストを通すよう折りたたみロジックをThreadViewに移植
-- [ ] ピン留め機能との整合性テストを作成（ピン留めはルートメモのみ対象）
-- [ ] テストを通すようピン留め動作を調整
+- [x] 返信作成、編集、削除、カスケード削除がスレッドビューでも動作するテストを作成
+- [x] テストを通すよう既存ハンドラーをviewModeに対応させる
+- [x] 折りたたみ機能がスレッドビューで動作するテストを作成
+- [x] テストを通すよう折りたたみロジックをThreadViewに移植
+- [x] ピン留め機能との整合性テストを作成（ピン留めはルートメモのみ対象）
+- [x] テストを通すようピン留め動作を調整
 
 ### 統合テスト
-- [ ] メインビュー → スレッドビュー → メインビューの遷移フローをテスト
-- [ ] スレッドビューでの返信投稿 → メインビューに戻った時の表示更新をテスト
-- [ ] 検索でヒットした返信メモからスレッドビューへの遷移をテスト
-- [ ] すべての統合テストが継続的にグリーンを維持
+- [x] メインビュー → スレッドビュー → メインビューの遷移フローをテスト
+- [x] スレッドビューでの返信投稿 → メインビューに戻った時の表示更新をテスト
+- [x] 検索でヒットした返信メモからスレッドビューへの遷移をテスト
+- [x] すべての統合テストが継続的にグリーンを維持
+
+---
+
+## v0.0.15 完了サマリー
+
+### 実装ファイル
+- src/types/memo.ts: ViewMode型を追加
+- src/ui/components/thread-view.ts: ThreadViewコンポーネント実装
+- src/ui/components/memo-list.ts: viewModeに応じたフィルタリング実装
+- src/ui/components/memo-card.ts: onThreadClickハンドラー追加
+- src/ui/sidebar.ts: ビュー切り替え機能 (showThreadView/showMainView/renderThreadView)
+- styles.css: ThreadView用CSSスタイル追加
+
+### テストファイル
+- test/sidebar-integration.test.ts: Sidebarビューモード統合テスト (12テスト)
+- test/memo-card-thread-click.test.ts: MemoCardスレッド遷移テスト (14テスト)
+- test/thread-view.test.ts: ThreadViewコンポーネントテスト (12テスト)
+- test/thread-view-compatibility.test.ts: 既存機能の互換性テスト (16テスト)
+- test/thread-view-integration.test.ts: 統合テスト (22テスト)
+
+合計: 76テスト、全て成功
+
+### 次のバージョン候補
+- v0.0.16: パフォーマンス最適化（仮想スクロール、遅延ロード等）
+- v0.0.17: 検索機能の強化（スレッド内検索、ハイライト等）
+- v0.0.18: エクスポート機能（スレッド単位でのMarkdownエクスポート等）

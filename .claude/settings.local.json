@@ -34,7 +34,8 @@
       "Bash(npm version:*)",
       "Bash(npm run format:check:*)",
       "Bash(npm run format:*)",
-      "Bash(npx dprint fmt:*)"
+      "Bash(npx dprint fmt:*)",
+      "Bash(.gitignore)"
     ],
     "deny": [],
     "ask": []

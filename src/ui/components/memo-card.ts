@@ -163,6 +163,27 @@ export class MemoCard {
 			})
 		}
 
+		// ! スレッドボタン（返信が存在する場合のみ、ゴミ箱以外）。
+		if (!this.isTrash && this.replyCount > 0 && this.handlers.onThreadClick) {
+			const threadBtn = actions.createEl("button", {
+				cls: "memolog-btn memolog-btn-thread",
+				attr: { "aria-label": "スレッドを表示" },
+			})
+			setIcon(threadBtn, "message-circle")
+			threadBtn.addEventListener("click", e => {
+				e.stopPropagation() // ! カードクリックイベントと区別。
+				if (this.handlers.onThreadClick) {
+					this.handlers.onThreadClick(this.memo.id)
+				}
+			})
+
+			// ! 返信数バッジをスレッドボタンに表示。
+			threadBtn.createSpan({
+				cls: "memolog-thread-count-badge",
+				text: String(this.replyCount),
+			})
+		}
+
 		// ! ピン留めボタン（ゴミ箱以外）。
 		if (!this.isTrash && this.handlers.onPinToggle) {
 			const pinBtn = actions.createEl("button", {
@@ -222,26 +243,6 @@ export class MemoCard {
 			})
 		}
 
-		// ! スレッドボタン（返信が存在する場合のみ、ゴミ箱以外）。
-		if (!this.isTrash && this.replyCount > 0 && this.handlers.onThreadClick) {
-			const threadBtn = actions.createEl("button", {
-				cls: "memolog-btn memolog-btn-thread",
-				attr: { "aria-label": "スレッドを表示" },
-			})
-			setIcon(threadBtn, "message-circle")
-			threadBtn.addEventListener("click", e => {
-				e.stopPropagation() // ! カードクリックイベントと区別。
-				if (this.handlers.onThreadClick) {
-					this.handlers.onThreadClick(this.memo.id)
-				}
-			})
-
-			// ! 返信数バッジをスレッドボタンに表示。
-			threadBtn.createSpan({
-				cls: "memolog-thread-count-badge",
-				text: String(this.replyCount),
-			})
-		}
 
 		// ! 復活ボタン（ゴミ箱のみ）。
 		if (this.isTrash && this.handlers.onRestore) {

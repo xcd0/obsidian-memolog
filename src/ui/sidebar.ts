@@ -852,7 +852,12 @@ export class MemologSidebar extends ItemView {
 	// ! カテゴリタブ変更処理。
 	private async handleCategoryTabChange(category: string): Promise<void> {
 		this.currentCategory = category
-		await this.loadMemos()
+		// ! スレッド表示中の場合はメインビューに戻る。
+		if (this.viewMode === "thread") {
+			this.showMainView()
+		} else {
+			await this.loadMemos()
+		}
 	}
 
 	// ! 日付選択処理。

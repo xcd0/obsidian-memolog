@@ -1727,9 +1727,9 @@ export class MemologSidebar extends ItemView {
 			threadViewContainer = this.containerEl.createDiv({
 				cls: "memolog-thread-view-container",
 			})
-			// ! listAreaElの後に挿入。
-			if (this.listAreaEl.nextSibling) {
-				this.containerEl.insertBefore(threadViewContainer, this.listAreaEl.nextSibling)
+			// ! inputAreaElの前に挿入（入力欄を下部に表示するため）。
+			if (this.inputAreaEl) {
+				this.containerEl.insertBefore(threadViewContainer, this.inputAreaEl)
 			} else {
 				this.containerEl.appendChild(threadViewContainer)
 			}

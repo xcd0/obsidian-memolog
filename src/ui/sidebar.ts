@@ -704,6 +704,9 @@ export class MemologSidebar extends ItemView {
 			//! TODO完了済み表示ボタンの表示/非表示を更新。
 			this.updateTodoToggleButtonVisibility();
 
+			//! replyCountを計算して各メモに設定。v0.0.15で追加。
+			this.calculateReplyCount(displayMemos);
+
 			//! メモリストを更新。
 			if (this.memoList) {
 				//! ゴミ箱表示フラグを設定。
@@ -1795,5 +1798,23 @@ export class MemologSidebar extends ItemView {
 		);
 
 		this.threadView.render();
+	}
+
+	//! 各メモのreplyCount（直接の子メモ数）を計算して設定する。v0.0.15で追加。
+	private calculateReplyCount(memos: MemoEntry[]): void {
+		//! 親ID → 子メモ数のマップを作成。
+		const childCountMap = new Map<string, number>();
+
+		for (const memo of memos) {
+			if (memo.parentId) {
+				const count = childCountMap.get(memo.parentId) || 0;
+				childCountMap.set(memo.parentId, count + 1);
+			}
+		}
+
+		//! 各メモにreplyCountを設定。
+		for (const memo of memos) {
+			memo.replyCount = childCountMap.get(memo.id) || 0;
+		}
 	}
 }

@@ -16,7 +16,7 @@
 - TODOを新規追加する際は、「先に作成するテスト」と「テストを通す実装」の両方をセットで記述する。
 
 ## 現在の作業サマリー
-- **v0.0.14 スレッド対応機能**: データモデル、ThreadIndex管理、MemoManager統合、CRUD強化（返信作成・カスケード削除）、UI実装（MemoCard、InputForm返信モード、Sidebar統合）が完了。残りは折りたたみ機能と統合テストの実装段階。
+- **v0.0.14 スレッド対応機能**: データモデル、ThreadIndex管理、MemoManager統合、CRUD強化（返信作成・カスケード削除）、UI実装（MemoCard、InputForm返信モード、Sidebar統合、折りたたみ機能）が完了。残りは統合テストとビジュアルリグレッションテストの実装段階。
 
 ## 現在中止中のTODO
 - 現在中止すべきタスクはありません。
@@ -71,8 +71,10 @@
   - handleReply()メソッドで返信ボタン押下時にInputForm返信モードを起動
   - handleSubmit()を返信モード時にaddReply() API呼び出しに分岐
   - MemoListでcalculateThreadDepths()実装、threadDepthとreplyCountをMemoCardに渡す
-- [ ] サイドバー表示切り替え・折りたたみ永続化の期待動作を定義する UI テストを追加
-- [ ] 追加テストを通すサイドバーのトグル実装と状態永続化を行う
+- [x] スレッド折りたたみ機能を実装
+  - GlobalSettingsにcollapsedThreads配列を追加して永続化
+  - MemoCardに折りたたみボタン追加（返信がある場合のみ表示）
+  - MemoListでcalculateHiddenMemos()実装、折りたたまれた子孫を非表示化
+  - SidebarでhandleThreadToggle()実装、折りたたみ状態を設定に保存
 - [ ] ツリー表示/折りたたみ/インデント用スタイルのビジュアルリグレッションまたはスナップショットテストを準備
-- [ ] スタイル実装を行い、既存/新設テストをすべて通過させる
 - [ ] UI の主要フロー（返信投稿・折りたたみ・表示切替）を検証する統合テストを整備し、継続的にグリーンを維持

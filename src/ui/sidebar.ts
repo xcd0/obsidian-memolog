@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice, TFile, setIcon, EventRef } from "obsidian";
 import MemologPlugin from "../../main";
-import { MemoEntry, SortOrder } from "../types";
+import { MemoEntry, SortOrder, ViewMode } from "../types";
 import { MemoManager } from "../core/memo-manager";
 import { MemoList } from "./components/memo-list";
 import { InputForm } from "./components/input-form";
@@ -47,6 +47,8 @@ export class MemologSidebar extends ItemView {
 	private searchVisible: boolean = false;
 	private currentSearchQuery: SearchQuery | null = null;
 	private showCompletedTodos: boolean = false; //! 完了済みTODOの表示状態（一時的）。
+	private viewMode: ViewMode = "main"; //! ビューモード（メイン/スレッド表示）。v0.0.15で追加。
+	private focusedThreadId: string | null = null; //! スレッドビューでフォーカスされているメモID。v0.0.15で追加。
 
 	//! メモデータ。
 	private memos: MemoEntry[] = [];
@@ -1686,5 +1688,19 @@ export class MemologSidebar extends ItemView {
 				settingTab.openTabById(this.plugin.manifest.id);
 			}
 		}, 100);
+	}
+
+	//! スレッドビューに遷移する。v0.0.15で追加。
+	private showThreadView(memoId: string): void {
+		this.viewMode = "thread";
+		this.focusedThreadId = memoId;
+		//! TODO: ThreadViewコンポーネントの表示処理を実装。
+	}
+
+	//! メインビューに遷移する。v0.0.15で追加。
+	private showMainView(): void {
+		this.viewMode = "main";
+		this.focusedThreadId = null;
+		//! TODO: メインビューの表示処理を実装。
 	}
 }

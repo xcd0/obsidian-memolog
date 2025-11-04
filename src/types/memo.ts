@@ -43,6 +43,9 @@ export type InsertPosition = "top" | "bottom";
 //! メモのソート順。
 export type SortOrder = "asc" | "desc";
 
+//! ビューモード（メイン/スレッド表示）。v0.0.15で追加。
+export type ViewMode = "main" | "thread";
+
 //! スレッドインデックス（メモリ内のみ）。v0.0.14で追加。
 export interface ThreadIndex {
 	//! 親メモID → 子メモIDリストのマップ。

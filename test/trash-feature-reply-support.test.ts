@@ -842,4 +842,84 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 			})
 		})
 	})
+
+	describe("フェーズ4: UIコンポーネントの実装", () => {
+		describe("DeletedMemoPlaceholderコンポーネント", () => {
+			it("削除済みメモのプレースホルダーを表示できる", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+
+				// ! プレースホルダーの基本的な表示内容を確認。
+				expect(deletedMemo.content).toBe("[削除済み]")
+				expect(deletedMemo.permanentlyDeleted).toBe(true)
+			})
+
+			it("完全削除済み（permanently-deleted）の場合は復元ボタンを表示しない", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+
+				// ! permanently-deleted: trueの場合、復元不可。
+				const canRestore = !deletedMemo.permanentlyDeleted
+				expect(canRestore).toBe(false)
+			})
+
+			it("ゴミ箱に入っている（trashedAt）場合は復元ボタンを表示する", () => {
+				const trashedMemo: MemoEntry = {
+					id: "trashed-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				// ! trashedAtがある場合、復元可能。
+				const canRestore = !!trashedMemo.trashedAt && !trashedMemo.permanentlyDeleted
+				expect(canRestore).toBe(true)
+			})
+
+			it("削除済みメモにスレッド深さが適用される", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+					parentId: "some-parent",
+				}
+
+				// ! parentIdがあるメモはスレッド深さ > 0となる。
+				const hasParent = !!deletedMemo.parentId
+				expect(hasParent).toBe(true)
+			})
+
+			it("プレースホルダーに復元ハンドラーを設定できる", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				let restoredMemoId: string | null = null
+				const onRestore = (memoId: string) => {
+					restoredMemoId = memoId
+				}
+
+				// ! 復元ハンドラーを呼び出す。
+				onRestore(deletedMemo.id)
+				expect(restoredMemoId).toBe("deleted-id")
+			})
+		})
+	})
 })

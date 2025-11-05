@@ -1,6 +1,7 @@
 import { App } from "obsidian"
 import { shouldShowDeletedPlaceholder } from "../../core/memo-query-operations"
 import { CategoryConfig, MemoEntry, SortOrder, ViewMode } from "../../types"
+import { DeletedMemoPlaceholder } from "./deleted-memo-placeholder"
 import { MemoCard, MemoCardHandlers } from "./memo-card"
 
 // ! メモリストコンポーネント。
@@ -74,11 +75,32 @@ export class MemoList {
 
 		// ! 各メモをカードとして描画。
 		for (const memo of displayMemos) {
-			// ! ピン留め状態を確認。
-			const isPinned = this.pinnedMemoIds.includes(memo.id)
-
 			// ! スレッド深さを取得。
 			const threadDepth = depthMap.get(memo.id) || 0
+
+			// ! 削除済みメモで返信がある場合はプレースホルダーを表示。v0.0.16で追加。
+			const isDeleted = memo.permanentlyDeleted || !!memo.trashedAt
+			if (
+				isDeleted &&
+				shouldShowDeletedPlaceholder(memo, this.memos, this.viewMode, this.isTrash)
+			) {
+				// ! 復元可能かどうかを判定（trashedAtがあり、permanentlyDeletedでない場合）。
+				const canRestore = !!memo.trashedAt && !memo.permanentlyDeleted
+
+				const placeholder = new DeletedMemoPlaceholder(
+					this.app,
+					this.container,
+					memo,
+					canRestore,
+					this.handlers.onRestore,
+					threadDepth,
+				)
+				placeholder.render()
+				continue
+			}
+
+			// ! ピン留め状態を確認。
+			const isPinned = this.pinnedMemoIds.includes(memo.id)
 
 			// ! 返信数を取得（MemoEntryのreplyCountプロパティを使用）。
 			const replyCount = memo.replyCount || 0

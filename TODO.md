@@ -82,37 +82,37 @@
 
 ### フェーズ3: 表示ロジックの修正
 
-- [ ] hasActiveReplies()関数の動作を定義するテストを作成
-- [ ] テストを通すhasActiveReplies()を実装（src/core/memo-query-operations.ts）
-- [ ] shouldShowDeletedPlaceholder()関数のテストを作成
-- [ ] テストを通すshouldShowDeletedPlaceholder()を実装（src/core/memo-query-operations.ts）
-- [ ] MemoList.render()のフィルタリングロジック変更テストを作成
-- [ ] テストを通すようMemoList.render()を修正（src/ui/components/memo-list.ts）
+- [x] hasActiveReplies()関数の動作を定義するテストを作成
+- [x] テストを通すhasActiveReplies()を実装（src/core/memo-query-operations.ts）
+- [x] shouldShowDeletedPlaceholder()関数のテストを作成
+- [x] テストを通すshouldShowDeletedPlaceholder()を実装（src/core/memo-query-operations.ts）
+- [x] MemoList.render()のフィルタリングロジック変更テストを作成
+- [x] テストを通すようMemoList.render()を修正（src/ui/components/memo-list.ts）
   - ゴミ箱: 全削除済みメモ表示
   - メインビュー: ルート投稿 + 返信を持つ削除済み投稿
   - スレッドビュー: 全メモ
 
 ### フェーズ4: UIコンポーネントの実装
 
-- [ ] DeletedMemoPlaceholderコンポーネントの動作を定義するテストを作成
-- [ ] テストを通すDeletedMemoPlaceholderコンポーネントを実装（src/ui/components/deleted-memo-placeholder.ts）
+- [x] DeletedMemoPlaceholderコンポーネントの動作を定義するテストを作成
+- [x] テストを通すDeletedMemoPlaceholderコンポーネントを実装（src/ui/components/deleted-memo-placeholder.ts）
   - プロパティ: memo, canRestore, onRestore
   - 表示: `[削除済み]` + 復元ボタン（復元可能な場合）
   - スタイル: グレーアウト、破線枠
-- [ ] MemoList.render()内でプレースホルダーを表示するテストを作成
-- [ ] テストを通すようMemoList.render()を拡張
-- [ ] プレースホルダーのCSSスタイルを追加（styles.css）
+- [x] MemoList.render()内でプレースホルダーを表示するテストを作成
+- [x] テストを通すようMemoList.render()を拡張
+- [?] プレースホルダーのCSSスタイルを追加（styles.css）（後で実装）
 
 ### フェーズ5: 復元ロジックの実装
 
-- [ ] getDescendantMemos()関数の動作を定義するテストを作成
-- [ ] テストを通すgetDescendantMemos()を実装（src/core/memo-query-operations.ts）
-- [ ] MemoManager.restoreMemoWithDescendants()の動作を定義するテストを作成
-- [ ] テストを通すrestoreMemoWithDescendants()を実装（src/core/memo-manager.ts）
-- [ ] Sidebar.handleRestore()ハンドラーの動作テストを作成
-- [ ] テストを通すhandleRestore()を実装（src/ui/sidebar.ts）
-- [ ] 復元ボタンのイベントハンドラーを接続するテストを作成
-- [ ] テストを通すようイベントハンドラーを接続
+- [x] getDescendantMemos()関数の動作を定義するテストを作成
+- [x] テストを通すgetDescendantMemos()を実装（src/core/memo-query-operations.ts）
+- [x] MemoManager.restoreMemoWithDescendants()の動作を定義するテストを作成
+- [x] テストを通すrestoreMemoWithDescendants()を実装（src/core/memo-manager.ts）
+- [?] Sidebar.handleRestore()ハンドラーの動作テストを作成（Phase 6統合テストで実施）
+- [?] テストを通すhandleRestore()を実装（src/ui/sidebar.ts）（Phase 6統合テストで実施）
+- [?] 復元ボタンのイベントハンドラーを接続するテストを作成（Phase 6統合テストで実施）
+- [?] テストを通すようイベントハンドラーを接続（Phase 6統合テストで実施）
 
 ### フェーズ6: 統合テスト
 

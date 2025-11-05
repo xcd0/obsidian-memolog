@@ -116,8 +116,8 @@
 
 ### フェーズ6: 統合テスト
 
-- [ ] 削除マーカーの生成・パース・表示の統合テストを作成（test/trash-feature-off.test.ts）
-- [ ] ゴミ箱OFF時の削除動作テストを作成
+- [x] 削除マーカーの生成・パース・表示の統合テストを作成（test/trash-feature-off.test.ts）
+- [x] ゴミ箱OFF時の削除動作テストを作成
   - 返信なし投稿 → 完全削除
   - 返信あり投稿 → 削除マーカー作成
 - [ ] ゴミ箱ON時の返信削除・表示テストを作成（test/trash-feature-reply.test.ts）

@@ -37,7 +37,10 @@
 			"Bash(npx dprint fmt:*)",
 			"Bash(.gitignore)",
 			"Bash(chmod:*)",
-			"Bash(xargs -I {} bash -c 'echo \"\"\"\"=== {} ===\"\"\"\" && head -20 {}')"
+			"Bash(xargs -I {} bash -c 'echo \"\"\"\"=== {} ===\"\"\"\" && head -20 {}')",
+			"Bash(/tmp/memo-manager-part1.ts)",
+			"Bash(/tmp/memo-manager-part2.ts)",
+			"Bash(src/core/memo-manager.ts)"
 		],
 		"deny": [],
 		"ask": []

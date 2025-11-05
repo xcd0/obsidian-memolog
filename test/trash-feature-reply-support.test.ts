@@ -4,12 +4,17 @@
  * v0.0.16で追加された返信投稿のゴミ箱表示・復元機能のテスト。
  */
 
-import { parseMetadata, parseTextToMemo } from "../src/core/memo-helpers"
+import { App } from "obsidian"
+import { splitFileIntoMemos } from "../src/core/memo-crud-operations"
+import { memoToText, parseMetadata, parseTextToMemo } from "../src/core/memo-helpers"
+import { MemoManager } from "../src/core/memo-manager"
 import {
+	getDescendantMemos,
 	hasActiveReplies,
 	shouldShowDeletedPlaceholder,
 } from "../src/core/memo-query-operations"
 import { createDeletionMarker } from "../src/core/memo-trash-operations"
+import { MemologVaultHandler } from "../src/fs/vault-handler"
 import { MemoEntry } from "../src/types/memo"
 
 describe("ゴミ箱機能 - 返信投稿対応", () => {
@@ -919,6 +924,356 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				// ! 復元ハンドラーを呼び出す。
 				onRestore(deletedMemo.id)
 				expect(restoredMemoId).toBe("deleted-id")
+			})
+		})
+	})
+
+	describe("フェーズ5: 復元ロジックの実装", () => {
+		describe("getDescendantMemos()関数", () => {
+			it("直接の子メモのみを取得できる", () => {
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "親メモ",
+					category: "work",
+				}
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "子メモ",
+					category: "work",
+					parentId: "parent-id",
+				}
+
+				const memos = [parentMemo, childMemo]
+
+				const descendants = getDescendantMemos("parent-id", memos)
+
+				expect(descendants).toContain(childMemo)
+				expect(descendants.length).toBe(1)
+			})
+
+			it("孫メモも含めて再帰的に取得できる", () => {
+				const rootMemo: MemoEntry = {
+					id: "root-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ルート",
+					category: "work",
+				}
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "子",
+					category: "work",
+					parentId: "root-id",
+				}
+				const grandchildMemo: MemoEntry = {
+					id: "grandchild-id",
+					timestamp: "2025-11-04T10:20:00+09:00",
+					content: "孫",
+					category: "work",
+					parentId: "child-id",
+				}
+
+				const memos = [rootMemo, childMemo, grandchildMemo]
+
+				const descendants = getDescendantMemos("root-id", memos)
+
+				expect(descendants).toContain(childMemo)
+				expect(descendants).toContain(grandchildMemo)
+				expect(descendants.length).toBe(2)
+			})
+
+			it("子孫がいない場合は空配列を返す", () => {
+				const singleMemo: MemoEntry = {
+					id: "single-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "単独メモ",
+					category: "work",
+				}
+
+				const memos = [singleMemo]
+
+				const descendants = getDescendantMemos("single-id", memos)
+
+				expect(descendants.length).toBe(0)
+			})
+
+			it("複数の子メモと孫メモを全て取得できる", () => {
+				const rootMemo: MemoEntry = {
+					id: "root-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ルート",
+					category: "work",
+				}
+				const child1: MemoEntry = {
+					id: "child1-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "子1",
+					category: "work",
+					parentId: "root-id",
+				}
+				const child2: MemoEntry = {
+					id: "child2-id",
+					timestamp: "2025-11-04T10:20:00+09:00",
+					content: "子2",
+					category: "work",
+					parentId: "root-id",
+				}
+				const grandchild1: MemoEntry = {
+					id: "grandchild1-id",
+					timestamp: "2025-11-04T10:30:00+09:00",
+					content: "孫1",
+					category: "work",
+					parentId: "child1-id",
+				}
+
+				const memos = [rootMemo, child1, child2, grandchild1]
+
+				const descendants = getDescendantMemos("root-id", memos)
+
+				expect(descendants).toContain(child1)
+				expect(descendants).toContain(child2)
+				expect(descendants).toContain(grandchild1)
+				expect(descendants.length).toBe(3)
+			})
+
+			it("削除済みメモの子孫も取得できる", () => {
+				const trashedParent: MemoEntry = {
+					id: "trashed-parent-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "削除済み親",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const trashedChild: MemoEntry = {
+					id: "trashed-child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "削除済み子",
+					category: "work",
+					parentId: "trashed-parent-id",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				const memos = [trashedParent, trashedChild]
+
+				const descendants = getDescendantMemos("trashed-parent-id", memos)
+
+				expect(descendants).toContain(trashedChild)
+				expect(descendants.length).toBe(1)
+			})
+		})
+
+		describe("MemoManager.restoreMemoWithDescendants()関数", () => {
+			let app: App
+			let vaultHandler: MemologVaultHandler
+			let memoManager: MemoManager
+
+			beforeEach(() => {
+				// ! モックAppを作成。
+				app = {} as App
+				vaultHandler = new MemologVaultHandler(app)
+				memoManager = new MemoManager(app)
+
+				// ! vaultHandlerをモックに差し替え。
+				memoManager.vaultHandler = vaultHandler
+			})
+
+			afterEach(async () => {
+				// ! テスト後にファイルをクリーンアップ。
+				const allFiles = vaultHandler.getMarkdownFiles()
+				for (const file of allFiles) {
+					await vaultHandler.deleteFile(file.path)
+				}
+			})
+
+			it("単独投稿の復元: その投稿のみを復元できる", async () => {
+				const singleMemo: MemoEntry = {
+					id: "single-memo-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "単独メモ",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				// ! ファイルに保存。
+				const filePath = "memolog/work/2025-11-04.md"
+				const content = memoToText(singleMemo)
+				await vaultHandler.writeFile(filePath, content)
+
+				// ! 復元実行。
+				const result = await memoManager.restoreMemoWithDescendants(
+					"single-memo-id",
+					"memolog",
+					"%Y-%m-%d",
+					"day",
+					false,
+				)
+
+				expect(result).toBe(true)
+
+				// ! ファイルを読み込んで確認。
+				const fileContent = await vaultHandler.readFile(filePath)
+				const restoredMemo = parseTextToMemo(fileContent, "work")
+
+				expect(restoredMemo).toBeDefined()
+				expect(restoredMemo!.id).toBe("single-memo-id")
+				expect(restoredMemo!.trashedAt).toBeUndefined()
+			})
+
+			it("親投稿の復元: 削除済みの全子孫も一括復元できる", async () => {
+				const parentMemo: MemoEntry = {
+					id: "parent-memo-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "親メモ",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const childMemo: MemoEntry = {
+					id: "child-memo-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "子メモ",
+					category: "work",
+					parentId: "parent-memo-id",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const grandchildMemo: MemoEntry = {
+					id: "grandchild-memo-id",
+					timestamp: "2025-11-04T10:20:00+09:00",
+					content: "孫メモ",
+					category: "work",
+					parentId: "child-memo-id",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				// ! ファイルに保存。
+				const filePath = "memolog/work/2025-11-04.md"
+				const content = [memoToText(parentMemo), memoToText(childMemo), memoToText(grandchildMemo)].join(
+					"\n\n",
+				)
+				await vaultHandler.writeFile(filePath, content)
+
+				// ! 親メモを復元（子孫も一括復元される）。
+				const result = await memoManager.restoreMemoWithDescendants(
+					"parent-memo-id",
+					"memolog",
+					"%Y-%m-%d",
+					"day",
+					false,
+				)
+
+				expect(result).toBe(true)
+
+				// ! ファイルを読み込んで確認。
+				const fileContent = await vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
+
+				expect(memoTexts.length).toBe(3)
+
+				const memos = memoTexts.map(text => parseTextToMemo(text, "work")).filter(m => m !== null)
+				const restoredParent = memos.find(m => m!.id === "parent-memo-id")
+				const restoredChild = memos.find(m => m!.id === "child-memo-id")
+				const restoredGrandchild = memos.find(m => m!.id === "grandchild-memo-id")
+
+				expect(restoredParent).toBeDefined()
+				expect(restoredParent!.trashedAt).toBeUndefined()
+				expect(restoredChild).toBeDefined()
+				expect(restoredChild!.trashedAt).toBeUndefined()
+				expect(restoredGrandchild).toBeDefined()
+				expect(restoredGrandchild!.trashedAt).toBeUndefined()
+			})
+
+			it("存在しないメモIDの復元: falseを返す", async () => {
+				const result = await memoManager.restoreMemoWithDescendants(
+					"non-existent-id",
+					"memolog",
+					"%Y-%m-%d",
+					"day",
+					false,
+				)
+
+				expect(result).toBe(false)
+			})
+
+			it("親投稿のみ削除済み、子投稿はアクティブな場合: 親のみ復元される", async () => {
+				const parentMemo: MemoEntry = {
+					id: "parent-only-trashed-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "削除済み親",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const activeChild: MemoEntry = {
+					id: "active-child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "アクティブな子",
+					category: "work",
+					parentId: "parent-only-trashed-id",
+				}
+
+				// ! ファイルに保存。
+				const filePath = "memolog/work/2025-11-04.md"
+				const content = [memoToText(parentMemo), memoToText(activeChild)].join("\n\n")
+				await vaultHandler.writeFile(filePath, content)
+
+				// ! 親メモを復元。
+				const result = await memoManager.restoreMemoWithDescendants(
+					"parent-only-trashed-id",
+					"memolog",
+					"%Y-%m-%d",
+					"day",
+					false,
+				)
+
+				expect(result).toBe(true)
+
+				// ! ファイルを読み込んで確認。
+				const fileContent = await vaultHandler.readFile(filePath)
+				const memoTexts = splitFileIntoMemos(fileContent)
+
+				expect(memoTexts.length).toBe(2)
+
+				const memos = memoTexts.map(text => parseTextToMemo(text, "work")).filter(m => m !== null)
+				const restoredParent = memos.find(m => m!.id === "parent-only-trashed-id")
+				const childStillActive = memos.find(m => m!.id === "active-child-id")
+
+				expect(restoredParent).toBeDefined()
+				expect(restoredParent!.trashedAt).toBeUndefined()
+				expect(childStillActive).toBeDefined()
+				expect(childStillActive!.trashedAt).toBeUndefined()
+			})
+
+			it("完全削除済み（permanently-deleted）のメモは復元できない", async () => {
+				const permanentlyDeletedMemo: MemoEntry = {
+					id: "permanently-deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+
+				// ! ファイルに保存。
+				const filePath = "memolog/work/2025-11-04.md"
+				const content = memoToText(permanentlyDeletedMemo)
+				await vaultHandler.writeFile(filePath, content)
+
+				// ! 復元実行（失敗するはず）。
+				const result = await memoManager.restoreMemoWithDescendants(
+					"permanently-deleted-id",
+					"memolog",
+					"%Y-%m-%d",
+					"day",
+					false,
+				)
+
+				expect(result).toBe(false)
+
+				// ! ファイルを読み込んで確認（変更されていないはず）。
+				const fileContent = await vaultHandler.readFile(filePath)
+				const memo = parseTextToMemo(fileContent, "work")
+
+				expect(memo).toBeDefined()
+				expect(memo!.permanentlyDeleted).toBe(true)
 			})
 		})
 	})

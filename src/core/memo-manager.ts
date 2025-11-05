@@ -16,7 +16,7 @@ import {
 	updateMemoInList,
 } from "./memo-crud-operations"
 import { memoToText, parseTextToMemo } from "./memo-helpers"
-import { hasReplies } from "./memo-query-operations"
+import { getDescendantMemos, hasReplies } from "./memo-query-operations"
 import {
 	extractCategoryFromMemo,
 	filterMemologFiles,
@@ -237,6 +237,111 @@ export class MemoManager {
 				return true
 			})(),
 			{ memoId, rootDirectory, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" },
+		)
+
+		return result.success && result.data ? result.data : false
+	}
+
+	// ! ゴミ箱からメモとその全子孫を復元する。
+	// ! v0.0.16で追加。
+	async restoreMemoWithDescendants(
+		memoId: string,
+		rootDirectory: string,
+		pathFormat: string,
+		saveUnit: SaveUnit,
+		useDirectoryCategory: boolean,
+	): Promise<boolean> {
+		const result = await this.errorHandler.wrap(
+			(async () => {
+				// ! 全カテゴリのファイルから対象メモを検索。
+				const allFiles = this.vaultHandler.getMarkdownFiles()
+				const fileContents = new Map<string, string>()
+
+				// ! ファイル内容を読み込んでMapに格納。
+				for (const file of allFiles) {
+					const content = await this.vaultHandler.readFile(file.path)
+					fileContents.set(file.path, content)
+				}
+
+				// ! memolog配下のファイルのみをフィルタリング。
+				const memologFileContents = filterMemologFiles(fileContents, rootDirectory)
+
+				// ! 削除されたメモを検索。
+				const searchResult = findDeletedMemoInFiles(memologFileContents, memoId)
+
+				if (!searchResult) {
+					notify.warning("復活対象のメモが見つかりません")
+					return false
+				}
+
+				const { filePath: targetFilePath, memoIndex: targetMemoIndex, allMemos: allMemoTexts } = searchResult
+
+				// ! まずMemoEntryに変換して検証・子孫取得。
+				const cat = extractCategoryFromMemo(allMemoTexts[targetMemoIndex])
+				const allMemosForCheck = allMemoTexts.map(text => parseTextToMemo(text, cat || "")).filter(m =>
+					m !== null
+				) as MemoEntry[]
+				const targetMemo = allMemosForCheck[targetMemoIndex]
+
+				// ! 完全削除済み（permanently-deleted）の場合は復元できない。
+				if (targetMemo.permanentlyDeleted) {
+					notify.warning("完全削除済みのメモは復元できません")
+					return false
+				}
+
+				// ! trashedAtがない場合も復元できない。
+				if (!targetMemo.trashedAt) {
+					notify.warning("メモは既に復元されています")
+					return false
+				}
+
+				// ! 復元対象のメモIDリストを作成（自分 + 子孫）。
+				const descendantMemos = getDescendantMemos(memoId, allMemosForCheck)
+				const memoIdsToRestore = [memoId, ...descendantMemos.map(m => m.id)]
+
+				// ! 複数のメモを復元する（文字列配列で処理）。
+				let updatedMemoTexts = [...allMemoTexts]
+				for (const idToRestore of memoIdsToRestore) {
+					const { memos, restored } = markMemoAsRestored(updatedMemoTexts, idToRestore)
+					if (restored) {
+						updatedMemoTexts = memos
+					}
+				}
+
+				// ! タイムスタンプ順にソート（文字列配列のまま）。
+				const sortedMemos = sortMemosByTimestamp(updatedMemoTexts)
+
+				// ! ファイルに書き込み。
+				const newContent = joinMemosToFileContent(sortedMemos)
+				await this.vaultHandler.writeFile(targetFilePath, newContent)
+
+				// ! categoryを抽出してキャッシュを無効化。
+				const restoredMemo = sortedMemos[targetMemoIndex]
+				const cacheCategory = extractCategoryFromMemo(restoredMemo)
+				if (cacheCategory) {
+					const cacheKey = generateCacheKey(targetFilePath, cacheCategory)
+					this.cacheManager.invalidateMemos(cacheKey)
+				}
+
+				// ! スレッドインデックスを無効化。
+				this.threadIndexManager.clear()
+
+				const count = memoIdsToRestore.length
+				if (count === 1) {
+					notify.success("メモを復活しました")
+				} else {
+					notify.success(`メモと子孫${count - 1}件を復活しました`)
+				}
+				return true
+			})(),
+			{
+				memoId,
+				rootDirectory,
+				pathFormat,
+				saveUnit,
+				useDirectoryCategory,
+				context: "MemoManager.restoreMemoWithDescendants",
+			},
 		)
 
 		return result.success && result.data ? result.data : false

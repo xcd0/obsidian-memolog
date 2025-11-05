@@ -242,3 +242,21 @@ export function shouldShowDeletedPlaceholder(
 	const hasActiveChildren = hasActiveReplies(memo.id, allMemos)
 	return hasActiveChildren
 }
+
+// ! 指定されたメモIDの全子孫メモを再帰的に取得する。
+// ! v0.0.16で追加。
+// ! @param parentId 親メモのID
+// ! @param allMemos 全メモエントリの配列
+// ! @returns 子孫メモエントリの配列
+export function getDescendantMemos(parentId: string, allMemos: MemoEntry[]): MemoEntry[] {
+	const result: MemoEntry[] = []
+	const children = allMemos.filter(m => m.parentId === parentId)
+
+	for (const child of children) {
+		result.push(child)
+		// ! 再帰的に孫メモも取得。
+		result.push(...getDescendantMemos(child.id, allMemos))
+	}
+
+	return result
+}

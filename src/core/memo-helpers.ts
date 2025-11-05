@@ -432,9 +432,10 @@ export function parseTextToMemo(
 			} else {
 				// ! タイムゾーンの違いで逆算に失敗する場合、正規表現でマッチを試みる。
 				const beforePattern = createTemplateRegex(parts[0])
-				const match = bodyText.match(beforePattern)
+				const match = extracted.match(beforePattern)
 				if (match && match[0]) {
-					extracted = bodyText.slice(match[0].length)
+					// ! マッチした部分を削除（先頭から）。
+					extracted = extracted.slice(match[0].length)
 				} else {
 					extractionSucceeded = false
 				}

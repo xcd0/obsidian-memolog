@@ -69,7 +69,7 @@
 - [x] テストを通すようparseTextToMemo()を拡張（src/core/memo-helpers.ts）
 - [x] createDeletionMarker()関数の動作を定義するテストを作成
 - [x] テストを通すcreateDeletionMarker()を実装（src/core/memo-trash-operations.ts）
-- [!] parseTextToMemo()の削除マーカーパース修正（`[削除済み]`を正しく読み取る）
+- [x] parseTextToMemo()の削除マーカーパース修正（`[削除済み]`を正しく読み取る）
 
 ### フェーズ2: 削除ロジックの修正
 

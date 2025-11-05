@@ -40,7 +40,8 @@
 			"Bash(xargs -I {} bash -c 'echo \"\"\"\"=== {} ===\"\"\"\" && head -20 {}')",
 			"Bash(/tmp/memo-manager-part1.ts)",
 			"Bash(/tmp/memo-manager-part2.ts)",
-			"Bash(src/core/memo-manager.ts)"
+			"Bash(src/core/memo-manager.ts)",
+			"Bash(npx jest:*)"
 		],
 		"deny": [],
 		"ask": []

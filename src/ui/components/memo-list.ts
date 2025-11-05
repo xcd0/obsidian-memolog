@@ -1,4 +1,5 @@
 import { App } from "obsidian"
+import { shouldShowDeletedPlaceholder } from "../../core/memo-query-operations"
 import { CategoryConfig, MemoEntry, SortOrder, ViewMode } from "../../types"
 import { MemoCard, MemoCardHandlers } from "./memo-card"
 
@@ -42,7 +43,25 @@ export class MemoList {
 		this.container.empty()
 
 		// ! ビューモードに応じてメモをフィルタリング。
-		const displayMemos = this.viewMode === "main" ? this.memos.filter(m => !m.parentId) : this.memos
+		// ! v0.0.16: ゴミ箱タブ、メインビュー、スレッドビューで異なるフィルタリングを適用。
+		let displayMemos: MemoEntry[]
+
+		if (this.isTrash) {
+			// ! ゴミ箱タブ: 全削除済みメモ表示（ルート/返信問わず）。
+			displayMemos = this.memos.filter(m => m.trashedAt || m.permanentlyDeleted)
+		} else if (this.viewMode === "main") {
+			// ! メインビュー: ルート投稿 + 返信を持つ削除済み投稿。
+			displayMemos = this.memos.filter(m => {
+				// ! ルート投稿は常に表示。
+				if (!m.parentId) return true
+
+				// ! 削除済みメモで返信がある場合のみ表示（プレースホルダーとして）。
+				return shouldShowDeletedPlaceholder(m, this.memos, this.viewMode, this.isTrash)
+			})
+		} else {
+			// ! スレッドビュー: 全メモ表示。
+			displayMemos = this.memos
+		}
 
 		// ! メモが空の場合はプレースホルダーを表示。
 		if (displayMemos.length === 0) {

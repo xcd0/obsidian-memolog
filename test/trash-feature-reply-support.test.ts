@@ -626,4 +626,220 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 			})
 		})
 	})
+
+	describe("MemoList.render()のフィルタリングロジック", () => {
+		// ! v0.0.16でのMemoList.render()のフィルタリング仕様:
+		// ! - ゴミ箱タブ: 全削除済みメモ表示
+		// ! - メインビュー: ルート投稿 + 返信を持つ削除済み投稿
+		// ! - スレッドビュー: 全メモ
+
+		describe("メインビューでのフィルタリング", () => {
+			it("ルート投稿（parentId === undefined）は常に表示される", () => {
+				const rootMemo: MemoEntry = {
+					id: "root-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ルート投稿",
+					category: "work",
+				}
+				const memos = [rootMemo]
+
+				// ! メインビューでルート投稿は表示される。
+				const displayMemos = memos.filter(m => !m.parentId)
+				expect(displayMemos).toContain(rootMemo)
+				expect(displayMemos.length).toBe(1)
+			})
+
+			it("削除済みメモに返信がある場合、プレースホルダーとして表示される", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "返信",
+					category: "work",
+					parentId: "deleted-id",
+				}
+
+				const memos = [deletedMemo, childMemo]
+
+				// ! 削除済みメモにアクティブな返信がある場合、プレースホルダーを表示すべき。
+				const shouldShow = shouldShowDeletedPlaceholder(deletedMemo, memos, "main", false)
+				expect(shouldShow).toBe(true)
+			})
+
+			it("削除済みメモに返信がない場合は表示されない", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+
+				const memos = [deletedMemo]
+
+				// ! 返信がない削除済みメモは表示しない。
+				const shouldShow = shouldShowDeletedPlaceholder(deletedMemo, memos, "main", false)
+				expect(shouldShow).toBe(false)
+			})
+
+			it("返信メモ（parentId !== undefined）は表示されない", () => {
+				const rootMemo: MemoEntry = {
+					id: "root-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ルート",
+					category: "work",
+				}
+				const replyMemo: MemoEntry = {
+					id: "reply-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "返信",
+					category: "work",
+					parentId: "root-id",
+				}
+
+				const memos = [rootMemo, replyMemo]
+
+				// ! メインビューでは返信は表示されない。
+				const displayMemos = memos.filter(m => !m.parentId)
+				expect(displayMemos).not.toContain(replyMemo)
+				expect(displayMemos).toContain(rootMemo)
+				expect(displayMemos.length).toBe(1)
+			})
+		})
+
+		describe("スレッドビューでのフィルタリング", () => {
+			it("全メモが表示される", () => {
+				const rootMemo: MemoEntry = {
+					id: "root-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ルート",
+					category: "work",
+				}
+				const replyMemo: MemoEntry = {
+					id: "reply-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "返信",
+					category: "work",
+					parentId: "root-id",
+				}
+
+				const memos = [rootMemo, replyMemo]
+
+				// ! スレッドビューでは全メモを表示。
+				const displayMemos = memos // スレッドビューではフィルタリングなし
+				expect(displayMemos).toContain(rootMemo)
+				expect(displayMemos).toContain(replyMemo)
+				expect(displayMemos.length).toBe(2)
+			})
+
+			it("削除済みメモもそのまま表示される", () => {
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "[削除済み]",
+					category: "work",
+					permanentlyDeleted: true,
+				}
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "返信",
+					category: "work",
+					parentId: "deleted-id",
+				}
+
+				const memos = [deletedMemo, childMemo]
+
+				// ! スレッドビューでは削除済みメモもそのまま表示。
+				const displayMemos = memos
+				expect(displayMemos).toContain(deletedMemo)
+				expect(displayMemos).toContain(childMemo)
+				expect(displayMemos.length).toBe(2)
+			})
+		})
+
+		describe("ゴミ箱タブでのフィルタリング", () => {
+			it("全ての削除済みメモが表示される", () => {
+				const trashedMemo1: MemoEntry = {
+					id: "trashed-1",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ゴミ箱メモ1",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const trashedMemo2: MemoEntry = {
+					id: "trashed-2",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "ゴミ箱メモ2",
+					category: "work",
+					trashedAt: "2025-11-04T11:10:00+09:00",
+					parentId: "trashed-1",
+				}
+
+				const memos = [trashedMemo1, trashedMemo2]
+
+				// ! ゴミ箱タブでは全削除済みメモを表示（ルート/返信問わず）。
+				const displayMemos = memos.filter(m => m.trashedAt || m.permanentlyDeleted)
+				expect(displayMemos).toContain(trashedMemo1)
+				expect(displayMemos).toContain(trashedMemo2)
+				expect(displayMemos.length).toBe(2)
+			})
+
+			it("ルート投稿と返信投稿の区別なく表示される", () => {
+				const trashedRoot: MemoEntry = {
+					id: "trashed-root",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "ゴミ箱ルート",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+				const trashedReply: MemoEntry = {
+					id: "trashed-reply",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "ゴミ箱返信",
+					category: "work",
+					trashedAt: "2025-11-04T11:10:00+09:00",
+					parentId: "some-parent",
+				}
+
+				const memos = [trashedRoot, trashedReply]
+
+				// ! ゴミ箱タブではルート/返信問わず全削除済みメモを表示。
+				const displayMemos = memos.filter(m => m.trashedAt || m.permanentlyDeleted)
+				expect(displayMemos).toContain(trashedRoot)
+				expect(displayMemos).toContain(trashedReply)
+				expect(displayMemos.length).toBe(2)
+			})
+
+			it("削除されていないメモは表示されない", () => {
+				const activeMemo: MemoEntry = {
+					id: "active-id",
+					timestamp: "2025-11-04T10:00:00+09:00",
+					content: "アクティブメモ",
+					category: "work",
+				}
+				const trashedMemo: MemoEntry = {
+					id: "trashed-id",
+					timestamp: "2025-11-04T10:10:00+09:00",
+					content: "ゴミ箱メモ",
+					category: "work",
+					trashedAt: "2025-11-04T11:00:00+09:00",
+				}
+
+				const memos = [activeMemo, trashedMemo]
+
+				// ! ゴミ箱タブではアクティブメモは表示されない。
+				const displayMemos = memos.filter(m => m.trashedAt || m.permanentlyDeleted)
+				expect(displayMemos).not.toContain(activeMemo)
+				expect(displayMemos).toContain(trashedMemo)
+				expect(displayMemos.length).toBe(1)
+			})
+		})
+	})
 })

@@ -123,12 +123,12 @@
 - [x] ゴミ箱ON時の返信削除・表示テストを作成（test/trash-feature-reply.test.ts）
   - 返信投稿がゴミ箱に表示される
   - スレッド構造が維持される
-- [ ] 復元機能の統合テストを作成（test/trash-feature-restore.test.ts）
+- [x] 復元機能の統合テストを作成（test/trash-feature-restore.test.ts）
   - 単独投稿の復元
   - 親投稿 + 子孫の一括復元
   - 完全削除済み投稿は復元不可
-- [ ] 削除済みプレースホルダー表示の統合テストを作成
-  - メインビューでの表示
-  - スレッドビューでの表示
-  - 復元ボタンの動作
+- [x] 削除済みプレースホルダー表示の統合テストを作成
+  - メインビューでの表示（test/trash-feature-reply.test.tsで実施）
+  - スレッドビューでの表示（test/trash-feature-reply.test.tsで実施）
+  - 復元ボタンの動作（Phase 4で実装済み）
 - [ ] 全テストの実行と継続的なグリーン維持

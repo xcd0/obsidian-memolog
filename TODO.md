@@ -14,6 +14,7 @@
 
 - t-wada さんのTDD手法を徹底し、必ずテストを先に書いてから実装に着手する。
 - TODOを新規追加する際は、「先に作成するテスト」と「テストを通す実装」の両方をセットで記述する。
+- 以降のtodo.mdの記述を毎作業ごとに更新する。終わったタスクに関する記述を削除し、追加の作業があれば追加する。
 
 ---
 
@@ -68,8 +69,7 @@
 - [x] テストを通すようparseTextToMemo()を拡張（src/core/memo-helpers.ts）
 - [x] createDeletionMarker()関数の動作を定義するテストを作成
 - [x] テストを通すcreateDeletionMarker()を実装（src/core/memo-trash-operations.ts）
-- [x] parseTextToMemo()の削除マーカーパース修正（`[削除済み]`を正しく読み取る）
-- [x] フェーズ1の全テスト成功確認（1070テスト）
+- [!] parseTextToMemo()の削除マーカーパース修正（`[削除済み]`を正しく読み取る）
 
 ### フェーズ2: 削除ロジックの修正
 

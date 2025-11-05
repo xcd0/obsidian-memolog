@@ -193,3 +193,12 @@ export function getMemosWithAttachments(memos: MemoEntry[]): MemoEntry[] {
 export function getMemosWithTemplate(memos: MemoEntry[]): MemoEntry[] {
 	return memos.filter(memo => memo.template !== undefined && memo.template !== null)
 }
+
+// ! メモに返信（子メモ）があるかチェックする。
+// ! v0.0.16で追加。
+// ! @param memoId チェックするメモのID
+// ! @param allMemos 全メモエントリの配列
+// ! @returns 返信がある場合はtrue
+export function hasReplies(memoId: string, allMemos: MemoEntry[]): boolean {
+	return allMemos.some(memo => memo.parentId === memoId)
+}

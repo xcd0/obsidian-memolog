@@ -162,3 +162,27 @@ export function createDeletionMarker(memo: MemoEntry): string {
 	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : ""
 	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${parentIdEncoded}, permanently-deleted: "true" -->\n[削除済み]\n`
 }
+
+// ! メモリスト内の指定されたメモを削除マーカーに置き換える。
+// ! v0.0.16で追加。
+// ! @param memoTexts メモテキストの配列
+// ! @param memoId 削除マーカーに置き換えるメモのID
+// ! @param memo 削除マーカーの元になるメモエントリ
+// ! @returns 更新後のメモテキスト配列と置き換えられたかどうか
+export function replaceMemoWithDeletionMarker(
+	memoTexts: string[],
+	memoId: string,
+	memo: MemoEntry,
+): { memos: string[]; replaced: boolean } {
+	let replaced = false
+
+	const updatedMemos = memoTexts.map(memoText => {
+		if (memoText.includes(`memo-id: ${memoId}`)) {
+			replaced = true
+			return createDeletionMarker(memo)
+		}
+		return memoText
+	})
+
+	return { memos: updatedMemos, replaced }
+}

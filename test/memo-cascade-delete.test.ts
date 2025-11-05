@@ -49,7 +49,7 @@ describe("MemoManager - カスケード削除", () => {
 		memoManager = new MemoManager(app as never)
 	})
 
-	test("親メモを削除すると子メモも削除される", async () => {
+	test("親メモを削除すると子メモも削除される（v0.0.16: 親は削除マーカー、子は削除）", async () => {
 		const fileContent = `<!-- memo-id: parent, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
 ## 2025-11-04 10:00
 親メモ
@@ -66,14 +66,16 @@ describe("MemoManager - カスケード削除", () => {
 		// ! 書き込まれた内容を確認。
 		const writtenContent = (app.vault.modify.mock.calls[0] as unknown[])[1] as string
 
-		// ! 親メモと子メモの両方が削除されている（含まれていない）。
-		expect(writtenContent).not.toContain("memo-id: parent")
-		expect(writtenContent).not.toContain("memo-id: child")
+		// ! v0.0.16: 親メモは削除マーカーに変換され、子メモは完全削除される。
+		expect(writtenContent).toContain("memo-id: parent")
+		expect(writtenContent).toContain("permanently-deleted: \"true\"")
+		expect(writtenContent).toContain("[削除済み]")
 		expect(writtenContent).not.toContain("親メモ")
+		expect(writtenContent).not.toContain("memo-id: child")
 		expect(writtenContent).not.toContain("子メモ")
 	})
 
-	test("孫メモまで含めて再帰的に削除される", async () => {
+	test("孫メモまで含めて再帰的に削除される（v0.0.16: 親は削除マーカー、子孫は削除）", async () => {
 		const fileContent = `<!-- memo-id: root, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
 ## 2025-11-04 10:00
 ルート
@@ -94,13 +96,15 @@ describe("MemoManager - カスケード削除", () => {
 		// ! 書き込まれた内容を確認。
 		const writtenContent = (app.vault.modify.mock.calls[0] as unknown[])[1] as string
 
-		// ! 3つのメモすべてが削除されている。
-		expect(writtenContent).not.toContain("memo-id: root")
+		// ! v0.0.16: 親メモは削除マーカーに変換され、子孫は完全削除される。
+		expect(writtenContent).toContain("memo-id: root")
+		expect(writtenContent).toContain("permanently-deleted: \"true\"")
+		expect(writtenContent).toContain("[削除済み]")
 		expect(writtenContent).not.toContain("memo-id: child")
 		expect(writtenContent).not.toContain("memo-id: grandchild")
 	})
 
-	test("複数の子メモを持つ親を削除するとすべての子が削除される", async () => {
+	test("複数の子メモを持つ親を削除するとすべての子が削除される（v0.0.16: 親は削除マーカー）", async () => {
 		const fileContent = `<!-- memo-id: parent, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
 ## 2025-11-04 10:00
 親
@@ -125,8 +129,9 @@ describe("MemoManager - カスケード削除", () => {
 		// ! 書き込まれた内容を確認。
 		const writtenContent = (app.vault.modify.mock.calls[0] as unknown[])[1] as string
 
-		// ! 4つのメモすべてが削除されている。
-		expect(writtenContent).not.toContain("memo-id: parent")
+		// ! v0.0.16: 親メモは削除マーカーに変換され、子は完全削除される。
+		expect(writtenContent).toContain("memo-id: parent")
+		expect(writtenContent).toContain("permanently-deleted: \"true\"")
 		expect(writtenContent).not.toContain("memo-id: child1")
 		expect(writtenContent).not.toContain("memo-id: child2")
 		expect(writtenContent).not.toContain("memo-id: child3")
@@ -197,7 +202,7 @@ describe("MemoManager - カスケード削除", () => {
 		expect(clearSpy).toHaveBeenCalled()
 	})
 
-	test("複雑なツリー構造でもすべての子孫が削除される", async () => {
+	test("複雑なツリー構造でもすべての子孫が削除される（v0.0.16: 親は削除マーカー）", async () => {
 		const fileContent = `<!-- memo-id: root, timestamp: 2025-11-04T10:00:00+09:00, category: "work" -->
 ## 2025-11-04 10:00
 ルート
@@ -234,8 +239,9 @@ describe("MemoManager - カスケード削除", () => {
 		// ! 書き込まれた内容を確認。
 		const writtenContent = (app.vault.modify.mock.calls[0] as unknown[])[1] as string
 
-		// ! ツリー内のすべてのメモが削除されている。
-		expect(writtenContent).not.toContain("memo-id: root")
+		// ! v0.0.16: ルートメモは削除マーカーに変換され、子孫は完全削除される。
+		expect(writtenContent).toContain("memo-id: root")
+		expect(writtenContent).toContain("permanently-deleted: \"true\"")
 		expect(writtenContent).not.toContain("memo-id: child1")
 		expect(writtenContent).not.toContain("memo-id: child2")
 		expect(writtenContent).not.toContain("memo-id: grandchild1-1")

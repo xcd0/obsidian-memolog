@@ -120,7 +120,7 @@
 - [x] ゴミ箱OFF時の削除動作テストを作成
   - 返信なし投稿 → 完全削除
   - 返信あり投稿 → 削除マーカー作成
-- [ ] ゴミ箱ON時の返信削除・表示テストを作成（test/trash-feature-reply.test.ts）
+- [x] ゴミ箱ON時の返信削除・表示テストを作成（test/trash-feature-reply.test.ts）
   - 返信投稿がゴミ箱に表示される
   - スレッド構造が維持される
 - [ ] 復元機能の統合テストを作成（test/trash-feature-restore.test.ts）

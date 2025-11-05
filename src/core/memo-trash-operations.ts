@@ -1,3 +1,4 @@
+import { MemoEntry } from "../types/memo"
 import { isDeletedMemo } from "./memo-helpers"
 
 // ! ゴミ箱操作の純粋関数群。
@@ -150,4 +151,14 @@ export function findDeletedMemoIndexById(memoTexts: string[], memoId: string): n
 	return memoTexts.findIndex(
 		text => text.includes(`memo-id: ${memoId}`) && isDeletedMemo(text),
 	)
+}
+
+// ! 削除マーカーを作成する（ゴミ箱OFF時に返信がある投稿を削除する場合）。
+// ! v0.0.16で追加。
+// ! @param memo 削除するメモ
+// ! @returns 削除マーカーのテキスト
+export function createDeletionMarker(memo: MemoEntry): string {
+	const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : ""
+	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : ""
+	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${parentIdEncoded}, permanently-deleted: "true" -->\n[削除済み]\n`
 }

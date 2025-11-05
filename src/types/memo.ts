@@ -35,6 +35,9 @@ export interface MemoEntry {
 
 	// ! 返信数（キャッシュ用）。v0.0.14で追加。
 	replyCount?: number
+
+	// ! 完全削除済みフラグ（ゴミ箱OFF時に返信がある投稿を削除した場合）。v0.0.16で追加。
+	permanentlyDeleted?: boolean
 }
 
 // ! メモの挿入位置。

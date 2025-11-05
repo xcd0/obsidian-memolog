@@ -36,7 +36,8 @@
 			"Bash(npm run format:*)",
 			"Bash(npx dprint fmt:*)",
 			"Bash(.gitignore)",
-			"Bash(chmod:*)"
+			"Bash(chmod:*)",
+			"Bash(xargs -I {} bash -c 'echo \"\"\"\"=== {} ===\"\"\"\" && head -20 {}')"
 		],
 		"deny": [],
 		"ask": []

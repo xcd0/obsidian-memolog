@@ -142,6 +142,7 @@ export function parseMetadata(text: string): {
 	trashedAt: string | null
 	pinnedAt: string | null
 	parentId: string | null
+	permanentlyDeleted?: boolean
 } {
 	const commentMatch = text.match(/<!-- (.+?) -->/)
 
@@ -169,6 +170,7 @@ export function parseMetadata(text: string): {
 	const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/)
 	const pinnedAtMatch = comment.match(/pinnedAt: "([^"]+)"/)
 	const parentIdMatch = comment.match(/parent-id: ([^,]+?)(?:,|$)/)
+	const permanentlyDeletedMatch = comment.match(/permanently-deleted: "([^"]+)"/)
 
 	// ! categoryのパース処理（JSON形式と非JSON形式の両方に対応）。
 	let parsedCategory: string | null = null
@@ -196,6 +198,7 @@ export function parseMetadata(text: string): {
 		trashedAt: trashedAtMatch?.[1] || null,
 		pinnedAt: pinnedAtMatch?.[1] || null,
 		parentId: parentIdMatch?.[1].trim() || null,
+		permanentlyDeleted: permanentlyDeletedMatch ? permanentlyDeletedMatch[1] === "true" : undefined,
 	}
 }
 
@@ -381,15 +384,22 @@ export function parseTextToMemo(
 
 	// ! 削除フラグとtrashedAtタイムスタンプをmemo-idヘッダーから抽出。
 	let trashedAt: string | undefined = undefined
+	let permanentlyDeleted: boolean | undefined = undefined
 	if (commentMatch) {
 		const comment = commentMatch[1]
 		const deletedMatch = comment.match(/deleted: "([^"]+)"/)
 		const trashedAtMatch = comment.match(/trashedAt: "([^"]+)"/)
+		const permanentlyDeletedMatch = comment.match(/permanently-deleted: "([^"]+)"/)
+
 		if (deletedMatch && trashedAtMatch) {
 			const isDeleted = deletedMatch[1] === "true"
 			if (isDeleted) {
 				trashedAt = trashedAtMatch[1]
 			}
+		}
+
+		if (permanentlyDeletedMatch) {
+			permanentlyDeleted = permanentlyDeletedMatch[1] === "true"
 		}
 	}
 
@@ -464,9 +474,19 @@ export function parseTextToMemo(
 			content = bodyText
 		}
 	} else {
-		// ! デフォルト: HTMLコメントの次がタイムスタンプ行、その次の行から本文。
-		const actualContentStartIndex = contentStartIndex + 1
-		content = lines.slice(actualContentStartIndex).join("\n").trim()
+		// ! デフォルト: HTMLコメントの次の行から本文。
+		// ! (permanently-deletedの場合、次の行が`[削除済み]`となる)
+		content = lines.slice(contentStartIndex).join("\n").trim()
+
+		// ! 従来のタイムスタンプ行の除去処理（後方互換性）。
+		// ! タイムスタンプパターンで始まる場合、その行をスキップ。
+		const timestampPattern = /^##?\s*\d{4}-\d{2}-\d{2}/
+		const firstContentLine = lines[contentStartIndex]
+		if (firstContentLine && timestampPattern.test(firstContentLine)) {
+			// ! タイムスタンプ行の次から本文。
+			const actualContentStartIndex = contentStartIndex + 1
+			content = lines.slice(actualContentStartIndex).join("\n").trim()
+		}
 	}
 
 	// ! コメントアウトされたコンテンツ（<!--\nCONTENT\n-->）を展開。
@@ -491,5 +511,6 @@ export function parseTextToMemo(
 		template,
 		trashedAt,
 		parentId,
+		permanentlyDeleted,
 	}
 }

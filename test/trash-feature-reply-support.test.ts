@@ -5,6 +5,10 @@
  */
 
 import { parseMetadata, parseTextToMemo } from "../src/core/memo-helpers"
+import {
+	hasActiveReplies,
+	shouldShowDeletedPlaceholder,
+} from "../src/core/memo-query-operations"
 import { createDeletionMarker } from "../src/core/memo-trash-operations"
 import { MemoEntry } from "../src/types/memo"
 
@@ -388,6 +392,237 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 
 				expect(expectedMarker).toContain("permanently-deleted: \"true\"")
 				expect(expectedMarker).toContain("parent-id: parent-id")
+			})
+		})
+	})
+
+	describe("フェーズ3: 表示ロジックの修正", () => {
+		describe("hasActiveReplies()関数", () => {
+			it("削除されていない返信がある場合はtrueを返す", () => {
+				// ! TDD: hasActiveReplies()の動作を定義。
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "親メモ",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "parent-id",
+				}
+
+				const memos = [parentMemo, childMemo]
+
+				// ! アクティブな返信があるのでtrue。
+				expect(hasActiveReplies("parent-id", memos)).toBe(true)
+			})
+
+			it("返信がすべて削除済みの場合はfalseを返す", () => {
+				// ! TDD: 返信がすべて削除済みの場合はfalse。
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "親メモ",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "parent-id",
+					trashedAt: "2025-10-31T12:05:00.000Z",
+				}
+
+				const memos = [parentMemo, childMemo]
+
+				// ! 返信は削除済みなのでfalse。
+				expect(hasActiveReplies("parent-id", memos)).toBe(false)
+			})
+
+			it("返信が完全削除済み（permanently-deleted）の場合はfalseを返す", () => {
+				// ! TDD: 返信が完全削除済みの場合もfalse。
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "親メモ",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "[削除済み]",
+					parentId: "parent-id",
+					permanentlyDeleted: true,
+				}
+
+				const memos = [parentMemo, childMemo]
+
+				// ! 完全削除済みなのでfalse。
+				expect(hasActiveReplies("parent-id", memos)).toBe(false)
+			})
+
+			it("アクティブな返信と削除済み返信が混在する場合はtrueを返す", () => {
+				// ! TDD: アクティブな返信が1つでもあればtrue。
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "親メモ",
+				}
+
+				const childMemo1: MemoEntry = {
+					id: "child-id-1",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信1",
+					parentId: "parent-id",
+				}
+
+				const childMemo2: MemoEntry = {
+					id: "child-id-2",
+					category: "work",
+					timestamp: "2025-10-31T12:02:00.000Z",
+					content: "返信2",
+					parentId: "parent-id",
+					trashedAt: "2025-10-31T12:05:00.000Z",
+				}
+
+				const memos = [parentMemo, childMemo1, childMemo2]
+
+				// ! アクティブな返信が1つあるのでtrue。
+				expect(hasActiveReplies("parent-id", memos)).toBe(true)
+			})
+
+			it("返信がない場合はfalseを返す", () => {
+				// ! TDD: 返信がない場合はfalse。
+				const parentMemo: MemoEntry = {
+					id: "parent-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "親メモ",
+				}
+
+				const memos = [parentMemo]
+
+				// ! 返信がないのでfalse。
+				expect(hasActiveReplies("parent-id", memos)).toBe(false)
+			})
+		})
+
+		describe("shouldShowDeletedPlaceholder()関数", () => {
+			it("メインビューで削除済みメモに返信がある場合はtrueを返す", () => {
+				// ! TDD: メインビューで削除済みメモに返信がある場合は表示。
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "[削除済み]",
+					permanentlyDeleted: true,
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "deleted-id",
+				}
+
+				const memos = [deletedMemo, childMemo]
+
+				// ! 削除済みで返信があり、メインビューなのでtrue。
+				expect(shouldShowDeletedPlaceholder(deletedMemo, memos, "main", false)).toBe(true)
+			})
+
+			it("スレッドビューで削除済みメモに返信がある場合はtrueを返す", () => {
+				// ! TDD: スレッドビューでも削除済みメモに返信がある場合は表示。
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "[削除済み]",
+					trashedAt: "2025-10-31T12:05:00.000Z",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "deleted-id",
+				}
+
+				const memos = [deletedMemo, childMemo]
+				// ! 削除済みで返信があり、スレッドビューなのでtrue。
+				expect(shouldShowDeletedPlaceholder(deletedMemo, memos, "thread", false)).toBe(true)
+			})
+
+			it("削除済みメモに返信がない場合はfalseを返す", () => {
+				// ! TDD: 返信がない削除済みメモは表示しない。
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "[削除済み]",
+					permanentlyDeleted: true,
+				}
+
+				const memos = [deletedMemo]
+				// ! 返信がないのでfalse。
+				expect(shouldShowDeletedPlaceholder(deletedMemo, memos, "main", false)).toBe(false)
+			})
+
+			it("削除されていないメモの場合はfalseを返す", () => {
+				// ! TDD: 削除されていないメモは表示しない。
+				const memo: MemoEntry = {
+					id: "memo-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "通常のメモ",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "memo-id",
+				}
+
+				const memos = [memo, childMemo]
+				// ! 削除されていないのでfalse。
+				expect(shouldShowDeletedPlaceholder(memo, memos, "main", false)).toBe(false)
+			})
+
+			it("ゴミ箱タブの場合はfalseを返す", () => {
+				// ! TDD: ゴミ箱タブではプレースホルダーを表示しない。
+				const deletedMemo: MemoEntry = {
+					id: "deleted-id",
+					category: "work",
+					timestamp: "2025-10-31T12:00:00.000Z",
+					content: "[削除済み]",
+					trashedAt: "2025-10-31T12:05:00.000Z",
+				}
+
+				const childMemo: MemoEntry = {
+					id: "child-id",
+					category: "work",
+					timestamp: "2025-10-31T12:01:00.000Z",
+					content: "返信",
+					parentId: "deleted-id",
+				}
+
+				const memos = [deletedMemo, childMemo]
+				// ! ゴミ箱タブではプレースホルダーを表示しない。
+				expect(shouldShowDeletedPlaceholder(deletedMemo, memos, "main", true)).toBe(false)
 			})
 		})
 	})

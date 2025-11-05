@@ -202,3 +202,43 @@ export function getMemosWithTemplate(memos: MemoEntry[]): MemoEntry[] {
 export function hasReplies(memoId: string, allMemos: MemoEntry[]): boolean {
 	return allMemos.some(memo => memo.parentId === memoId)
 }
+
+// ! メモに削除されていない（アクティブな）返信があるかチェックする。
+// ! v0.0.16で追加。
+// ! @param memoId チェックするメモのID
+// ! @param allMemos 全メモエントリの配列
+// ! @returns アクティブな返信がある場合はtrue
+export function hasActiveReplies(memoId: string, allMemos: MemoEntry[]): boolean {
+	return allMemos.some(
+		memo => memo.parentId === memoId && !memo.trashedAt && !memo.permanentlyDeleted,
+	)
+}
+
+// ! 削除済みメモのプレースホルダーを表示すべきかチェックする。
+// ! v0.0.16で追加。
+// ! @param memo チェックするメモ
+// ! @param allMemos 全メモエントリの配列
+// ! @param viewMode 現在のビューモード
+// ! @param isTrashTab ゴミ箱タブかどうか
+// ! @returns プレースホルダーを表示すべき場合はtrue
+export function shouldShowDeletedPlaceholder(
+	memo: MemoEntry,
+	allMemos: MemoEntry[],
+	_viewMode: "main" | "thread",
+	isTrashTab: boolean,
+): boolean {
+	// ! ゴミ箱タブではプレースホルダーを表示しない。
+	if (isTrashTab) {
+		return false
+	}
+
+	// ! 削除されていないメモはプレースホルダーを表示しない。
+	const isDeleted = memo.permanentlyDeleted || !!memo.trashedAt
+	if (!isDeleted) {
+		return false
+	}
+
+	// ! アクティブな返信がある場合のみプレースホルダーを表示。
+	const hasActiveChildren = hasActiveReplies(memo.id, allMemos)
+	return hasActiveChildren
+}

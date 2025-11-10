@@ -1,6 +1,6 @@
 import { App } from "obsidian"
 import { MemologVaultHandler } from "../fs/vault-handler"
-import { MemoEntry, SaveUnit, SortOrder, ThreadIndex, ThreadTree } from "../types"
+import { MemoEntry, SortOrder, ThreadIndex, ThreadTree } from "../types"
 import { notify } from "../utils/notification-manager"
 import { CacheManager } from "./cache-manager"
 import { FileIOError, getErrorHandler } from "./error-handler"
@@ -179,7 +179,6 @@ export class MemoManager {
 		memoId: string,
 		rootDirectory: string,
 		pathFormat: string,
-		saveUnit: SaveUnit,
 		useDirectoryCategory: boolean,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
@@ -236,7 +235,7 @@ export class MemoManager {
 				notify.success("メモを復活しました")
 				return true
 			})(),
-			{ memoId, rootDirectory, pathFormat, saveUnit, useDirectoryCategory, context: "MemoManager.restoreFromTrash" },
+			{ memoId, rootDirectory, pathFormat, useDirectoryCategory, context: "MemoManager.restoreFromTrash" },
 		)
 
 		return result.success && result.data ? result.data : false
@@ -248,7 +247,6 @@ export class MemoManager {
 		memoId: string,
 		rootDirectory: string,
 		pathFormat: string,
-		saveUnit: SaveUnit,
 		useDirectoryCategory: boolean,
 	): Promise<boolean> {
 		const result = await this.errorHandler.wrap(
@@ -338,7 +336,6 @@ export class MemoManager {
 				memoId,
 				rootDirectory,
 				pathFormat,
-				saveUnit,
 				useDirectoryCategory,
 				context: "MemoManager.restoreMemoWithDescendants",
 			},

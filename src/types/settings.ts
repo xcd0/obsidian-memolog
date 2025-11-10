@@ -35,9 +35,6 @@ export interface GlobalSettings {
 	// ! 既定のカテゴリのディレクトリ名。
 	defaultCategory: string
 
-	// ! 保存単位。
-	saveUnit: SaveUnit
-
 	// ! ソート順（昇順/降順）。
 	order: "asc" | "desc"
 
@@ -117,7 +114,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 		},
 	],
 	defaultCategory: "work",
-	saveUnit: "day",
 	order: "asc",
 	rootDirectory: "memolog",
 	memoTemplate: "# %Y-%m-%d %H:%M:%S\n{{content}}",

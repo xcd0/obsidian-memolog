@@ -639,7 +639,6 @@ describe("MemoManager", () => {
 		const category = "test"
 		const rootDirectory = "memolog"
 		const pathFormat = "YYYY-MM-DD"
-		const saveUnit = "month" as const
 
 		it("ゴミ箱からメモを復活できる", async () => {
 			// ! メモを追加。
@@ -653,7 +652,6 @@ describe("MemoManager", () => {
 				memo.id,
 				rootDirectory,
 				pathFormat,
-				saveUnit,
 				false,
 			)
 
@@ -671,7 +669,6 @@ describe("MemoManager", () => {
 				"nonexistent-id",
 				rootDirectory,
 				pathFormat,
-				saveUnit,
 				false,
 			)
 
@@ -687,7 +684,6 @@ describe("MemoManager", () => {
 				memo.id,
 				rootDirectory,
 				pathFormat,
-				saveUnit,
 				false,
 			)
 

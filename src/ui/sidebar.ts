@@ -466,21 +466,13 @@ export class MemologSidebar extends ItemView {
 					const processedFiles = new Set<string>() // ! 処理済みファイルパスを記録。
 
 					for (const cat of settings.categories) {
-						const filePath = settings.pathFormat
-							? PathGenerator.generateCustomPath(
-								settings.rootDirectory,
-								cat.directory,
-								settings.pathFormat,
-								settings.useDirectoryCategory,
-								this.selectedDate,
-							)
-							: PathGenerator.generateFilePath(
-								settings.rootDirectory,
-								cat.directory,
-								settings.saveUnit,
-								settings.useDirectoryCategory,
-								this.selectedDate,
-							)
+						const filePath = PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							cat.directory,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							this.selectedDate,
+						)
 
 						// ! 既に処理済みのファイルはスキップ（重複読み込み防止）。
 						if (processedFiles.has(filePath)) {
@@ -565,21 +557,13 @@ export class MemologSidebar extends ItemView {
 					const currentDate = new Date(startDate)
 					currentDate.setHours(0, 0, 0, 0)
 					while (currentDate <= endDate) {
-						const filePath = settings.pathFormat
-							? PathGenerator.generateCustomPath(
-								settings.rootDirectory,
-								categoryDirectory,
-								settings.pathFormat,
-								settings.useDirectoryCategory,
-								currentDate,
-							)
-							: PathGenerator.generateFilePath(
-								settings.rootDirectory,
-								categoryDirectory,
-								settings.saveUnit,
-								settings.useDirectoryCategory,
-								currentDate,
-							)
+						const filePath = PathGenerator.generateCustomPath(
+							settings.rootDirectory,
+							categoryDirectory,
+							settings.pathFormat,
+							settings.useDirectoryCategory,
+							currentDate,
+						)
 
 						// ! ファイルが存在する場合のみ読み込む。
 						if (this.memoManager.vaultHandler.fileExists(filePath)) {
@@ -606,21 +590,13 @@ export class MemologSidebar extends ItemView {
 				} else {
 					// ! カレンダーで日付が選択されている場合、またはフィルターが未設定の場合。
 					const targetDate = this.selectedDate || new Date()
-					const filePath = settings.pathFormat
-						? PathGenerator.generateCustomPath(
-							settings.rootDirectory,
-							categoryDirectory,
-							settings.pathFormat,
-							settings.useDirectoryCategory,
-							targetDate,
-						)
-						: PathGenerator.generateFilePath(
-							settings.rootDirectory,
-							categoryDirectory,
-							settings.saveUnit,
-							settings.useDirectoryCategory,
-							targetDate,
-						)
+					const filePath = PathGenerator.generateCustomPath(
+						settings.rootDirectory,
+						categoryDirectory,
+						settings.pathFormat,
+						settings.useDirectoryCategory,
+						targetDate,
+					)
 
 					// ! ファイルが存在するか確認。
 					const fileExists = this.memoManager.vaultHandler.fileExists(filePath)
@@ -879,19 +855,12 @@ export class MemologSidebar extends ItemView {
 			const category = this.currentCategory || settings.defaultCategory
 
 			// ! 現在のメモが保存されるパスを取得（添付ファイルパスの計算に必要）。
-			const memoFilePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					category,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					category,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-				)
+			const memoFilePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				category,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+			)
 
 			// ! PathGeneratorを使用して添付ファイルの完全なパスを生成。
 			const filePath = PathGenerator.generateAttachmentPath(
@@ -940,19 +909,12 @@ export class MemologSidebar extends ItemView {
 			}
 
 			// ! ファイルパスを生成（directoryを使用）。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					categoryDirectory,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					categoryDirectory,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-				)
+			const filePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				categoryDirectory,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+			)
 
 			// ! 添付ファイルをVaultにコピー。
 			const copiedAttachments: string[] = []
@@ -1004,21 +966,13 @@ export class MemologSidebar extends ItemView {
 
 				// ! 親メモと同じカテゴリに返信を作成。
 				const parentMemoDate = new Date(parentMemo.timestamp)
-				const parentFilePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						parentMemo.category,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						parentMemoDate,
-					)
-					: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						parentMemo.category,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						parentMemoDate,
-					)
+				const parentFilePath = PathGenerator.generateCustomPath(
+					settings.rootDirectory,
+					parentMemo.category,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					parentMemoDate,
+				)
 
 				// ! 親メモのカテゴリ設定を取得してTODOリスト機能を確認。
 				const parentCategoryConfig = settings.categories.find(c => c.directory === parentMemo.category)
@@ -1084,21 +1038,13 @@ export class MemologSidebar extends ItemView {
 
 			// ! メモのタイムスタンプから日付とファイルパスを取得。
 			const memoDate = new Date(memo.timestamp)
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					memo.category,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					memo.category,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
+			const filePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				memo.category,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+				memoDate,
+			)
 
 			let deleted = false
 
@@ -1129,24 +1075,24 @@ export class MemologSidebar extends ItemView {
 						return
 					}
 
-				// ! 選択されたオプションに応じて削除を実行。
-				if (option === "cascade") {
-					// ! カスケード削除（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
-					deleted = await this.memoManager.deleteMemoWithDescendants(
-						filePath,
-						memo.category,
-						memoId,
-						settings.enableTrash, // ! ゴミ箱に移動するかどうか。
-					)
-				} else {
-					// ! メモのみを削除し、子を親なしに（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
-					deleted = await this.memoManager.deleteOnlyMemoAndOrphanChildren(
-						filePath,
-						memo.category,
-						memoId,
-						settings.enableTrash, // ! ゴミ箱に移動するかどうか。
-					)
-				}
+					// ! 選択されたオプションに応じて削除を実行。
+					if (option === "cascade") {
+						// ! カスケード削除（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
+						deleted = await this.memoManager.deleteMemoWithDescendants(
+							filePath,
+							memo.category,
+							memoId,
+							settings.enableTrash, // ! ゴミ箱に移動するかどうか。
+						)
+					} else {
+						// ! メモのみを削除し、子を親なしに（ゴミ箱有効時はゴミ箱に移動、無効時は完全削除）。
+						deleted = await this.memoManager.deleteOnlyMemoAndOrphanChildren(
+							filePath,
+							memo.category,
+							memoId,
+							settings.enableTrash, // ! ゴミ箱に移動するかどうか。
+						)
+					}
 				} else {
 					// ! 返信がない場合は通常の削除。
 					if (settings.enableTrash) {
@@ -1183,7 +1129,6 @@ export class MemologSidebar extends ItemView {
 				memoId,
 				settings.rootDirectory,
 				settings.pathFormat,
-				settings.saveUnit,
 				settings.useDirectoryCategory,
 			)
 
@@ -1245,21 +1190,13 @@ export class MemologSidebar extends ItemView {
 			const memoDate = new Date(memo.timestamp)
 
 			// ! ファイルパスを生成（メモのタイムスタンプとカテゴリを使用）。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					memo.category,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					memo.category,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
+			const filePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				memo.category,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+				memoDate,
+			)
 
 			// ! メモを更新。
 			const updated = await this.memoManager.updateMemo(
@@ -1304,38 +1241,22 @@ export class MemologSidebar extends ItemView {
 			const memoDate = new Date(memo.timestamp)
 
 			// ! 古いカテゴリのファイルパスを生成。
-			const oldFilePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					oldCategory,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					oldCategory,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
+			const oldFilePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				oldCategory,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+				memoDate,
+			)
 
 			// ! 新しいカテゴリのファイルパスを生成。
-			const newFilePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					newCategory,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					newCategory,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
+			const newFilePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				newCategory,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+				memoDate,
+			)
 
 			// ! 古いファイルからメモを削除。
 			const deleted = await this.memoManager.deleteMemo(oldFilePath, oldCategory, memoId)
@@ -1382,21 +1303,13 @@ export class MemologSidebar extends ItemView {
 			const memoDate = new Date(memo.timestamp)
 
 			// ! ファイルパスを生成。
-			const filePath = settings.pathFormat
-				? PathGenerator.generateCustomPath(
-					settings.rootDirectory,
-					memo.category,
-					settings.pathFormat,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
-				: PathGenerator.generateFilePath(
-					settings.rootDirectory,
-					memo.category,
-					settings.saveUnit,
-					settings.useDirectoryCategory,
-					memoDate,
-				)
+			const filePath = PathGenerator.generateCustomPath(
+				settings.rootDirectory,
+				memo.category,
+				settings.pathFormat,
+				settings.useDirectoryCategory,
+				memoDate,
+			)
 
 			// ! TODO完了状態を更新。
 			await this.memoManager.updateTodoCompleted(filePath, memo.category, memoId, completed)
@@ -1608,21 +1521,13 @@ export class MemologSidebar extends ItemView {
 					: [{ directory: this.currentCategory }]
 
 			for (const cat of categoriesToSearch) {
-				const filePath = settings.pathFormat
-					? PathGenerator.generateCustomPath(
-						settings.rootDirectory,
-						cat.directory,
-						settings.pathFormat,
-						settings.useDirectoryCategory,
-						currentDate,
-					)
-					: PathGenerator.generateFilePath(
-						settings.rootDirectory,
-						cat.directory,
-						settings.saveUnit,
-						settings.useDirectoryCategory,
-						currentDate,
-					)
+				const filePath = PathGenerator.generateCustomPath(
+					settings.rootDirectory,
+					cat.directory,
+					settings.pathFormat,
+					settings.useDirectoryCategory,
+					currentDate,
+				)
 
 				// ! 既に処理済みのファイルはスキップ。
 				if (processedFiles.has(filePath)) {
@@ -1819,5 +1724,4 @@ export class MemologSidebar extends ItemView {
 			memo.replyCount = childCountMap.get(memo.id) || 0
 		}
 	}
-
 }

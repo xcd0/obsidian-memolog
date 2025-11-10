@@ -1106,7 +1106,6 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 					"single-memo-id",
 					"memolog",
 					"%Y-%m-%d",
-					"day",
 					false,
 				)
 
@@ -1158,7 +1157,6 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 					"parent-memo-id",
 					"memolog",
 					"%Y-%m-%d",
-					"day",
 					false,
 				)
 
@@ -1188,7 +1186,6 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 					"non-existent-id",
 					"memolog",
 					"%Y-%m-%d",
-					"day",
 					false,
 				)
 
@@ -1221,7 +1218,6 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 					"parent-only-trashed-id",
 					"memolog",
 					"%Y-%m-%d",
-					"day",
 					false,
 				)
 
@@ -1262,7 +1258,6 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 					"permanently-deleted-id",
 					"memolog",
 					"%Y-%m-%d",
-					"day",
 					false,
 				)
 

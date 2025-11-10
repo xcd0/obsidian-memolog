@@ -204,25 +204,6 @@ export class MemologSettingTab extends PluginSettingTab {
 				return text
 			})
 
-		// ! 保存単位設定。
-		new Setting(containerEl)
-			.setName("保存単位")
-			.setDesc("メモを保存するファイルの単位（時間の長さ順）")
-			.addDropdown(dropdown =>
-				dropdown
-					.addOption("all", "全て1ファイル")
-					.addOption("year", "年単位")
-					.addOption("month", "月単位")
-					.addOption("week", "週単位")
-					.addOption("day", "日単位")
-					.setValue(settings.saveUnit)
-					.onChange(async value => {
-						await this.plugin.settingsManager.updateGlobalSettings({
-							saveUnit: value as typeof settings.saveUnit,
-						})
-					})
-			)
-
 		// ! ソート順設定。
 		new Setting(containerEl)
 			.setName("ソート順")

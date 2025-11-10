@@ -1348,8 +1348,6 @@ export class MemologSettingTab extends PluginSettingTab {
 
 	// ! カテゴリアイテムを追加する。
 	private addCategoryItem(containerEl: HTMLElement, category: CategoryConfig, index: number): void {
-		const settings = this.plugin.settingsManager.getGlobalSettings()
-
 		const categoryDiv = containerEl.createDiv({ cls: "memolog-category-setting" })
 
 		// ! カテゴリ名（ディレクトリ名）。
@@ -1378,7 +1376,9 @@ export class MemologSettingTab extends PluginSettingTab {
 
 			// ! 保存処理。
 			const save = async (value: string) => {
-				const updatedCategories = [...settings.categories]
+				// ! イベントハンドラ内で最新の設定を取得する。
+				const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+				const updatedCategories = [...currentSettings.categories]
 				updatedCategories[index] = { ...updatedCategories[index], directory: value }
 				await this.saveSettings({
 					categories: updatedCategories,
@@ -1422,7 +1422,9 @@ export class MemologSettingTab extends PluginSettingTab {
 
 				// ! 保存処理（空文字列も許容）。
 				const save = async (value: string) => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], name: value }
 					await this.saveSettings({
 						categories: updatedCategories,
@@ -1455,7 +1457,9 @@ export class MemologSettingTab extends PluginSettingTab {
 			}
 			colorBtn.addEventListener("click", () => {
 				void (async () => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], color: preset.value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
@@ -1472,7 +1476,9 @@ export class MemologSettingTab extends PluginSettingTab {
 			.setName("カラーコード")
 			.addColorPicker(colorPicker =>
 				colorPicker.setValue(category.color).onChange(async value => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], color: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
@@ -1491,7 +1497,9 @@ export class MemologSettingTab extends PluginSettingTab {
 				const save = async (value: string) => {
 					// ! #で始まる6桁の16進数かチェック。
 					if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-						const updatedCategories = [...settings.categories]
+						// ! イベントハンドラ内で最新の設定を取得する。
+						const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+						const updatedCategories = [...currentSettings.categories]
 						updatedCategories[index] = { ...updatedCategories[index], color: value }
 						await this.saveSettings({
 							categories: updatedCategories,
@@ -1524,7 +1532,9 @@ export class MemologSettingTab extends PluginSettingTab {
 		const iconPicker = new IconPicker(iconPickerContainer, category.icon, {
 			onIconSelect: (iconName: string) => {
 				void (async () => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], icon: iconName }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
@@ -1543,7 +1553,9 @@ export class MemologSettingTab extends PluginSettingTab {
 			.setDesc("このカテゴリのタブにアイコンを表示します")
 			.addToggle(toggle =>
 				toggle.setValue(category.showIcon ?? true).onChange(async value => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], showIcon: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
@@ -1560,7 +1572,9 @@ export class MemologSettingTab extends PluginSettingTab {
 			)
 			.addToggle(toggle =>
 				toggle.setValue(category.useTodoList ?? false).onChange(async value => {
-					const updatedCategories = [...settings.categories]
+					// ! イベントハンドラ内で最新の設定を取得する。
+					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+					const updatedCategories = [...currentSettings.categories]
 					updatedCategories[index] = { ...updatedCategories[index], useTodoList: value }
 					await this.plugin.settingsManager.updateGlobalSettings({
 						categories: updatedCategories,
@@ -1577,7 +1591,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setTooltip("上に移動")
 					.setDisabled(index === 0)
 					.onClick(async () => {
-						const updatedCategories = [...settings.categories] // ! 配列の要素を入れ替え。
+						// ! イベントハンドラ内で最新の設定を取得する。
+						const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+						const updatedCategories = [...currentSettings.categories] // ! 配列の要素を入れ替え。
 						;[updatedCategories[index - 1], updatedCategories[index]] = [
 							updatedCategories[index],
 							updatedCategories[index - 1],
@@ -1589,13 +1605,17 @@ export class MemologSettingTab extends PluginSettingTab {
 						this.refreshSidebar()
 					})
 			)
-			.addButton(button =>
-				button
+			.addButton(button => {
+				// ! イベントハンドラ内で最新の設定を取得する。
+				const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+				return button
 					.setButtonText("↓")
 					.setTooltip("下に移動")
-					.setDisabled(index === settings.categories.length - 1)
+					.setDisabled(index === currentSettings.categories.length - 1)
 					.onClick(async () => {
-						const updatedCategories = [...settings.categories] // ! 配列の要素を入れ替え。
+						// ! イベントハンドラ内で最新の設定を取得する。
+						const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+						const updatedCategories = [...currentSettings.categories] // ! 配列の要素を入れ替え。
 						;[updatedCategories[index], updatedCategories[index + 1]] = [
 							updatedCategories[index + 1],
 							updatedCategories[index],
@@ -1606,13 +1626,17 @@ export class MemologSettingTab extends PluginSettingTab {
 						this.display()
 						this.refreshSidebar()
 					})
-			)
+			})
 			.addButton(button =>
 				button
 					.setButtonText("削除")
 					.setWarning()
 					.onClick(async () => {
-						const updatedCategories = settings.categories.filter((_, i) => i !== index)
+						// ! イベントハンドラ内で最新の設定を取得する。
+						const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+						const updatedCategories = currentSettings.categories.filter(
+							(_: CategoryConfig, i: number) => i !== index,
+						)
 						await this.plugin.settingsManager.updateGlobalSettings({
 							categories: updatedCategories,
 						})

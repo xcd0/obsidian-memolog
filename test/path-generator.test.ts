@@ -49,11 +49,11 @@ describe("PathGenerator", () => {
 				const result = PathGenerator.generateCustomPath(
 					rootDir,
 					category,
-					"week",
+					"%Y-%m",
 					false,
 					testDate,
 				)
-				expect(result).toBe("memolog/2025-W43.md")
+				expect(result).toBe("memolog/2025-10.md")
 			})
 		})
 	})

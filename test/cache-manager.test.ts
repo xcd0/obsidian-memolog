@@ -149,7 +149,7 @@ describe("CacheManager", () => {
 		it("設定をキャッシュに保存して取得できる", () => {
 			const settings = {
 				rootDirectory: "memolog",
-				saveUnit: "day" as const,
+				pathFormat: "%Y%m%d-%C.md",
 			}
 
 			// ! キャッシュに保存。

@@ -21,9 +21,6 @@ export interface CategoryConfig {
 	useTodoList?: boolean
 }
 
-// ! 保存単位。
-export type SaveUnit = "day" | "week" | "month" | "year" | "all"
-
 // ! グローバル設定。
 export interface GlobalSettings {
 	// ! ディレクトリでカテゴリを分離するかどうか。

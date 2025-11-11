@@ -1262,7 +1262,7 @@
 /* ソート順選択テーブル */
 .memolog-sort-order-table-container {
 	margin-top: 0.5rem;
-	width: 100%;
+	width: 60%;
 }
 
 .memolog-sort-order-table {
@@ -1306,7 +1306,7 @@
 /* ファイルパス書式選択テーブル */
 .memolog-path-format-table-container {
 	margin-top: 0.5rem;
-	width: 100%;
+	width: 60%;
 }
 
 .memolog-path-format-table {
@@ -1375,7 +1375,7 @@
 /* 添付ファイル保存先テーブル */
 .memolog-attachment-path-table-container {
 	margin-top: 0.5rem;
-	width: 100%;
+	width: 60%;
 }
 
 .memolog-attachment-path-table {
@@ -1440,7 +1440,7 @@
 /* 添付ファイル名書式テーブル */
 .memolog-attachment-name-table-container {
 	margin-top: 0.5rem;
-	width: 100%;
+	width: 60%;
 }
 
 .memolog-attachment-name-table {
@@ -1505,7 +1505,7 @@
 /* メモテンプレートテーブル */
 .memolog-template-table-container {
 	margin-top: 0.5rem;
-	width: 100%;
+	width: 60%;
 }
 
 .memolog-template-table {

@@ -1071,7 +1071,52 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 
 			beforeEach(() => {
 				// ! モックAppを作成。
-				app = {} as App
+				// ! ファイルシステムをシミュレートするためのストレージ。
+				const fileStorage = new Map<string, string>()
+
+				app = {
+					vault: {
+						adapter: {
+							stat: jest.fn().mockResolvedValue({ mtime: Date.now() }),
+							exists: jest.fn().mockImplementation(async (path: string) => fileStorage.has(path)),
+							read: jest.fn().mockImplementation(async (path: string) => fileStorage.get(path) || ""),
+							write: jest.fn().mockImplementation(async (path: string, content: string) => {
+								fileStorage.set(path, content)
+							}),
+						},
+						getAbstractFileByPath: jest.fn().mockImplementation((path: string) => {
+							if (fileStorage.has(path)) {
+								return {
+									path,
+									basename: path.split("/").pop()?.replace(".md", "") || "",
+									extension: "md",
+								}
+							}
+							return null
+						}),
+						getMarkdownFiles: jest.fn().mockImplementation(() => {
+							return Array.from(fileStorage.keys()).map(path => ({
+								path,
+								basename: path.split("/").pop()?.replace(".md", "") || "",
+								extension: "md",
+							}))
+						}),
+						read: jest.fn().mockImplementation(async (file: any) => fileStorage.get(file.path) || ""),
+						create: jest.fn().mockImplementation(async (path: string, content: string) => {
+							fileStorage.set(path, content)
+							return {
+								path,
+								basename: path.split("/").pop()?.replace(".md", "") || "",
+								extension: "md",
+							}
+						}),
+						modify: jest.fn().mockImplementation(async (file: any, content: string) => {
+							fileStorage.set(file.path, content)
+						}),
+						createFolder: jest.fn().mockResolvedValue(undefined),
+					},
+				} as any
+
 				vaultHandler = new MemologVaultHandler(app)
 				memoManager = new MemoManager(app)
 

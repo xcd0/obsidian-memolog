@@ -98,12 +98,14 @@ export function memoToText(memo: MemoEntry, template?: string, useTodoList = fal
 		body = "- [ ] " + body.replace(/\n/g, "\n  ")
 	}
 
-	// ! ID、タイムスタンプ、カテゴリ、テンプレート、親IDをHTMLコメントとして埋め込む。
+	// ! ID、タイムスタンプ、カテゴリ、テンプレート、親ID、ゴミ箱情報をHTMLコメントとして埋め込む。
 	// ! テンプレートとカテゴリはJSON.stringifyでエンコード（改行等を含むため）。
 	const categoryEncoded = memo.category ? `, category: ${JSON.stringify(memo.category)}` : ""
 	const templateEncoded = memo.template ? `, template: ${JSON.stringify(memo.template)}` : ""
 	const parentIdEncoded = memo.parentId ? `, parent-id: ${memo.parentId}` : ""
-	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${parentIdEncoded} -->\n${body}${attachments}\n`
+	const deletedEncoded = memo.trashedAt ? `, deleted: "true", trashedAt: "${memo.trashedAt}"` : ""
+	const permanentlyDeletedEncoded = memo.permanentlyDeleted ? `, permanently-deleted: "true"` : ""
+	return `<!-- memo-id: ${memo.id}, timestamp: ${memo.timestamp}${categoryEncoded}${templateEncoded}${parentIdEncoded}${deletedEncoded}${permanentlyDeletedEncoded} -->\n${body}${attachments}\n`
 }
 
 // ! JSON文字列全体をマッチする正規表現パターン。

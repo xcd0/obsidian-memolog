@@ -205,25 +205,81 @@ export class MemologSettingTab extends PluginSettingTab {
 			})
 
 		// ! ソート順設定。
-		new Setting(containerEl)
+		const sortOrderSetting = new Setting(containerEl)
 			.setName("ソート順")
-			.setDesc("メモの表示順序")
-			.addDropdown(dropdown =>
-				dropdown
-					.addOption("asc", "昇順（最新が下）")
-					.addOption("desc", "降順（最新が上）")
-					.setValue(settings.order)
-					.onChange(async value => {
-						await this.plugin.settingsManager.updateGlobalSettings({
-							order: value as typeof settings.order,
-						})
+			.setDesc("メモの表示順序（行をクリックして選択）")
+
+		// ! 表を作成。
+		const sortOrderTableContainer = sortOrderSetting.controlEl.createDiv({
+			cls: "memolog-sort-order-table-container",
+		})
+		const sortOrderTable = sortOrderTableContainer.createEl("table", { cls: "memolog-sort-order-table" })
+
+		// ! ヘッダー。
+		const sortOrderThead = sortOrderTable.createEl("thead")
+		const sortOrderHeaderRow = sortOrderThead.createEl("tr")
+		sortOrderHeaderRow.createEl("th", { text: "選択" })
+		sortOrderHeaderRow.createEl("th", { text: "ソート順" })
+		sortOrderHeaderRow.createEl("th", { text: "説明" })
+
+		// ! ボディ。
+		const sortOrderTbody = sortOrderTable.createEl("tbody")
+		const sortOrderOptions = [
+			{ value: "asc", label: "昇順", desc: "古い投稿が上、最新が下" },
+			{ value: "desc", label: "降順", desc: "最新の投稿が上、古いものが下" },
+		]
+
+		for (const option of sortOrderOptions) {
+			const row = sortOrderTbody.createEl("tr", { cls: "memolog-sort-order-row" })
+
+			// ! 選択されているオプションをハイライト。
+			if (option.value === settings.order) {
+				row.addClass("memolog-sort-order-selected")
+			}
+
+			// ! ラジオボタン。
+			const radioCell = row.createEl("td")
+			const radio = radioCell.createEl("input", { type: "radio" })
+			radio.name = "sort-order"
+			radio.checked = option.value === settings.order
+
+			// ! ソート順ラベル。
+			row.createEl("td", { text: option.label })
+
+			// ! 説明。
+			row.createEl("td", { text: option.desc, cls: "memolog-sort-order-desc" })
+
+			// ! 行クリックで選択。
+			row.addEventListener("click", () => {
+				void (async () => {
+					// ! 全ての行から選択状態を解除。
+					sortOrderTbody.querySelectorAll(".memolog-sort-order-row").forEach(r => {
+						r.removeClass("memolog-sort-order-selected")
+						const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+						if (radioInput) radioInput.checked = false
 					})
-			)
+
+					// ! この行を選択。
+					row.addClass("memolog-sort-order-selected")
+					radio.checked = true
+
+					// ! 設定を更新。
+					await this.plugin.settingsManager.updateGlobalSettings({
+						order: option.value as typeof settings.order,
+					})
+
+					// ! サイドバーを再描画。
+					this.refreshSidebar()
+				})()
+			})
+		}
 
 		// ! ファイルパス書式設定。
 		const pathFormatSetting = new Setting(containerEl)
 			.setName("ファイルパスの書式")
-			.setDesc("保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%C=カテゴリ名")
+			.setDesc(
+				"保存ファイルパスの書式を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%C=カテゴリ名（行をクリックして選択）",
+			)
 
 		// ! プレビュー表示領域を説明側に追加。
 		const pathPreviewContainer = pathFormatSetting.descEl.createDiv({
@@ -263,71 +319,6 @@ export class MemologSettingTab extends PluginSettingTab {
 			}
 		}
 
-		const pathFormatContainer = pathFormatSetting.controlEl.createDiv({
-			cls: "memolog-path-format-container",
-		})
-
-		// ! プリセットオプション（構造的な優先度順: /の数 < %Cの有無 < 文字列長）。
-		const pathPresets = [
-			// /なし - カテゴリなし。
-			{ label: "%Y%m%d.md", value: "%Y%m%d.md" },
-			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md" },
-			// /なし - カテゴリあり。
-			{ label: "%C.md", value: "%C.md" },
-			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md" },
-			// /が1つ - カテゴリなし。
-			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md" },
-			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md" },
-			// /が1つ - カテゴリあり。
-			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md" },
-			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md" },
-			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md" },
-			// /が2つ - カテゴリあり。
-			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md" },
-		]
-
-		// ! 現在の設定値がプリセットに含まれるか確認。
-		const isPathCustom = !pathPresets.some(preset => preset.value === settings.pathFormat)
-
-		// ! カスタム入力欄の初期値（設定値または空文字）。
-		let pathCustomValue = isPathCustom ? settings.pathFormat : ""
-
-		// ! ラジオボタングループ。
-		const pathRadioGroup = pathFormatContainer.createDiv({
-			cls: "memolog-path-format-radio-group",
-		})
-
-		// ! カスタムラジオボタンと入力欄。
-		const pathCustomRadioItem = pathRadioGroup.createDiv({
-			cls: "memolog-path-format-radio-item",
-		})
-
-		const pathCustomRadio = pathCustomRadioItem.createEl("input", {
-			type: "radio",
-			attr: {
-				name: "path-format",
-				value: "custom",
-				id: "path-format-custom",
-			},
-		})
-
-		if (isPathCustom) {
-			pathCustomRadio.checked = true
-		}
-
-		const pathCustomInput = pathCustomRadioItem.createEl("input", {
-			type: "text",
-			placeholder: "%Y-%m-%d/memo.md",
-			value: pathCustomValue,
-			cls: "memolog-setting-text-input-inline",
-		})
-
-		// ! カスタム入力欄クリック時、カスタムラジオボタンを自動選択。
-		pathCustomInput.addEventListener("focus", () => {
-			pathCustomRadio.checked = true
-			pathCustomRadio.dispatchEvent(new Event("change"))
-		})
-
 		// ! 初期プレビューを表示。
 		updatePathPreview(settings.pathFormat)
 
@@ -343,47 +334,160 @@ export class MemologSettingTab extends PluginSettingTab {
 			}
 		}
 
-		// ! プリセットラジオボタン。
+		// ! プリセットオプション。
+		const pathPresets = [
+			{ label: "%Y%m%d.md", value: "%Y%m%d.md", desc: "カテゴリなし" },
+			{ label: "%Y-%m-%d.md", value: "%Y-%m-%d.md", desc: "カテゴリなし" },
+			{ label: "%C.md", value: "%C.md", desc: "カテゴリ別ファイル" },
+			{ label: "%Y%m%d-%C.md", value: "%Y%m%d-%C.md", desc: "日付-カテゴリ" },
+			{ label: "%Y/%m/%d.md", value: "%Y/%m/%d.md", desc: "年/月/日フォルダ" },
+			{ label: "%Y-%m-%d/memo.md", value: "%Y-%m-%d/memo.md", desc: "日付フォルダ" },
+			{ label: "%C/%Y%m%d.md", value: "%C/%Y%m%d.md", desc: "カテゴリ/日付" },
+			{ label: "%C/%Y-%m-%d.md", value: "%C/%Y-%m-%d.md", desc: "カテゴリ/日付" },
+			{ label: "%Y-%m-%d/%C.md", value: "%Y-%m-%d/%C.md", desc: "日付/カテゴリ" },
+			{ label: "%C/%Y-%m-%d/memo.md", value: "%C/%Y-%m-%d/memo.md", desc: "カテゴリ/日付/メモ" },
+		]
+
+		// ! 現在の設定値がプリセットに含まれるか確認。
+		const isPathCustom = !pathPresets.some(preset => preset.value === settings.pathFormat)
+
+		// ! 表を作成。
+		const pathFormatTableContainer = pathFormatSetting.controlEl.createDiv({
+			cls: "memolog-path-format-table-container",
+		})
+		const pathFormatTable = pathFormatTableContainer.createEl("table", { cls: "memolog-path-format-table" })
+
+		// ! ヘッダー。
+		const pathFormatThead = pathFormatTable.createEl("thead")
+		const pathFormatHeaderRow = pathFormatThead.createEl("tr")
+		pathFormatHeaderRow.createEl("th", { text: "選択" })
+		pathFormatHeaderRow.createEl("th", { text: "書式" })
+		pathFormatHeaderRow.createEl("th", { text: "説明" })
+
+		// ! ボディ。
+		const pathFormatTbody = pathFormatTable.createEl("tbody")
+
+		// ! プリセットオプション。
 		for (const preset of pathPresets) {
-			const radioItem = pathRadioGroup.createDiv({
-				cls: "memolog-path-format-radio-item",
-			})
+			const row = pathFormatTbody.createEl("tr", { cls: "memolog-path-format-row" })
 
-			const radio = radioItem.createEl("input", {
-				type: "radio",
-				attr: {
-					name: "path-format",
-					value: preset.value,
-					id: `path-format-${preset.value}`,
-				},
-			})
-
-			if (settings.pathFormat === preset.value) {
-				radio.checked = true
+			// ! 選択されているオプションをハイライト。
+			if (preset.value === settings.pathFormat) {
+				row.addClass("memolog-path-format-selected")
 			}
 
-			radioItem.createEl("label", {
-				text: preset.label,
-				attr: {
-					for: `path-format-${preset.value}`,
-				},
-				cls: "memolog-path-format-radio-label",
-			})
+			// ! ラジオボタン。
+			const radioCell = row.createEl("td")
+			const radio = radioCell.createEl("input", { type: "radio" })
+			radio.name = "path-format"
+			radio.checked = preset.value === settings.pathFormat
 
-			radio.addEventListener("change", () => {
+			// ! 書式ラベル。
+			row.createEl("td", { text: preset.label, cls: "memolog-path-format-label" })
+
+			// ! 説明。
+			row.createEl("td", { text: preset.desc })
+
+			// ! 行クリックで選択。
+			row.addEventListener("click", () => {
 				void (async () => {
-					if (radio.checked) {
-						updatePathPreview(preset.value)
-						await this.plugin.settingsManager.updateGlobalSettings({
-							pathFormat: preset.value,
-						})
-						checkMigrationNeeded()
-						// ! サイドバー(カード表示)を再描画。
-						this.refreshSidebar()
-					}
+					// ! 全ての行から選択状態を解除。
+					pathFormatTbody.querySelectorAll(".memolog-path-format-row").forEach(r => {
+						r.removeClass("memolog-path-format-selected")
+						const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+						if (radioInput) radioInput.checked = false
+					})
+
+					// ! この行を選択。
+					row.addClass("memolog-path-format-selected")
+					radio.checked = true
+
+					// ! プレビューを更新。
+					updatePathPreview(preset.value)
+
+					// ! 設定を更新。
+					await this.plugin.settingsManager.updateGlobalSettings({
+						pathFormat: preset.value,
+					})
+
+					checkMigrationNeeded()
+
+					// ! サイドバーを再描画。
+					this.refreshSidebar()
 				})()
 			})
 		}
+
+		// ! カスタム入力行。
+		const customRow = pathFormatTbody.createEl("tr", { cls: "memolog-path-format-row memolog-path-format-custom-row" })
+
+		if (isPathCustom) {
+			customRow.addClass("memolog-path-format-selected")
+		}
+
+		// ! ラジオボタン。
+		const customRadioCell = customRow.createEl("td")
+		const customRadio = customRadioCell.createEl("input", { type: "radio" })
+		customRadio.name = "path-format"
+		customRadio.checked = isPathCustom
+
+		// ! カスタム入力欄。
+		const customInputCell = customRow.createEl("td", { attr: { colspan: "2" } })
+		const customInput = customInputCell.createEl("input", {
+			type: "text",
+			placeholder: "%Y-%m-%d/memo.md",
+			value: isPathCustom ? settings.pathFormat : "",
+			cls: "memolog-path-format-custom-input",
+		})
+
+		// ! カスタム入力欄フォーカス時、ラジオボタンを選択。
+		customInput.addEventListener("focus", () => {
+			// ! 全ての行から選択状態を解除。
+			pathFormatTbody.querySelectorAll(".memolog-path-format-row").forEach(r => {
+				r.removeClass("memolog-path-format-selected")
+				const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+				if (radioInput) radioInput.checked = false
+			})
+
+			// ! カスタム行を選択。
+			customRow.addClass("memolog-path-format-selected")
+			customRadio.checked = true
+		})
+
+		// ! カスタム入力変更時。
+		customInput.addEventListener("input", () => {
+			const value = customInput.value
+			if (value) {
+				this.debounce("path-format-custom", async () => {
+					updatePathPreview(value)
+					await this.plugin.settingsManager.updateGlobalSettings({
+						pathFormat: value,
+					})
+					checkMigrationNeeded()
+					this.refreshSidebar()
+				}, 300)
+			}
+		})
+
+		// ! カスタム行クリック。
+		customRow.addEventListener("click", e => {
+			// ! 入力欄自体をクリックした場合は何もしない。
+			if (e.target === customInput) return
+
+			// ! 全ての行から選択状態を解除。
+			pathFormatTbody.querySelectorAll(".memolog-path-format-row").forEach(r => {
+				r.removeClass("memolog-path-format-selected")
+				const radioInput = r.querySelector("input[type=\"radio\"]") as HTMLInputElement
+				if (radioInput) radioInput.checked = false
+			})
+
+			// ! カスタム行を選択。
+			customRow.addClass("memolog-path-format-selected")
+			customRadio.checked = true
+
+			// ! 入力欄にフォーカス。
+			customInput.focus()
+		})
 
 		// ! 変換ボタンを追加。
 		const migrationSetting = new Setting(containerEl)
@@ -426,36 +530,6 @@ export class MemologSettingTab extends PluginSettingTab {
 						},
 					)
 					modal.open()
-				})
-			}
-		})
-
-		// ! 各pathFormat変更時に変換ボタンをチェック。
-		pathCustomRadio.addEventListener("change", () => {
-			void (async () => {
-				if (pathCustomRadio.checked) {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						pathFormat: pathCustomInput.value,
-					})
-					updatePathPreview(pathCustomInput.value)
-					checkMigrationNeeded()
-					// ! サイドバー(カード表示)を再描画。
-					this.refreshSidebar()
-				}
-			})()
-		})
-
-		pathCustomInput.addEventListener("input", () => {
-			pathCustomValue = pathCustomInput.value
-			if (pathCustomRadio.checked) {
-				updatePathPreview(pathCustomInput.value)
-				this.debounce("path-format-custom", async () => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						pathFormat: pathCustomInput.value,
-					})
-					checkMigrationNeeded()
-					// ! サイドバー(カード表示)を再描画。
-					this.refreshSidebar()
 				})
 			}
 		})

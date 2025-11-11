@@ -1259,6 +1259,119 @@
 	border: 1px solid var(--background-modifier-border);
 }
 
+/* ソート順選択テーブル */
+.memolog-sort-order-table-container {
+	margin-top: 0.5rem;
+	width: 100%;
+}
+
+.memolog-sort-order-table {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-sort-order-table thead {
+	background-color: var(--background-secondary);
+}
+
+.memolog-sort-order-table th,
+.memolog-sort-order-table td {
+	padding: 0.5rem;
+	text-align: left;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-sort-order-table th {
+	font-weight: 600;
+}
+
+.memolog-sort-order-row {
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-sort-order-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-sort-order-selected {
+	background-color: var(--background-modifier-active-hover) !important;
+}
+
+.memolog-sort-order-desc {
+	color: var(--text-muted);
+}
+
+/* ファイルパス書式選択テーブル */
+.memolog-path-format-table-container {
+	margin-top: 0.5rem;
+	width: 100%;
+}
+
+.memolog-path-format-table {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-path-format-table thead {
+	background-color: var(--background-secondary);
+}
+
+.memolog-path-format-table th,
+.memolog-path-format-table td {
+	padding: 0.5rem;
+	text-align: left;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.memolog-path-format-table th {
+	font-weight: 600;
+}
+
+.memolog-path-format-row {
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.memolog-path-format-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.memolog-path-format-selected {
+	background-color: var(--background-modifier-active-hover) !important;
+}
+
+.memolog-path-format-label {
+	font-family: var(--font-monospace);
+	font-weight: 500;
+}
+
+.memolog-path-format-desc {
+	color: var(--text-muted);
+}
+
+.memolog-path-format-custom-row:hover {
+	background-color: var(--background-secondary);
+}
+
+.memolog-path-format-custom-input {
+	width: 100%;
+	padding: 0.25rem;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.memolog-path-format-custom-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+}
+
 /* 設定ボタン */
 .memolog-settings-btn {
 	flex-shrink: 0;

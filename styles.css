@@ -1112,11 +1112,6 @@
 	color: var(--text-accent);
 }
 
-.memolog-path-format-custom-input {
-	margin-left: 1.5rem;
-	margin-top: 0.25rem;
-}
-
 .memolog-path-format-custom-input-field {
 	width: 100%;
 	max-width: 400px;

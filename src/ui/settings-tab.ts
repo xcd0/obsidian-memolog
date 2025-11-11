@@ -761,10 +761,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 				const previews = examples.map(example => {
 					const generated = PathGenerator.generateAttachmentName(format, example.fileName, now)
-					return `${example.label}: ${generated}`
+					return `${example.label}:\n${generated}`
 				})
 
-				attachmentNamePreviewContent.setText(previews.join("\n"))
+				attachmentNamePreviewContent.setText(previews.join("\n\n"))
 			} catch (error) {
 				attachmentNamePreviewContent.setText(`エラー: ${(error as Error).message}`)
 			}

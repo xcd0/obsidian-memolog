@@ -274,4 +274,124 @@ describe("添付ファイル保存先プレビュー表示", () => {
 			expect(preview).toBe("vault/memolog/2025/attachments")
 		})
 	})
+
+	describe("問題1: ファイルパスの書式プレビューにルートディレクトリが反映される", () => {
+		it("ルートディレクトリ=hoge/hoge, pathFormat=%Y/%m/%d.md", () => {
+			const rootDir = "hoge/hoge"
+			const pathFormat = "%Y/%m/%d.md"
+
+			// ! ファイルパスの書式のプレビュー。
+			const memoPath = PathGenerator.generateCustomPath(
+				rootDir,
+				"default",
+				pathFormat,
+				false,
+				testDate,
+			)
+
+			// ! 期待値: ルートディレクトリ + 展開された書式。
+			expect(memoPath).toBe("hoge/hoge/2025/11/11.md")
+		})
+
+		it("ルートディレクトリ=memolog, pathFormat=%Y-%m-%d.md", () => {
+			const rootDir = "memolog"
+			const pathFormat = "%Y-%m-%d.md"
+
+			const memoPath = PathGenerator.generateCustomPath(
+				rootDir,
+				"default",
+				pathFormat,
+				false,
+				testDate,
+			)
+
+			expect(memoPath).toBe("memolog/2025-11-11.md")
+		})
+	})
+
+	describe("問題2: 添付ファイル保存先プレビューがファイルパス書式の変更を反映する", () => {
+		const rootDir = "vault"
+
+		it("pathFormat変更: %Y-%m-%d.md → %Y/%m/%d.md で ./attachments の位置が変わる", () => {
+			// ! 変更前: pathFormat=%Y-%m-%d.md。
+			const preview1 = generateAttachmentPathPreview(
+				"./attachments",
+				rootDir,
+				"%Y-%m-%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			// ! メモ: vault/2025-11-11.md → ディレクトリ: vault。
+			expect(preview1).toBe("vault/attachments")
+
+			// ! 変更後: pathFormat=%Y/%m/%d.md。
+			const preview2 = generateAttachmentPathPreview(
+				"./attachments",
+				rootDir,
+				"%Y/%m/%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			// ! メモ: vault/2025/11/11.md → ディレクトリ: vault/2025/11。
+			expect(preview2).toBe("vault/2025/11/attachments")
+
+			// ! 添付ファイルの位置が異なることを確認。
+			expect(preview1).not.toBe(preview2)
+		})
+
+		it("rootDirectory変更: memolog → hoge/hoge で絶対パスの基準が変わる", () => {
+			// ! 変更前: rootDirectory=memolog。
+			const preview1 = generateAttachmentPathPreview(
+				"/attachments",
+				"memolog",
+				"%Y/%m/%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			expect(preview1).toBe("memolog/attachments")
+
+			// ! 変更後: rootDirectory=hoge/hoge。
+			const preview2 = generateAttachmentPathPreview(
+				"/attachments",
+				"hoge/hoge",
+				"%Y/%m/%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			expect(preview2).toBe("hoge/hoge/attachments")
+
+			// ! ルートディレクトリが異なることを確認。
+			expect(preview1).not.toBe(preview2)
+		})
+
+		it("rootDirectory + pathFormat 両方変更で相対パスの位置が変わる", () => {
+			// ! 初期状態: rootDirectory=memolog, pathFormat=%Y-%m-%d.md。
+			const preview1 = generateAttachmentPathPreview(
+				"./attachments",
+				"memolog",
+				"%Y-%m-%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			expect(preview1).toBe("memolog/attachments")
+
+			// ! 両方変更: rootDirectory=vault/notes, pathFormat=%Y/%m/%d.md。
+			const preview2 = generateAttachmentPathPreview(
+				"./attachments",
+				"vault/notes",
+				"%Y/%m/%d.md",
+				"default",
+				false,
+				testDate,
+			)
+			expect(preview2).toBe("vault/notes/2025/11/attachments")
+
+			expect(preview1).not.toBe(preview2)
+		})
+	})
 })

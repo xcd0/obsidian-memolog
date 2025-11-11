@@ -537,6 +537,47 @@ export class MemologSettingTab extends PluginSettingTab {
 				"画像などの添付ファイルの保存先を指定します。%Y=年、%m=月、%d=日などの書式が使用できます（行をクリックして選択）",
 			)
 
+		// ! プレビュー表示領域を説明側に追加。
+		const attachmentPathPreviewContainer = attachmentPathSetting.descEl.createDiv({
+			cls: "memolog-template-preview-container",
+			attr: {
+				style:
+					"margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);",
+			},
+		})
+		attachmentPathPreviewContainer.createDiv({
+			text: "出力例:",
+			attr: {
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;",
+			},
+		})
+		const attachmentPathPreviewContent = attachmentPathPreviewContainer.createDiv({
+			cls: "memolog-template-preview-content",
+			attr: {
+				style:
+					"white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;",
+			},
+		})
+
+		// ! プレビュー更新関数。
+		const updateAttachmentPathPreview = (format: string) => {
+			try {
+				const preview = PathGenerator.generateCustomPath(
+					"memolog",
+					settings.categories[0]?.directory || "default",
+					format,
+					settings.useDirectoryCategory,
+					new Date(),
+				)
+				attachmentPathPreviewContent.setText(preview)
+			} catch (error) {
+				attachmentPathPreviewContent.setText(`エラー: ${(error as Error).message}`)
+			}
+		}
+
+		// ! 初期プレビューを表示。
+		updateAttachmentPathPreview(settings.attachmentPath)
+
 		// ! プリセットオプション。
 		const attachmentPresets = [
 			{ label: "./attachments", value: "./attachments" },
@@ -597,6 +638,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					row.addClass("memolog-attachment-path-selected")
 					radio.checked = true
 
+					// ! プレビューを更新。
+					updateAttachmentPathPreview(preset.value)
+
 					// ! 設定を更新。
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentPath: preset.value,
@@ -647,6 +691,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		attachmentCustomInput.addEventListener("input", () => {
 			const value = attachmentCustomInput.value
 			if (value) {
+				updateAttachmentPathPreview(value)
 				this.debounce("attachment-path-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentPath: value,
@@ -681,6 +726,52 @@ export class MemologSettingTab extends PluginSettingTab {
 			.setDesc(
 				"添付ファイルの名前を指定します。%Y=年、%m=月、%d=日、%H=時、%M=分、%S=秒、%s=タイムスタンプ、%f=元ファイル名、%e=拡張子（行をクリックして選択）",
 			)
+
+		// ! プレビュー表示領域を説明側に追加。
+		const attachmentNamePreviewContainer = attachmentNameSetting.descEl.createDiv({
+			cls: "memolog-template-preview-container",
+			attr: {
+				style:
+					"margin-top: 8px; padding: 8px 12px; background-color: var(--background-secondary); border-radius: 4px; border: 1px solid var(--background-modifier-border);",
+			},
+		})
+		attachmentNamePreviewContainer.createDiv({
+			text: "出力例:",
+			attr: {
+				style: "font-weight: 600; margin-bottom: 4px; color: var(--text-muted); font-size: 0.85rem;",
+			},
+		})
+		const attachmentNamePreviewContent = attachmentNamePreviewContainer.createDiv({
+			cls: "memolog-template-preview-content",
+			attr: {
+				style:
+					"white-space: pre-wrap; font-family: var(--font-monospace); line-height: 1.5; color: var(--text-normal); font-size: 0.9rem;",
+			},
+		})
+
+		// ! プレビュー更新関数。
+		const updateAttachmentNamePreview = (format: string) => {
+			try {
+				const now = new Date()
+				const examples = [
+					{ label: "クリップボード貼り付け", fileName: "image.png" },
+					{ label: "動画ファイル", fileName: "video.mp4" },
+					{ label: "PDFファイル", fileName: "document.pdf" },
+				]
+
+				const previews = examples.map(example => {
+					const generated = PathGenerator.generateAttachmentName(format, example.fileName, now)
+					return `${example.label}: ${generated}`
+				})
+
+				attachmentNamePreviewContent.setText(previews.join("\n"))
+			} catch (error) {
+				attachmentNamePreviewContent.setText(`エラー: ${(error as Error).message}`)
+			}
+		}
+
+		// ! 初期プレビューを表示。
+		updateAttachmentNamePreview(settings.attachmentNameFormat)
 
 		// ! プリセットオプション。
 		const attachmentNamePresets = [
@@ -739,6 +830,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					row.addClass("memolog-attachment-name-selected")
 					radio.checked = true
 
+					// ! プレビューを更新。
+					updateAttachmentNamePreview(preset.value)
+
 					// ! 設定を更新。
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentNameFormat: preset.value,
@@ -789,6 +883,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		attachmentNameCustomInput.addEventListener("input", () => {
 			const value = attachmentNameCustomInput.value
 			if (value) {
+				updateAttachmentNamePreview(value)
 				this.debounce("attachment-name-format-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						attachmentNameFormat: value,

@@ -1262,7 +1262,7 @@
 /* ソート順選択テーブル */
 .memolog-sort-order-table-container {
 	margin-top: 0.5rem;
-	width: 60%;
+	width: 100%;
 }
 
 .memolog-sort-order-table {

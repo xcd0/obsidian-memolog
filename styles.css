@@ -1259,12 +1259,17 @@
 	border: 1px solid var(--background-modifier-border);
 }
 
-/* ソート順選択テーブル */
-.memolog-sort-order-table-container {
+/* 基本タブの選択肢テーブル共通スタイル */
+.memolog-sort-order-table-container,
+.memolog-path-format-table-container,
+.memolog-attachment-path-table-container,
+.memolog-attachment-name-table-container,
+.memolog-template-table-container {
 	margin-top: 0.5rem;
 	width: 100%;
 }
 
+/* ソート順選択テーブル */
 .memolog-sort-order-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -1304,11 +1309,6 @@
 }
 
 /* ファイルパス書式選択テーブル */
-.memolog-path-format-table-container {
-	margin-top: 0.5rem;
-	width: 60%;
-}
-
 .memolog-path-format-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -1373,11 +1373,6 @@
 }
 
 /* 添付ファイル保存先テーブル */
-.memolog-attachment-path-table-container {
-	margin-top: 0.5rem;
-	width: 60%;
-}
-
 .memolog-attachment-path-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -1438,11 +1433,6 @@
 }
 
 /* 添付ファイル名書式テーブル */
-.memolog-attachment-name-table-container {
-	margin-top: 0.5rem;
-	width: 60%;
-}
-
 .memolog-attachment-name-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -1503,11 +1493,6 @@
 }
 
 /* メモテンプレートテーブル */
-.memolog-template-table-container {
-	margin-top: 0.5rem;
-	width: 60%;
-}
-
 .memolog-template-table {
 	width: 100%;
 	border-collapse: collapse;

@@ -4,7 +4,7 @@
  * v0.0.16で追加された返信投稿のゴミ箱表示・復元機能のテスト。
  */
 
-import { App } from "obsidian"
+import { App, TFile } from "obsidian"
 import { splitFileIntoMemos } from "../src/core/memo-crud-operations"
 import { memoToText, parseMetadata, parseTextToMemo } from "../src/core/memo-helpers"
 import { MemoManager } from "../src/core/memo-manager"
@@ -1086,32 +1086,37 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 						},
 						getAbstractFileByPath: jest.fn().mockImplementation((path: string) => {
 							if (fileStorage.has(path)) {
-								return {
-									path,
-									basename: path.split("/").pop()?.replace(".md", "") || "",
-									extension: "md",
-								}
+								const mockFile = Object.create(TFile.prototype)
+								mockFile.path = path
+								mockFile.basename = path.split("/").pop()?.replace(".md", "") || ""
+								mockFile.extension = "md"
+								return mockFile
 							}
 							return null
 						}),
 						getMarkdownFiles: jest.fn().mockImplementation(() => {
-							return Array.from(fileStorage.keys()).map(path => ({
-								path,
-								basename: path.split("/").pop()?.replace(".md", "") || "",
-								extension: "md",
-							}))
+							return Array.from(fileStorage.keys()).map(path => {
+								const mockFile = Object.create(TFile.prototype)
+								mockFile.path = path
+								mockFile.basename = path.split("/").pop()?.replace(".md", "") || ""
+								mockFile.extension = "md"
+								return mockFile
+							})
 						}),
 						read: jest.fn().mockImplementation(async (file: any) => fileStorage.get(file.path) || ""),
 						create: jest.fn().mockImplementation(async (path: string, content: string) => {
 							fileStorage.set(path, content)
-							return {
-								path,
-								basename: path.split("/").pop()?.replace(".md", "") || "",
-								extension: "md",
-							}
+							const mockFile = Object.create(TFile.prototype)
+							mockFile.path = path
+							mockFile.basename = path.split("/").pop()?.replace(".md", "") || ""
+							mockFile.extension = "md"
+							return mockFile
 						}),
 						modify: jest.fn().mockImplementation(async (file: any, content: string) => {
 							fileStorage.set(file.path, content)
+						}),
+						delete: jest.fn().mockImplementation(async (file: any) => {
+							fileStorage.delete(file.path)
 						}),
 						createFolder: jest.fn().mockResolvedValue(undefined),
 					},

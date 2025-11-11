@@ -41,7 +41,8 @@
 			"Bash(/tmp/memo-manager-part1.ts)",
 			"Bash(/tmp/memo-manager-part2.ts)",
 			"Bash(src/core/memo-manager.ts)",
-			"Bash(npx jest:*)"
+			"Bash(npx jest:*)",
+			"Bash(gh run view:*)"
 		],
 		"deny": [],
 		"ask": []

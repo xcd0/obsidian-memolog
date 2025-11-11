@@ -562,14 +562,53 @@ export class MemologSettingTab extends PluginSettingTab {
 		// ! プレビュー更新関数。
 		const updateAttachmentPathPreview = (format: string) => {
 			try {
-				const preview = PathGenerator.generateCustomPath(
-					"memolog",
+				const now = new Date()
+				// ! 日付フォーマット展開用のヘルパー関数。
+				const expandDateFormat = (str: string): string => {
+					const year = now.getFullYear()
+					const month = (now.getMonth() + 1).toString().padStart(2, "0")
+					const day = now.getDate().toString().padStart(2, "0")
+					const hour = now.getHours().toString().padStart(2, "0")
+					const minute = now.getMinutes().toString().padStart(2, "0")
+					const second = now.getSeconds().toString().padStart(2, "0")
+
+					return str
+						.replace(/%Y/g, year.toString())
+						.replace(/%m/g, month)
+						.replace(/%d/g, day)
+						.replace(/%H/g, hour)
+						.replace(/%M/g, minute)
+						.replace(/%S/g, second)
+				}
+
+				// ! メモファイルのパスを生成。
+				const memoPath = PathGenerator.generateCustomPath(
+					settings.rootDirectory,
 					settings.categories[0]?.directory || "default",
-					format,
+					settings.pathFormat,
 					settings.useDirectoryCategory,
-					new Date(),
+					now,
 				)
-				attachmentPathPreviewContent.setText(preview)
+
+				// ! 添付ファイルの保存先パスを計算。
+				let attachmentPath: string
+				if (format.startsWith("./")) {
+					// ! 相対パス: メモファイルと同じディレクトリからの相対パス。
+					const memoDir = memoPath.substring(0, memoPath.lastIndexOf("/"))
+					const relativePath = format.substring(2) // "./" を除去。
+					const expandedPath = expandDateFormat(relativePath)
+					attachmentPath = `${memoDir}/${expandedPath}`
+				} else if (format.startsWith("/")) {
+					// ! 絶対パス: ルートディレクトリからの絶対パス。
+					const absolutePath = format.substring(1) // "/" を除去。
+					const expandedPath = expandDateFormat(absolutePath)
+					attachmentPath = `${settings.rootDirectory}/${expandedPath}`
+				} else {
+					// ! その他: そのまま表示。
+					attachmentPath = expandDateFormat(format)
+				}
+
+				attachmentPathPreviewContent.setText(attachmentPath)
 			} catch (error) {
 				attachmentPathPreviewContent.setText(`エラー: ${(error as Error).message}`)
 			}

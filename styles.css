@@ -2165,6 +2165,17 @@
 	margin-top: 1rem;
 }
 
+/* Setting要素のレイアウト比率調整 */
+.memolog-settings-tab-container .setting-item-info {
+	flex: 0 0 40%;
+	max-width: 40%;
+}
+
+.memolog-settings-tab-container .setting-item-control {
+	flex: 0 0 60%;
+	max-width: 60%;
+}
+
 /* タブヘッダー */
 .memolog-settings-tab-header {
 	display: flex;

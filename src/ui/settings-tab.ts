@@ -2305,6 +2305,16 @@ export class MemologSettingTab extends PluginSettingTab {
 						)
 					}
 				},
+				() => {
+					// ! キャンセル時の処理: 入力欄を初期値に戻してボタンを無効化。
+					if (this.rootDirectoryInputEl) {
+						this.rootDirectoryInputEl.value = this.initialRootDirectory
+					}
+					if (this.rootDirectoryMigrationButton) {
+						this.rootDirectoryMigrationButton.disabled = true
+						this.rootDirectoryMigrationButton.removeClass("mod-cta")
+					}
+				},
 			)
 
 			modal.open()

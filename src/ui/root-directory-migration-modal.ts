@@ -15,8 +15,10 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 	private backupManager: BackupManager
 	private settingsManager: SettingsManager
 	private onConfirm: (createBackup: boolean) => Promise<void>
+	private onCancel?: () => void
 	private isGitRepo: boolean
 	private addToGitignore: boolean = false
+	private migrationExecuted: boolean = false
 
 	constructor(
 		app: App,
@@ -25,6 +27,7 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 		mappings: FileMapping[],
 		settingsManager: SettingsManager,
 		onConfirm: (createBackup: boolean) => Promise<void>,
+		onCancel?: () => void,
 	) {
 		super(app)
 		this.oldRootDir = oldRootDir
@@ -32,6 +35,7 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 		this.mappings = mappings
 		this.settingsManager = settingsManager
 		this.onConfirm = onConfirm
+		this.onCancel = onCancel
 		this.backupManager = new BackupManager(app)
 		this.isGitRepo = false
 	}
@@ -295,6 +299,7 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 			)
 
 			// ! 移行実行。
+			this.migrationExecuted = true
 			await this.onConfirm(true)
 			this.close()
 		} catch (error) {
@@ -372,6 +377,7 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 		}
 
 		try {
+			this.migrationExecuted = true
 			await this.onConfirm(false)
 			this.close()
 		} catch (error) {
@@ -382,6 +388,11 @@ export class RootDirectoryMigrationConfirmModal extends Modal {
 	override onClose() {
 		const { contentEl } = this
 		contentEl.empty()
+
+		// ! 移行が実行されなかった場合（キャンセルまたはバックアップのみ）、キャンセルコールバックを呼ぶ。
+		if (!this.migrationExecuted && this.onCancel) {
+			this.onCancel()
+		}
 	}
 }
 

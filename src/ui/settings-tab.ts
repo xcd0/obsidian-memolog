@@ -107,6 +107,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		// ! タブ定義。
 		const tabs = [
 			{ id: "basic", label: "基本", render: (el: HTMLElement) => this.addBasicSettings(el) },
+			{ id: "memo", label: "メモ", render: (el: HTMLElement) => this.addMemoSettings(el) },
 			{ id: "category", label: "カテゴリ", render: (el: HTMLElement) => this.addCategorySettings(el) },
 			{ id: "trash", label: "ゴミ箱", render: (el: HTMLElement) => this.addTrashSettings(el) },
 			{ id: "advanced", label: "高度な機能", render: (el: HTMLElement) => this.addAdvancedFeaturesWithActions(el) },
@@ -1007,6 +1008,11 @@ export class MemologSettingTab extends PluginSettingTab {
 			// ! 入力欄にフォーカス。
 			attachmentNameCustomInput.focus()
 		})
+	}
+
+	// ! メモ設定を追加する。
+	private addMemoSettings(containerEl: HTMLElement): void {
+		const settings = this.plugin.settingsManager.getGlobalSettings()
 
 		// ! メモのテンプレート設定。
 		const templateSetting = new Setting(containerEl)

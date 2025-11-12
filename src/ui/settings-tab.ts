@@ -106,7 +106,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		// ! タブ定義。
 		const tabs = [
-			{ id: "basic", label: "基本", render: (el: HTMLElement) => this.addBasicSettings(el) },
+			{ id: "basic", label: "ファイルパス", render: (el: HTMLElement) => this.addBasicSettings(el) },
 			{ id: "memo", label: "メモ", render: (el: HTMLElement) => this.addMemoSettings(el) },
 			{ id: "category", label: "カテゴリ", render: (el: HTMLElement) => this.addCategorySettings(el) },
 			{ id: "trash", label: "ゴミ箱", render: (el: HTMLElement) => this.addTrashSettings(el) },

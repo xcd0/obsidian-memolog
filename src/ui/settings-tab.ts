@@ -7,9 +7,14 @@ import { CategoryConfig, DEFAULT_GLOBAL_SETTINGS } from "../types"
 import { BackupManager } from "../utils/backup-manager"
 import { PathGenerator } from "../utils/path-generator"
 import { PathMigrator } from "../utils/path-migrator"
+import { RootDirectoryMigrator } from "../utils/root-directory-migrator"
 import { IconPicker } from "./components/icon-picker"
 import { MigrationConfirmModal, MigrationResultModal } from "./migration-modal"
 import { RestoreBackupModal } from "./restore-modal"
+import {
+	RootDirectoryMigrationConfirmModal,
+	RootDirectoryMigrationResultModal,
+} from "./root-directory-migration-modal"
 import { MemologSidebar, VIEW_TYPE_MEMOLOG } from "./sidebar"
 
 // ! プリセットカラー定義。
@@ -33,6 +38,8 @@ export class MemologSettingTab extends PluginSettingTab {
 	private initialPathFormat: string = ""
 	private initialUseDirectoryCategory: boolean = false
 	private migrationButton: HTMLButtonElement | null = null
+	private initialRootDirectory: string = "" // ! ルートディレクトリの初期値。
+	private rootDirectoryMigrationButton: HTMLButtonElement | null = null // ! ルートディレクトリ変更ボタン。
 	private currentActiveTab: string = "basic" // ! 現在アクティブなタブ。
 	// ! 設定画面表示時の初期設定値（JSON文字列）- 将来的な変更検出・比較機能用に保持。
 	private _initialSettings: string = ""
@@ -171,6 +178,19 @@ export class MemologSettingTab extends PluginSettingTab {
 		let updatePathPreview: (format: string, rootDirectory?: string) => void
 		let updateAttachmentPathPreview: (attachmentPathFormat: string, pathFormat?: string, rootDirectory?: string) => void
 
+		// ! ルートディレクトリの初期値を保存。
+		this.initialRootDirectory = settings.rootDirectory
+
+		// ! ルートディレクトリ変更ボタンのチェック関数。
+		const checkRootDirectoryMigrationNeeded = () => {
+			const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+			const hasChanged = currentSettings.rootDirectory !== this.initialRootDirectory
+
+			if (this.rootDirectoryMigrationButton) {
+				this.rootDirectoryMigrationButton.disabled = !hasChanged
+			}
+		}
+
 		// ! ルートディレクトリ設定。
 		new Setting(containerEl)
 			.setName("ルートディレクトリ")
@@ -184,6 +204,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					await this.plugin.settingsManager.updateGlobalSettings({
 						rootDirectory: value,
 					})
+					checkRootDirectoryMigrationNeeded()
 				}
 
 				// ! リアルタイム保存 - input イベントを監視。
@@ -213,6 +234,17 @@ export class MemologSettingTab extends PluginSettingTab {
 				})
 
 				return text
+			})
+			.addButton(btn => {
+				btn
+					.setButtonText("変更")
+					.setDisabled(true)
+					.onClick(async () => {
+						await this.showRootDirectoryMigrationDialog()
+					})
+
+				this.rootDirectoryMigrationButton = btn.buttonEl
+				return btn
 			})
 
 		// ! ソート順設定。
@@ -2134,6 +2166,81 @@ export class MemologSettingTab extends PluginSettingTab {
 						progressNotice.hide()
 						new Notice(
 							`❌ 変換エラー: ${error instanceof Error ? error.message : "Unknown error"}`,
+						)
+					}
+				},
+			)
+
+			modal.open()
+		} catch (error) {
+			notice.hide()
+			new Notice(
+				`❌ 計画作成エラー: ${error instanceof Error ? error.message : "Unknown error"}`,
+			)
+		}
+	}
+
+	// ! ルートディレクトリ移行ダイアログを表示。
+	private async showRootDirectoryMigrationDialog() {
+		const settings = this.plugin.settingsManager.getGlobalSettings()
+		const migrator = new RootDirectoryMigrator(this.app)
+
+		// ! 移行計画を作成。
+		const notice = new Notice("移行計画を作成中...", 0)
+		try {
+			const mappings = await migrator.calculateMappings(
+				this.initialRootDirectory,
+				settings.rootDirectory,
+			)
+
+			notice.hide()
+
+			if (mappings.length === 0) {
+				new Notice("移行対象のファイルがありません。")
+				return
+			}
+
+			// ! 確認モーダルを表示。
+			const modal = new RootDirectoryMigrationConfirmModal(
+				this.app,
+				this.initialRootDirectory,
+				settings.rootDirectory,
+				mappings,
+				this.plugin.settingsManager,
+				async (_createBackup: boolean) => {
+					const progressNotice = new Notice("ファイルを移行中...", 0)
+
+					try {
+						// ! 移行を実行。
+						const result = await migrator.migrate(mappings, (current, total) => {
+							progressNotice.setMessage(`ファイルを移行中... (${current}/${total})`)
+						})
+
+						progressNotice.hide()
+
+						// ! 旧ディレクトリのクリーンアップ。
+						await migrator.cleanupOldDirectory(this.initialRootDirectory)
+
+						// ! 結果を表示。
+						const resultModal = new RootDirectoryMigrationResultModal(this.app, result)
+						resultModal.open()
+
+						// ! 成功した場合は初期値を更新。
+						if (result.movedCount > 0) {
+							this.initialRootDirectory = settings.rootDirectory
+
+							// ! 変更ボタンを無効化。
+							if (this.rootDirectoryMigrationButton) {
+								this.rootDirectoryMigrationButton.disabled = true
+							}
+
+							// ! サイドバーを再描画。
+							this.refreshSidebar()
+						}
+					} catch (error) {
+						progressNotice.hide()
+						new Notice(
+							`❌ 移行エラー: ${error instanceof Error ? error.message : "Unknown error"}`,
 						)
 					}
 				},

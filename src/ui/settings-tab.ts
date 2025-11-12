@@ -231,6 +231,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setButtonText("変更")
 					.setDisabled(true)
 					.onClick(async () => {
+						console.log("変更ボタンがクリックされました")
+						console.log("pendingRootDirectory:", pendingRootDirectory)
+						console.log("initialRootDirectory:", this.initialRootDirectory)
 						await this.showRootDirectoryMigrationDialog(pendingRootDirectory)
 					})
 
@@ -2173,18 +2176,25 @@ export class MemologSettingTab extends PluginSettingTab {
 
 	// ! ルートディレクトリ移行ダイアログを表示。
 	private async showRootDirectoryMigrationDialog(newRootDirectory: string) {
+		console.log("showRootDirectoryMigrationDialog called")
+		console.log("newRootDirectory:", newRootDirectory)
+		console.log("initialRootDirectory:", this.initialRootDirectory)
+
 		const settings = this.plugin.settingsManager.getGlobalSettings()
 		const migrator = new RootDirectoryMigrator(this.app)
 
 		// ! ルートディレクトリが変更されているか確認。
 		if (newRootDirectory === this.initialRootDirectory) {
+			console.log("ルートディレクトリが変更されていません")
 			new Notice("ルートディレクトリが変更されていません。")
 			return
 		}
 
 		// ! 旧ルートディレクトリの存在確認。
 		const oldFolder = this.app.vault.getAbstractFileByPath(this.initialRootDirectory)
+		console.log("oldFolder:", oldFolder)
 		if (!oldFolder) {
+			console.log("旧ルートディレクトリが見つかりません")
 			new Notice(
 				`旧ルートディレクトリ「${this.initialRootDirectory}」が見つかりません。\n` +
 					`新しいルートディレクトリ「${newRootDirectory}」を使用する場合は、` +
@@ -2211,6 +2221,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		}
 
 		// ! 移行計画を作成。
+		console.log("移行計画を作成中...")
 		const notice = new Notice("移行計画を作成中...", 0)
 		try {
 			const mappings = await migrator.calculateMappings(
@@ -2218,9 +2229,11 @@ export class MemologSettingTab extends PluginSettingTab {
 				newRootDirectory,
 			)
 
+			console.log("mappings:", mappings.length)
 			notice.hide()
 
 			if (mappings.length === 0) {
+				console.log("移行対象のファイルがありません")
 				new Notice(
 					`旧ルートディレクトリ「${this.initialRootDirectory}」に移行対象のファイルがありません。\n` +
 						`ディレクトリは空か、既にファイルが移行されています。`,
@@ -2246,6 +2259,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			}
 
 			// ! 確認モーダルを表示。
+			console.log("確認モーダルを表示します")
 			const modal = new RootDirectoryMigrationConfirmModal(
 				this.app,
 				this.initialRootDirectory,
@@ -2301,8 +2315,11 @@ export class MemologSettingTab extends PluginSettingTab {
 				},
 			)
 
+			console.log("modal.open() を呼び出します")
 			modal.open()
+			console.log("modal.open() が完了しました")
 		} catch (error) {
+			console.error("エラーが発生しました:", error)
 			notice.hide()
 			new Notice(
 				`❌ 計画作成エラー: ${error instanceof Error ? error.message : "Unknown error"}`,

@@ -82,8 +82,6 @@ export class MemologSettingTab extends PluginSettingTab {
 		const { containerEl } = this
 		containerEl.empty()
 
-		containerEl.createEl("h2", { text: "memolog 設定" })
-
 		// ! 初期値を保存（変更検出用）。
 		const settings = this.plugin.settingsManager.getGlobalSettings()
 		this.initialPathFormat = settings.pathFormat

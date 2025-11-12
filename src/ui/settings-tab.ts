@@ -168,8 +168,8 @@ export class MemologSettingTab extends PluginSettingTab {
 		const settings = this.plugin.settingsManager.getGlobalSettings()
 
 		// ! プレビュー更新関数を格納する変数（後で定義）。
-		let updatePathPreview: (format: string) => void
-		let updateAttachmentPathPreview: (attachmentPathFormat: string, pathFormat?: string) => void
+		let updatePathPreview: (format: string, rootDirectory?: string) => void
+		let updateAttachmentPathPreview: (attachmentPathFormat: string, pathFormat?: string, rootDirectory?: string) => void
 
 		// ! ルートディレクトリ設定。
 		new Setting(containerEl)
@@ -189,12 +189,12 @@ export class MemologSettingTab extends PluginSettingTab {
 				// ! リアルタイム保存 - input イベントを監視。
 				text.inputEl.addEventListener("input", () => {
 					const value = text.inputEl.value
-					// ! プレビューを即座に更新。
+					// ! プレビューを即座に更新（新しいrootDirectoryを渡す）。
 					if (updatePathPreview) {
-						updatePathPreview(settings.pathFormat)
+						updatePathPreview(settings.pathFormat, value)
 					}
 					if (updateAttachmentPathPreview) {
-						updateAttachmentPathPreview(settings.attachmentPath)
+						updateAttachmentPathPreview(settings.attachmentPath, settings.pathFormat, value)
 					}
 					this.debounce("root-directory", () => {
 						void saveRootDirectory(value)
@@ -315,11 +315,12 @@ export class MemologSettingTab extends PluginSettingTab {
 		})
 
 		// ! パスプレビュー更新関数。
-		updatePathPreview = (format: string) => {
+		updatePathPreview = (format: string, rootDirectory?: string) => {
 			try {
 				const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+				const effectiveRootDirectory = rootDirectory ?? currentSettings.rootDirectory
 				const preview = PathGenerator.generateCustomPath(
-					currentSettings.rootDirectory,
+					effectiveRootDirectory,
 					currentSettings.categories[0]?.directory || "default",
 					format,
 					currentSettings.useDirectoryCategory,
@@ -583,13 +584,14 @@ export class MemologSettingTab extends PluginSettingTab {
 		})
 
 		// ! プレビュー更新関数。
-		updateAttachmentPathPreview = (attachmentPathFormat: string, pathFormat?: string) => {
+		updateAttachmentPathPreview = (attachmentPathFormat: string, pathFormat?: string, rootDirectory?: string) => {
 			try {
 				const now = new Date()
 				const currentSettings = this.plugin.settingsManager.getGlobalSettings()
 
-				// ! pathFormatが指定されていない場合は現在の設定を使用。
+				// ! 指定されていない場合は現在の設定を使用。
 				const effectivePathFormat = pathFormat ?? currentSettings.pathFormat
+				const effectiveRootDirectory = rootDirectory ?? currentSettings.rootDirectory
 
 				// ! 日付フォーマット展開用のヘルパー関数。
 				const expandDateFormat = (str: string): string => {
@@ -609,9 +611,9 @@ export class MemologSettingTab extends PluginSettingTab {
 						.replace(/%S/g, second)
 				}
 
-				// ! メモファイルのパスを生成（指定されたpathFormatまたは現在の設定を使用）。
+				// ! メモファイルのパスを生成（指定された値または現在の設定を使用）。
 				const memoPath = PathGenerator.generateCustomPath(
-					currentSettings.rootDirectory,
+					effectiveRootDirectory,
 					currentSettings.categories[0]?.directory || "default",
 					effectivePathFormat,
 					currentSettings.useDirectoryCategory,
@@ -630,7 +632,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					// ! 絶対パス: ルートディレクトリからの絶対パス。
 					const absolutePath = attachmentPathFormat.substring(1) // "/" を除去。
 					const expandedPath = expandDateFormat(absolutePath)
-					attachmentPath = `${currentSettings.rootDirectory}/${expandedPath}`
+					attachmentPath = `${effectiveRootDirectory}/${expandedPath}`
 				} else {
 					// ! その他: そのまま表示。
 					attachmentPath = expandDateFormat(attachmentPathFormat)

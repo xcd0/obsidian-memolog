@@ -188,6 +188,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 			if (this.rootDirectoryMigrationButton) {
 				this.rootDirectoryMigrationButton.disabled = !hasChanged
+				this.rootDirectoryMigrationButton.toggleClass("mod-cta", hasChanged)
 			}
 		}
 
@@ -2185,6 +2186,30 @@ export class MemologSettingTab extends PluginSettingTab {
 		const settings = this.plugin.settingsManager.getGlobalSettings()
 		const migrator = new RootDirectoryMigrator(this.app)
 
+		// ! ルートディレクトリが変更されているか確認。
+		if (settings.rootDirectory === this.initialRootDirectory) {
+			new Notice("ルートディレクトリが変更されていません。")
+			return
+		}
+
+		// ! 旧ルートディレクトリの存在確認。
+		const oldFolder = this.app.vault.getAbstractFileByPath(this.initialRootDirectory)
+		if (!oldFolder) {
+			new Notice(
+				`旧ルートディレクトリ「${this.initialRootDirectory}」が見つかりません。\n` +
+					`新しいルートディレクトリ「${settings.rootDirectory}」を使用する場合は、` +
+					`既に移行されているか、データがない状態です。`,
+				8000,
+			)
+			// ! 初期値を更新してボタンを無効化。
+			this.initialRootDirectory = settings.rootDirectory
+			if (this.rootDirectoryMigrationButton) {
+				this.rootDirectoryMigrationButton.disabled = true
+				this.rootDirectoryMigrationButton.removeClass("mod-cta")
+			}
+			return
+		}
+
 		// ! 移行計画を作成。
 		const notice = new Notice("移行計画を作成中...", 0)
 		try {
@@ -2196,7 +2221,17 @@ export class MemologSettingTab extends PluginSettingTab {
 			notice.hide()
 
 			if (mappings.length === 0) {
-				new Notice("移行対象のファイルがありません。")
+				new Notice(
+					`旧ルートディレクトリ「${this.initialRootDirectory}」に移行対象のファイルがありません。\n` +
+						`ディレクトリは空か、既にファイルが移行されています。`,
+					6000,
+				)
+				// ! 初期値を更新してボタンを無効化。
+				this.initialRootDirectory = settings.rootDirectory
+				if (this.rootDirectoryMigrationButton) {
+					this.rootDirectoryMigrationButton.disabled = true
+					this.rootDirectoryMigrationButton.removeClass("mod-cta")
+				}
 				return
 			}
 
@@ -2232,6 +2267,7 @@ export class MemologSettingTab extends PluginSettingTab {
 							// ! 変更ボタンを無効化。
 							if (this.rootDirectoryMigrationButton) {
 								this.rootDirectoryMigrationButton.disabled = true
+								this.rootDirectoryMigrationButton.removeClass("mod-cta")
 							}
 
 							// ! サイドバーを再描画。

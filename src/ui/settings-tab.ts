@@ -40,6 +40,7 @@ export class MemologSettingTab extends PluginSettingTab {
 	private migrationButton: HTMLButtonElement | null = null
 	private initialRootDirectory: string = "" // ! ルートディレクトリの初期値。
 	private rootDirectoryMigrationButton: HTMLButtonElement | null = null // ! ルートディレクトリ変更ボタン。
+	private rootDirectoryInputEl: HTMLInputElement | null = null // ! ルートディレクトリ入力欄。
 	private currentActiveTab: string = "basic" // ! 現在アクティブなタブ。
 	// ! 設定画面表示時の初期設定値（JSON文字列）- 将来的な変更検出・比較機能用に保持。
 	private _initialSettings: string = ""
@@ -181,10 +182,12 @@ export class MemologSettingTab extends PluginSettingTab {
 		// ! ルートディレクトリの初期値を保存。
 		this.initialRootDirectory = settings.rootDirectory
 
+		// ! 入力中のルートディレクトリ値（未確定）。
+		let pendingRootDirectory = settings.rootDirectory
+
 		// ! ルートディレクトリ変更ボタンのチェック関数。
 		const checkRootDirectoryMigrationNeeded = () => {
-			const currentSettings = this.plugin.settingsManager.getGlobalSettings()
-			const hasChanged = currentSettings.rootDirectory !== this.initialRootDirectory
+			const hasChanged = pendingRootDirectory !== this.initialRootDirectory
 
 			if (this.rootDirectoryMigrationButton) {
 				this.rootDirectoryMigrationButton.disabled = !hasChanged
@@ -195,22 +198,20 @@ export class MemologSettingTab extends PluginSettingTab {
 		// ! ルートディレクトリ設定。
 		new Setting(containerEl)
 			.setName("ルートディレクトリ")
-			.setDesc("memologファイルを保存するルートディレクトリ")
+			.setDesc("memologファイルを保存するルートディレクトリ（変更ボタンを押すまで保存されません）")
 			.addText(text => {
 				text
 					.setPlaceholder("memolog")
 					.setValue(settings.rootDirectory)
 
-				const saveRootDirectory = async (value: string) => {
-					await this.plugin.settingsManager.updateGlobalSettings({
-						rootDirectory: value,
-					})
-					checkRootDirectoryMigrationNeeded()
-				}
+				// ! 入力欄の参照を保存。
+				this.rootDirectoryInputEl = text.inputEl
 
-				// ! リアルタイム保存 - input イベントを監視。
+				// ! 入力イベント - プレビュー更新とボタン状態更新のみ。
 				text.inputEl.addEventListener("input", () => {
 					const value = text.inputEl.value
+					pendingRootDirectory = value
+
 					// ! プレビューを即座に更新（新しいrootDirectoryを渡す）。
 					if (updatePathPreview) {
 						updatePathPreview(settings.pathFormat, value)
@@ -218,20 +219,9 @@ export class MemologSettingTab extends PluginSettingTab {
 					if (updateAttachmentPathPreview) {
 						updateAttachmentPathPreview(settings.attachmentPath, settings.pathFormat, value)
 					}
-					this.debounce("root-directory", () => {
-						void saveRootDirectory(value)
-					})
-				})
 
-				// ! フォーカスが外れた時も即座に保存。
-				text.inputEl.addEventListener("blur", () => {
-					const value = text.inputEl.value
-					const existingTimer = this.debounceTimers.get("root-directory")
-					if (existingTimer) {
-						clearTimeout(existingTimer)
-						this.debounceTimers.delete("root-directory")
-					}
-					void saveRootDirectory(value)
+					// ! ボタンの状態を更新。
+					checkRootDirectoryMigrationNeeded()
 				})
 
 				return text
@@ -241,7 +231,7 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setButtonText("変更")
 					.setDisabled(true)
 					.onClick(async () => {
-						await this.showRootDirectoryMigrationDialog()
+						await this.showRootDirectoryMigrationDialog(pendingRootDirectory)
 					})
 
 				this.rootDirectoryMigrationButton = btn.buttonEl
@@ -2182,12 +2172,12 @@ export class MemologSettingTab extends PluginSettingTab {
 	}
 
 	// ! ルートディレクトリ移行ダイアログを表示。
-	private async showRootDirectoryMigrationDialog() {
+	private async showRootDirectoryMigrationDialog(newRootDirectory: string) {
 		const settings = this.plugin.settingsManager.getGlobalSettings()
 		const migrator = new RootDirectoryMigrator(this.app)
 
 		// ! ルートディレクトリが変更されているか確認。
-		if (settings.rootDirectory === this.initialRootDirectory) {
+		if (newRootDirectory === this.initialRootDirectory) {
 			new Notice("ルートディレクトリが変更されていません。")
 			return
 		}
@@ -2197,12 +2187,22 @@ export class MemologSettingTab extends PluginSettingTab {
 		if (!oldFolder) {
 			new Notice(
 				`旧ルートディレクトリ「${this.initialRootDirectory}」が見つかりません。\n` +
-					`新しいルートディレクトリ「${settings.rootDirectory}」を使用する場合は、` +
+					`新しいルートディレクトリ「${newRootDirectory}」を使用する場合は、` +
 					`既に移行されているか、データがない状態です。`,
 				8000,
 			)
-			// ! 初期値を更新してボタンを無効化。
-			this.initialRootDirectory = settings.rootDirectory
+			// ! 設定を保存して初期値を更新。
+			settings.rootDirectory = newRootDirectory
+			await this.plugin.settingsManager.saveGlobalSettings()
+
+			this.initialRootDirectory = newRootDirectory
+
+			// ! 入力欄の値も更新。
+			if (this.rootDirectoryInputEl) {
+				this.rootDirectoryInputEl.value = newRootDirectory
+			}
+
+			// ! ボタンを無効化。
 			if (this.rootDirectoryMigrationButton) {
 				this.rootDirectoryMigrationButton.disabled = true
 				this.rootDirectoryMigrationButton.removeClass("mod-cta")
@@ -2215,7 +2215,7 @@ export class MemologSettingTab extends PluginSettingTab {
 		try {
 			const mappings = await migrator.calculateMappings(
 				this.initialRootDirectory,
-				settings.rootDirectory,
+				newRootDirectory,
 			)
 
 			notice.hide()
@@ -2226,8 +2226,18 @@ export class MemologSettingTab extends PluginSettingTab {
 						`ディレクトリは空か、既にファイルが移行されています。`,
 					6000,
 				)
-				// ! 初期値を更新してボタンを無効化。
-				this.initialRootDirectory = settings.rootDirectory
+				// ! 設定を保存して初期値を更新。
+				settings.rootDirectory = newRootDirectory
+				await this.plugin.settingsManager.saveGlobalSettings()
+
+				this.initialRootDirectory = newRootDirectory
+
+				// ! 入力欄の値も更新。
+				if (this.rootDirectoryInputEl) {
+					this.rootDirectoryInputEl.value = newRootDirectory
+				}
+
+				// ! ボタンを無効化。
 				if (this.rootDirectoryMigrationButton) {
 					this.rootDirectoryMigrationButton.disabled = true
 					this.rootDirectoryMigrationButton.removeClass("mod-cta")
@@ -2239,7 +2249,7 @@ export class MemologSettingTab extends PluginSettingTab {
 			const modal = new RootDirectoryMigrationConfirmModal(
 				this.app,
 				this.initialRootDirectory,
-				settings.rootDirectory,
+				newRootDirectory,
 				mappings,
 				this.plugin.settingsManager,
 				async (_createBackup: boolean) => {
@@ -2260,9 +2270,18 @@ export class MemologSettingTab extends PluginSettingTab {
 						const resultModal = new RootDirectoryMigrationResultModal(this.app, result)
 						resultModal.open()
 
-						// ! 成功した場合は初期値を更新。
+						// ! 成功した場合は設定を保存して初期値を更新。
 						if (result.movedCount > 0) {
-							this.initialRootDirectory = settings.rootDirectory
+							// ! 新しいルートディレクトリを設定に保存。
+							settings.rootDirectory = newRootDirectory
+							await this.plugin.settingsManager.saveGlobalSettings()
+
+							this.initialRootDirectory = newRootDirectory
+
+							// ! 入力欄の値も更新。
+							if (this.rootDirectoryInputEl) {
+								this.rootDirectoryInputEl.value = newRootDirectory
+							}
 
 							// ! 変更ボタンを無効化。
 							if (this.rootDirectoryMigrationButton) {

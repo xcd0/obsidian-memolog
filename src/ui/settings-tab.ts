@@ -188,10 +188,19 @@ export class MemologSettingTab extends PluginSettingTab {
 		// ! ルートディレクトリ変更ボタンのチェック関数。
 		const checkRootDirectoryMigrationNeeded = () => {
 			const hasChanged = pendingRootDirectory !== this.initialRootDirectory
+			console.log("checkRootDirectoryMigrationNeeded:", {
+				pendingRootDirectory,
+				initialRootDirectory: this.initialRootDirectory,
+				hasChanged,
+			})
 
 			if (this.rootDirectoryMigrationButton) {
 				this.rootDirectoryMigrationButton.disabled = !hasChanged
 				this.rootDirectoryMigrationButton.toggleClass("mod-cta", hasChanged)
+				console.log("ボタンの状態:", {
+					disabled: this.rootDirectoryMigrationButton.disabled,
+					hasCta: this.rootDirectoryMigrationButton.hasClass("mod-cta"),
+				})
 			}
 		}
 
@@ -231,13 +240,28 @@ export class MemologSettingTab extends PluginSettingTab {
 					.setButtonText("変更")
 					.setDisabled(true)
 					.onClick(async () => {
-						console.log("変更ボタンがクリックされました")
+						console.log("=== 変更ボタンがクリックされました ===")
 						console.log("pendingRootDirectory:", pendingRootDirectory)
 						console.log("initialRootDirectory:", this.initialRootDirectory)
+						console.log("ボタンdisabled状態:", btn.buttonEl.disabled)
 						await this.showRootDirectoryMigrationDialog(pendingRootDirectory)
 					})
 
 				this.rootDirectoryMigrationButton = btn.buttonEl
+				console.log("ルートディレクトリ変更ボタンを作成しました:", {
+					disabled: btn.buttonEl.disabled,
+					text: btn.buttonEl.textContent,
+				})
+
+				// ! 追加のクリックテスト用イベントリスナー。
+				btn.buttonEl.addEventListener("click", e => {
+					console.log("=== ネイティブクリックイベント発火 ===", {
+						disabled: btn.buttonEl.disabled,
+						target: e.target,
+						currentTarget: e.currentTarget,
+					})
+				})
+
 				return btn
 			})
 

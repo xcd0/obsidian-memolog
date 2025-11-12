@@ -236,16 +236,7 @@ export class MemologSettingTab extends PluginSettingTab {
 				return text
 			})
 			.addButton(btn => {
-				btn
-					.setButtonText("変更")
-					.setDisabled(true)
-					.onClick(async () => {
-						console.log("=== 変更ボタンがクリックされました ===")
-						console.log("pendingRootDirectory:", pendingRootDirectory)
-						console.log("initialRootDirectory:", this.initialRootDirectory)
-						console.log("ボタンdisabled状態:", btn.buttonEl.disabled)
-						await this.showRootDirectoryMigrationDialog(pendingRootDirectory)
-					})
+				btn.setButtonText("変更").setDisabled(true)
 
 				this.rootDirectoryMigrationButton = btn.buttonEl
 				console.log("ルートディレクトリ変更ボタンを作成しました:", {
@@ -253,13 +244,24 @@ export class MemologSettingTab extends PluginSettingTab {
 					text: btn.buttonEl.textContent,
 				})
 
-				// ! 追加のクリックテスト用イベントリスナー。
-				btn.buttonEl.addEventListener("click", e => {
+				// ! ネイティブクリックイベントを使用（ObsidianのonClickが動作しないため）。
+				btn.buttonEl.addEventListener("click", async e => {
 					console.log("=== ネイティブクリックイベント発火 ===", {
 						disabled: btn.buttonEl.disabled,
 						target: e.target,
 						currentTarget: e.currentTarget,
 					})
+
+					// ! disabled状態ではクリックを無視。
+					if (btn.buttonEl.disabled) {
+						console.log("ボタンがdisabledのためクリックを無視")
+						return
+					}
+
+					console.log("=== 変更ボタンがクリックされました ===")
+					console.log("pendingRootDirectory:", pendingRootDirectory)
+					console.log("initialRootDirectory:", this.initialRootDirectory)
+					await this.showRootDirectoryMigrationDialog(pendingRootDirectory)
 				})
 
 				return btn

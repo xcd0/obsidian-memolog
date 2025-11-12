@@ -169,7 +169,7 @@ export class MemologSettingTab extends PluginSettingTab {
 
 		// ! プレビュー更新関数を格納する変数（後で定義）。
 		let updatePathPreview: (format: string) => void
-		let updateAttachmentPathPreview: (format: string) => void
+		let updateAttachmentPathPreview: (attachmentPathFormat: string, pathFormat?: string) => void
 
 		// ! ルートディレクトリ設定。
 		new Setting(containerEl)
@@ -412,10 +412,10 @@ export class MemologSettingTab extends PluginSettingTab {
 
 					// ! プレビューを更新。
 					updatePathPreview(preset.value)
-					// ! 添付ファイルパスのプレビューも更新。
+					// ! 添付ファイルパスのプレビューも更新（新しいpathFormatを渡す）。
 					if (updateAttachmentPathPreview) {
 						const currentSettings = this.plugin.settingsManager.getGlobalSettings()
-						updateAttachmentPathPreview(currentSettings.attachmentPath)
+						updateAttachmentPathPreview(currentSettings.attachmentPath, preset.value)
 					}
 
 					// ! 設定を更新。
@@ -473,10 +473,10 @@ export class MemologSettingTab extends PluginSettingTab {
 			if (value) {
 				// ! プレビューを即座に更新。
 				updatePathPreview(value)
-				// ! 添付ファイルパスのプレビューも更新。
+				// ! 添付ファイルパスのプレビューも更新（新しいpathFormatを渡す）。
 				if (updateAttachmentPathPreview) {
 					const currentSettings = this.plugin.settingsManager.getGlobalSettings()
-					updateAttachmentPathPreview(currentSettings.attachmentPath)
+					updateAttachmentPathPreview(currentSettings.attachmentPath, value)
 				}
 				this.debounce("path-format-custom", async () => {
 					await this.plugin.settingsManager.updateGlobalSettings({
@@ -583,10 +583,13 @@ export class MemologSettingTab extends PluginSettingTab {
 		})
 
 		// ! プレビュー更新関数。
-		updateAttachmentPathPreview = (format: string) => {
+		updateAttachmentPathPreview = (attachmentPathFormat: string, pathFormat?: string) => {
 			try {
 				const now = new Date()
 				const currentSettings = this.plugin.settingsManager.getGlobalSettings()
+
+				// ! pathFormatが指定されていない場合は現在の設定を使用。
+				const effectivePathFormat = pathFormat ?? currentSettings.pathFormat
 
 				// ! 日付フォーマット展開用のヘルパー関数。
 				const expandDateFormat = (str: string): string => {
@@ -606,31 +609,31 @@ export class MemologSettingTab extends PluginSettingTab {
 						.replace(/%S/g, second)
 				}
 
-				// ! メモファイルのパスを生成（現在の設定を使用）。
+				// ! メモファイルのパスを生成（指定されたpathFormatまたは現在の設定を使用）。
 				const memoPath = PathGenerator.generateCustomPath(
 					currentSettings.rootDirectory,
 					currentSettings.categories[0]?.directory || "default",
-					currentSettings.pathFormat,
+					effectivePathFormat,
 					currentSettings.useDirectoryCategory,
 					now,
 				)
 
 				// ! 添付ファイルの保存先パスを計算。
 				let attachmentPath: string
-				if (format.startsWith("./")) {
+				if (attachmentPathFormat.startsWith("./")) {
 					// ! 相対パス: メモファイルと同じディレクトリからの相対パス。
 					const memoDir = memoPath.substring(0, memoPath.lastIndexOf("/"))
-					const relativePath = format.substring(2) // "./" を除去。
+					const relativePath = attachmentPathFormat.substring(2) // "./" を除去。
 					const expandedPath = expandDateFormat(relativePath)
 					attachmentPath = `${memoDir}/${expandedPath}`
-				} else if (format.startsWith("/")) {
+				} else if (attachmentPathFormat.startsWith("/")) {
 					// ! 絶対パス: ルートディレクトリからの絶対パス。
-					const absolutePath = format.substring(1) // "/" を除去。
+					const absolutePath = attachmentPathFormat.substring(1) // "/" を除去。
 					const expandedPath = expandDateFormat(absolutePath)
 					attachmentPath = `${currentSettings.rootDirectory}/${expandedPath}`
 				} else {
 					// ! その他: そのまま表示。
-					attachmentPath = expandDateFormat(format)
+					attachmentPath = expandDateFormat(attachmentPathFormat)
 				}
 
 				attachmentPathPreviewContent.setText(attachmentPath)

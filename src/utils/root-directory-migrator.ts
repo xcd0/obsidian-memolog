@@ -68,9 +68,10 @@ export class RootDirectoryMigrator {
 			// ! 新しいパスを計算。
 			const newPath = newRootDir + "/" + cleanRelativePath
 
-			// ! 競合チェック。
-			const hasConflict = newPaths.has(newPath) ||
-				this.app.vault.getAbstractFileByPath(newPath) !== null
+			// ! 競合チェック（設定ファイルは上書きするので競合としない）。
+			const isSettingsFile = cleanRelativePath.endsWith("memolog-setting.json")
+			const hasConflict = !isSettingsFile &&
+				(newPaths.has(newPath) || this.app.vault.getAbstractFileByPath(newPath) !== null)
 
 			mappings.push({
 				oldPath: file.path,
@@ -141,6 +142,15 @@ export class RootDirectoryMigrator {
 		const newDir = newPath.substring(0, newPath.lastIndexOf("/"))
 		if (!this.vaultHandler.folderExists(newDir)) {
 			await this.vaultHandler.createFolder(newDir)
+		}
+
+		// ! 設定ファイルの場合、既存ファイルを削除してから移動。
+		const isSettingsFile = newPath.endsWith("memolog-setting.json")
+		if (isSettingsFile) {
+			const existingFile = this.app.vault.getAbstractFileByPath(newPath)
+			if (existingFile instanceof TFile) {
+				await this.app.vault.delete(existingFile)
+			}
 		}
 
 		// ! ファイルを移動。

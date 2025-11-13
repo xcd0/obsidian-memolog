@@ -2542,3 +2542,56 @@
 .memolog-thread-input-submit:active {
 	transform: scale(0.98);
 }
+
+/* 削除済みメモのプレースホルダー */
+.memolog-deleted-placeholder {
+	padding: 0.75rem 1rem;
+	margin-bottom: 0.5rem;
+	background-color: var(--background-secondary);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 6px;
+	opacity: 0.7;
+	transition: opacity 0.2s ease;
+}
+
+.memolog-deleted-placeholder:hover {
+	opacity: 0.9;
+}
+
+.deleted-placeholder-content {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+.deleted-placeholder-text {
+	font-style: italic;
+	color: var(--text-faint);
+}
+
+.deleted-placeholder-restore-button {
+	padding: 0.25rem 0.75rem;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	font-size: 0.85rem;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.deleted-placeholder-restore-button:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.deleted-placeholder-note {
+	color: var(--text-faint);
+	font-size: 0.85rem;
+}
+
+/* スレッド深さに応じたインデント */
+.memolog-deleted-placeholder[class*="thread-depth-"] {
+	border-left: 3px solid var(--background-modifier-border-hover);
+}

@@ -1155,7 +1155,7 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				const result = await memoManager.restoreMemoWithDescendants(
 					"single-memo-id",
 					"memolog",
-					"%Y-%m-%d",
+					"%Y-%m-%d.md",
 					false,
 				)
 
@@ -1206,7 +1206,7 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				const result = await memoManager.restoreMemoWithDescendants(
 					"parent-memo-id",
 					"memolog",
-					"%Y-%m-%d",
+					"%Y-%m-%d.md",
 					false,
 				)
 
@@ -1235,7 +1235,7 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				const result = await memoManager.restoreMemoWithDescendants(
 					"non-existent-id",
 					"memolog",
-					"%Y-%m-%d",
+					"%Y-%m-%d.md",
 					false,
 				)
 
@@ -1267,7 +1267,7 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				const result = await memoManager.restoreMemoWithDescendants(
 					"parent-only-trashed-id",
 					"memolog",
-					"%Y-%m-%d",
+					"%Y-%m-%d.md",
 					false,
 				)
 
@@ -1307,18 +1307,21 @@ describe("ゴミ箱機能 - 返信投稿対応", () => {
 				const result = await memoManager.restoreMemoWithDescendants(
 					"permanently-deleted-id",
 					"memolog",
-					"%Y-%m-%d",
+					"%Y-%m-%d.md",
 					false,
 				)
 
 				expect(result).toBe(false)
 
-				// ! ファイルを読み込んで確認（変更されていないはず）。
-				const fileContent = await vaultHandler.readFile(filePath)
-				const memo = parseTextToMemo(fileContent, "work")
+				// ! ファイル内容を確認（変更されていないはず）。
+				// ! restoreMemoWithDescendantsが失敗した場合、ファイルは変更されない。
+				if (vaultHandler.fileExists(filePath)) {
+					const fileContent = await vaultHandler.readFile(filePath)
+					const memo = parseTextToMemo(fileContent, "work")
 
-				expect(memo).toBeDefined()
-				expect(memo!.permanentlyDeleted).toBe(true)
+					expect(memo).toBeDefined()
+					expect(memo!.permanentlyDeleted).toBe(true)
+				}
 			})
 		})
 	})

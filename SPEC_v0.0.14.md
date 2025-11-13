@@ -483,7 +483,7 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 }
 ```
 
-### 3.5 ゴミ箱機能のスレッド対応（v0.0.16で実装）
+### 3.5 ゴミ箱機能のスレッド対応
 
 #### 3.5.1 返信投稿の削除と復元
 
@@ -520,7 +520,7 @@ async function deleteThread(rootMemo: MemoEntry): Promise<void> {
 export interface MemoEntry {
 	// ... 既存フィールド ...
 
-	// ! 完全削除済みフラグ（ゴミ箱OFF時）。v0.0.16で追加。
+	// ! 完全削除済みフラグ（ゴミ箱OFF時）。v0.0.14で追加。
 	permanentlyDeleted?: boolean
 }
 ```
@@ -722,60 +722,14 @@ export class ThreadIndexManager {
 }
 ```
 
-### 5.2 インデックス更新戦略
-
-**差分更新（v0.0.15以降で検討）:**
-現在は全体再構築だが、将来的には差分更新を実装。
-
-```typescript
-// ! メモ追加時の差分更新。
-function addMemoToIndex(memo: MemoEntry, index: ThreadIndex): void {
-	if (memo.parentId) {
-		// ! 子として登録。
-		if (!index.childrenMap.has(memo.parentId)) {
-			index.childrenMap.set(memo.parentId, [])
-		}
-		index.childrenMap.get(memo.parentId)!.push(memo.id)
-		index.parentMap.set(memo.id, memo.parentId)
-
-		// ! 深さを設定。
-		const parentDepth = index.depthMap.get(memo.parentId) || 0
-		index.depthMap.set(memo.id, parentDepth + 1)
-
-		// ! 祖先の子孫数を更新。
-		updateAncestorDescendantCount(memo.parentId, index, +1)
-	} else {
-		// ! ルートメモ。
-		index.rootIds.add(memo.id)
-		index.depthMap.set(memo.id, 0)
-	}
-
-	index.descendantCountMap.set(memo.id, 0)
-}
-
-// ! 祖先の子孫数を更新（反復処理）。
-function updateAncestorDescendantCount(
-	memoId: string,
-	index: ThreadIndex,
-	delta: number,
-): void {
-	let currentId: string | undefined = memoId
-	while (currentId) {
-		const current = index.descendantCountMap.get(currentId) || 0
-		index.descendantCountMap.set(currentId, current + delta)
-		currentId = index.parentMap.get(currentId)
-	}
-}
-```
-
-### 5.3 キャッシュ無効化のタイミング
+### 5.2 キャッシュ無効化のタイミング
 
 - **メモ追加時**: ThreadIndexを再構築、影響を受けるツリーキャッシュを無効化
 - **メモ削除時**: ThreadIndexを再構築、削除されたメモを含むツリーキャッシュを無効化
 - **メモ更新時（parent変更）**: ThreadIndexを再構築、全ツリーキャッシュをクリア
 - **ファイル読み込み時**: ThreadIndexを再構築
 
-### 5.4 メモリ使用量の見積もり
+### 5.3 メモリ使用量の見積もり
 
 **1000メモ、平均深さ5、平均子数2の場合:**
 
@@ -840,44 +794,44 @@ TypeScriptは必須だね。
 
 ### 7.1 フェーズ1: データ構造とコア機能
 
-- [ ] MemoEntry型にparentIdを追加
-- [ ] ThreadNode, ThreadTree型の定義
-- [ ] buildThreadTree() 関数の実装
-- [ ] HTMLコメントタグのパーサー拡張
-- [ ] memoToText() 関数の拡張（parent-id対応）
-- [ ] 単体テスト作成（50件以上）
+- [x] MemoEntry型にparentIdを追加
+- [x] ThreadNode, ThreadTree型の定義
+- [x] buildThreadTree() 関数の実装
+- [x] HTMLコメントタグのパーサー拡張
+- [x] memoToText() 関数の拡張（parent-id対応）
+- [x] 単体テスト作成（50件以上）
 
 ### 7.2 フェーズ2: キャッシュとパフォーマンス
 
-- [ ] ThreadCacheManager の実装
-- [ ] スレッドツリーキャッシュの統合
-- [ ] パフォーマンステスト（1000メモ以上）
-- [ ] メモリ使用量の最適化
+- [x] ThreadCacheManager の実装
+- [x] スレッドツリーキャッシュの統合
+- [x] パフォーマンステスト（1000メモ以上）
+- [x] メモリ使用量の最適化
 
 ### 7.3 フェーズ3: UI実装
 
-- [ ] 返信ボタンの追加
-- [ ] 返信入力フォームの実装
-- [ ] スレッド表示モード切り替えUI
-- [ ] ツリー表示のインデント実装
-- [ ] 折りたたみ/展開機能
-- [ ] 返信数バッジの表示
+- [x] 返信ボタンの追加
+- [x] 返信入力フォームの実装
+- [x] スレッド表示モード切り替えUI
+- [x] ツリー表示のインデント実装
+- [x] 折りたたみ/展開機能
+- [x] 返信数バッジの表示
 
 ### 7.4 フェーズ4: スレッド操作
 
-- [ ] createReply() 関数の実装
-- [ ] deleteThread() 関数の実装
+- [x] createReply() 関数の実装
+- [x] deleteThread() 関数の実装
 - [ ] スレッド移動機能（親の変更）
 - [ ] スレッド分離機能（子を独立させる）
-- [ ] エラーハンドリング
+- [x] エラーハンドリング
 
 ### 7.5 フェーズ5: テストと品質保証
 
-- [ ] 統合テスト（100件以上）
+- [x] 統合テスト（100件以上）
 - [ ] E2Eテスト（主要シナリオ）
-- [ ] パフォーマンステスト
+- [x] パフォーマンステスト
 - [ ] アクセシビリティチェック
-- [ ] ドキュメント整備
+- [x] ドキュメント整備
 
 ---
 
@@ -906,20 +860,6 @@ TypeScriptは必須だね。
 - **最大返信数（1メモあたり）**: 無制限
 - **スレッドツリー全体**: 10,000メモまで快適動作
 - **推奨最大深さ（UI）**: 50階層（それ以上は折りたたみ推奨）
-
-### 8.4 長いスレッドへの対応
-
-**仮想スクロール（v0.0.15以降）:**
-
-- 表示領域外のノードはレンダリングしない
-- スクロールに応じて動的にレンダリング
-- 10,000ノードのスレッドでも滑らかにスクロール
-
-**段階的ローディング（v0.0.15以降）:**
-
-- 初期表示は深さ10まで
-- 「さらに表示」ボタンで追加ロード
-- メモリとレンダリングコストを削減
 
 ---
 

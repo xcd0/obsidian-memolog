@@ -259,3 +259,30 @@ export class ThreadIndexManager {
 		return `${memos.length}|${parts.join("|")}`
 	}
 }
+
+// ! メモの親を変更する。
+// ! @param memo 変更対象のメモ
+// ! @param newParentId 新しい親のID（null の場合はルートメモにする）
+// ! @param threadIndex スレッドインデックス（循環参照チェック用、オプション）
+// ! @returns 成功した場合は true、循環参照が発生する場合は false
+export function changeParentId(
+	memo: MemoEntry,
+	newParentId: string | null,
+	threadIndex?: ThreadIndex,
+): boolean {
+	// ! 循環参照チェック。
+	if (threadIndex && newParentId) {
+		if (wouldIntroduceCycle(memo.id, newParentId, threadIndex)) {
+			return false
+		}
+	}
+
+	// ! 親を変更。
+	if (newParentId === null) {
+		memo.parentId = undefined
+	} else {
+		memo.parentId = newParentId
+	}
+
+	return true
+}

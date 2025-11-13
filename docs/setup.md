@@ -2,65 +2,55 @@
 
 memologを開発・テストするための環境構築手順です。
 
-## 1. リポジトリのクローンとビルド
+## 1. 空のVaultを作成
+
+Obsidianで新しい空のVaultを作成します。
 
 ```bash
+# Windowsの場合
+mkdir %USERPROFILE%\Desktop\memolog-test-vault
+
+# PowerShellの場合
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\Desktop\memolog-test-vault"
+
+# Linux/macOSの場合
+mkdir -p ~/Desktop/memolog-test-vault
+```
+
+Obsidianで「Vault を開く」→ 作成したディレクトリを選択して開きます。
+一度開くと `.obsidian` ディレクトリが自動作成されます。
+
+## 2. プラグインディレクトリにリポジトリをクローン
+
+`.obsidian/plugins` ディレクトリ内に直接クローンします。
+
+```bash
+# Windowsの場合
+cd %USERPROFILE%\Desktop\memolog-test-vault\.obsidian\plugins
 git clone https://github.com/xcd0/obsidian-memolog.git
+
+# PowerShellの場合
+cd "$env:USERPROFILE\Desktop\memolog-test-vault\.obsidian\plugins"
+git clone https://github.com/xcd0/obsidian-memolog.git
+
+# Linux/macOSの場合
+cd ~/Desktop/memolog-test-vault/.obsidian/plugins
+git clone https://github.com/xcd0/obsidian-memolog.git
+```
+
+## 3. 依存関係のインストールとビルド
+
+```bash
 cd obsidian-memolog
 npm install
 npm run build
 ```
 
-## 2. Obsidianテスト環境へのデプロイ
+## 4. Obsidianでプラグインを有効化
 
-### 方法1: 手動コピー（推奨）
-
-ビルドした以下のファイルをObsidianのプラグインディレクトリにコピーします。
-
-```bash
-# Windowsの場合
-mkdir %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog
-copy main.js %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
-copy manifest.json %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
-copy styles.css %USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\
-
-# PowerShellの場合
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog"
-Copy-Item main.js, manifest.json, styles.css "$env:USERPROFILE\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog\"
-
-# Linux/macOSの場合
-mkdir -p ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
-cp main.js manifest.json styles.css ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog/
-```
-
-> **注意:** Vaultのパスは環境に合わせて変更してください。
-
-### 方法2: シンボリックリンク（開発効率化・推奨）
-
-```bash
-# Windowsの場合（管理者権限で実行）
-mklink /D "%USERPROFILE%\Desktop\dummy\vault\.obsidian\plugins\obsidian-memolog" "%CD%"
-
-# Linux/macOSの場合
-ln -s "$(pwd)" ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
-```
-
-**利点:**
-
-- ビルド後のファイルコピーが不要
-- `npm run dev`で自動ビルド → Obsidianで即座に反映
-- 開発効率が大幅に向上
-
-**注意（Windows）:**
-
-- 管理者権限が必要
-- コマンドプロンプトを右クリック →「管理者として実行」
-
-## 3. Obsidianでプラグインを有効化
-
-1. Obsidianを起動
-2. 設定 → コミュニティプラグイン
-3. "memolog"を有効化
+1. Obsidianを再起動（または Ctrl+R / Cmd+R でリロード）
+2. 設定 → コミュニティプラグイン → 「制限モードをオフにする」
+3. インストール済みプラグイン → "memolog"を有効化
 
 ## 開発モード
 
@@ -70,4 +60,20 @@ ln -s "$(pwd)" ~/Desktop/dummy/vault/.obsidian/plugins/obsidian-memolog
 npm run dev
 ```
 
-ビルド後、Obsidianでプラグインをリロードします（Ctrl+R または Cmd+R）。
+ファイルを編集後、Obsidianでプラグインをリロードします（Ctrl+R または Cmd+R）。
+
+## ディレクトリ構成
+
+```
+memolog-test-vault/
+├── .obsidian/
+│   └── plugins/
+│       └── obsidian-memolog/    # ← ここにクローン
+│           ├── src/
+│           ├── test/
+│           ├── main.js          # ビルド成果物
+│           ├── manifest.json
+│           ├── styles.css
+│           └── package.json
+└── (Vaultのメモファイル)
+```

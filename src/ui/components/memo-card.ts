@@ -114,6 +114,10 @@ export class MemoCard {
 				) {
 					return
 				}
+				// ! 編集モードのテキストエリアクリックは除外。
+				if ((e.target as HTMLElement).closest("textarea")) {
+					return
+				}
 				if (this.handlers.onThreadClick) {
 					this.handlers.onThreadClick(this.memo.id)
 				}

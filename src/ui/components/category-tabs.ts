@@ -4,6 +4,7 @@ import { CategoryConfig } from "../../types"
 // ! カテゴリタブのハンドラー。
 interface CategoryTabsHandlers {
 	onCategoryChange: (categoryDirectory: string) => void
+	onCategoryOrderChange?: (newOrder: string[]) => void
 }
 
 // ! カテゴリタブUI。
@@ -16,6 +17,8 @@ export class CategoryTabs {
 	private showAllTab: boolean
 	private showTrashTab: boolean
 	private showPinnedTab: boolean
+	private draggedCategory: string | null = null // ! ドラッグ中のカテゴリ。
+	private categoryOrder: string[] = [] // ! カテゴリの表示順序。
 
 	constructor(
 		container: HTMLElement,
@@ -24,6 +27,7 @@ export class CategoryTabs {
 		showAllTab = true,
 		showTrashTab = false,
 		showPinnedTab = true,
+		categoryOrder: string[] = [],
 	) {
 		this.container = container
 		this.categories = categories
@@ -32,6 +36,10 @@ export class CategoryTabs {
 		this.showTrashTab = showTrashTab
 		this.showPinnedTab = showPinnedTab
 		this.activeCategory = categories[0]?.directory || ""
+		// ! カテゴリ順序が指定されていない場合は、categoriesから順序を抽出。
+		this.categoryOrder = categoryOrder.length > 0
+			? categoryOrder
+			: categories.map(c => c.directory)
 	}
 
 	// ! タブを描画する。
@@ -59,8 +67,9 @@ export class CategoryTabs {
 			}
 		}
 
-		// ! 各カテゴリのタブを作成（ディレクトリ名が空のものは除外）。
-		for (const category of this.categories) {
+		// ! 各カテゴリのタブをcategoryOrderの順序で作成。
+		const sortedCategories = this.getSortedCategories()
+		for (const category of sortedCategories) {
 			// ! ディレクトリ名が空の場合はスキップ。
 			if (!category.directory || !category.directory.trim()) {
 				continue
@@ -187,6 +196,9 @@ export class CategoryTabs {
 			this.handlers.onCategoryChange(category.directory)
 		})
 
+		// ! ドラッグ&ドロップ機能を有効化。
+		this.setupDragAndDrop(tab, category.directory)
+
 		return tab
 	}
 
@@ -215,5 +227,105 @@ export class CategoryTabs {
 	// ! 現在のアクティブカテゴリを取得する。
 	getActiveCategory(): string {
 		return this.activeCategory
+	}
+
+	// ! カテゴリをソートして返す。
+	private getSortedCategories(): CategoryConfig[] {
+		// ! categoryOrderに従ってソート。
+		const orderMap = new Map(this.categoryOrder.map((dir, index) => [dir, index]))
+
+		return [...this.categories].sort((a, b) => {
+			const indexA = orderMap.get(a.directory) ?? this.categoryOrder.length
+			const indexB = orderMap.get(b.directory) ?? this.categoryOrder.length
+			return indexA - indexB
+		})
+	}
+
+	// ! ドラッグ&ドロップを設定する。
+	private setupDragAndDrop(tab: HTMLElement, categoryDirectory: string): void {
+		// ! draggable属性を設定。
+		tab.setAttribute("draggable", "true")
+		tab.setAttribute("data-category", categoryDirectory)
+
+		// ! dragstartイベント。
+		tab.addEventListener("dragstart", (e: DragEvent) => {
+			if (!e.dataTransfer) return
+
+			this.draggedCategory = categoryDirectory
+			e.dataTransfer.effectAllowed = "move"
+			e.dataTransfer.setData("text/plain", categoryDirectory)
+			tab.addClass("memolog-category-tab-dragging")
+		})
+
+		// ! dragendイベント。
+		tab.addEventListener("dragend", () => {
+			tab.removeClass("memolog-category-tab-dragging")
+			// ! すべてのdragoverクラスを削除。
+			this.container.querySelectorAll(".memolog-category-tab-dragover").forEach(el => {
+				el.removeClass("memolog-category-tab-dragover")
+			})
+			this.draggedCategory = null
+		})
+
+		// ! dragenterイベント。
+		tab.addEventListener("dragenter", (e: DragEvent) => {
+			if (!this.draggedCategory || this.draggedCategory === categoryDirectory) return
+			e.preventDefault()
+			tab.addClass("memolog-category-tab-dragover")
+		})
+
+		// ! dragleaveイベント。
+		tab.addEventListener("dragleave", () => {
+			tab.removeClass("memolog-category-tab-dragover")
+		})
+
+		// ! dragoverイベント。
+		tab.addEventListener("dragover", (e: DragEvent) => {
+			if (!this.draggedCategory || this.draggedCategory === categoryDirectory) return
+			e.preventDefault()
+			if (e.dataTransfer) {
+				e.dataTransfer.dropEffect = "move"
+			}
+		})
+
+		// ! dropイベント。
+		tab.addEventListener("drop", (e: DragEvent) => {
+			e.preventDefault()
+			tab.removeClass("memolog-category-tab-dragover")
+
+			if (!this.draggedCategory || this.draggedCategory === categoryDirectory) return
+
+			// ! カテゴリの順序を入れ替える。
+			this.swapCategories(this.draggedCategory, categoryDirectory)
+		})
+	}
+
+	// ! カテゴリの順序を入れ替える。
+	private swapCategories(fromCategory: string, toCategory: string): void {
+		const fromIndex = this.categoryOrder.indexOf(fromCategory)
+		const toIndex = this.categoryOrder.indexOf(toCategory)
+
+		if (fromIndex === -1 || toIndex === -1) return
+
+		// ! 新しい順序を作成。
+		const newOrder = [...this.categoryOrder]
+		const [removed] = newOrder.splice(fromIndex, 1)
+		newOrder.splice(toIndex, 0, removed)
+
+		this.categoryOrder = newOrder
+
+		// ! ハンドラーに通知。
+		if (this.handlers.onCategoryOrderChange) {
+			this.handlers.onCategoryOrderChange(newOrder)
+		}
+
+		// ! 再描画。
+		this.render(this.activeCategory)
+	}
+
+	// ! カテゴリ順序を更新する。
+	updateCategoryOrder(newOrder: string[]): void {
+		this.categoryOrder = newOrder
+		this.render(this.activeCategory)
 	}
 }

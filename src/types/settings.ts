@@ -76,6 +76,9 @@ export interface GlobalSettings {
 
 	// ! 折りたたまれたスレッドのメモID配列。
 	collapsedThreads: string[]
+
+	// ! カテゴリタブの表示順序（カテゴリdirectory名の配列）。
+	categoryOrder: string[]
 }
 
 // ! ローカル設定（カテゴリディレクトリごとの上書き設定）。
@@ -126,4 +129,5 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 	showPinnedTab: true,
 	logLevel: "info",
 	collapsedThreads: [],
+	categoryOrder: ["work", "hobby"],
 }

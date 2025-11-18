@@ -320,6 +320,18 @@
 	font-size: 0.85rem;
 }
 
+/* ドラッグ&ドロップ中のカテゴリタブ */
+.memolog-category-tab-dragging {
+	opacity: 0.5;
+	cursor: move;
+}
+
+/* ドラッグオーバー中のカテゴリタブ */
+.memolog-category-tab-dragover {
+	border-bottom: 2px solid var(--interactive-accent);
+	background-color: rgba(var(--interactive-accent-rgb), 0.1);
+}
+
 /* ボタン共通 */
 .memolog-btn-icon {
 	width: 20px;
@@ -597,9 +609,25 @@
 	margin: 0;
 }
 
-/* カード内のbr要素の行間を狭くする */
-.memolog-card-content br {
-	line-height: 0.5;
+/* カード内のbr要素の行間は親要素のline-height(1.3)を継承 */
+/* 以前は line-height: 0.5 で詰めすぎていたため削除 */
+
+/* カード内のリスト余白を最小限に */
+.memolog-card-content ul,
+.memolog-card-content ol {
+	margin: 0.25rem 0;
+	padding-left: 1.5rem;
+}
+
+.memolog-card-content li {
+	margin: 0;
+	padding: 0;
+}
+
+/* TODOチェックボックスとテキストの間隔 */
+.memolog-card-content .task-list-item {
+	margin: 0;
+	padding: 0;
 }
 
 /* Markdown内の画像 */

@@ -313,10 +313,12 @@ export class MemologSidebar extends ItemView {
 				settings.categories,
 				{
 					onCategoryChange: categoryDirectory => void this.handleCategoryTabChange(categoryDirectory),
+					onCategoryOrderChange: newOrder => void this.handleCategoryOrderChange(newOrder),
 				},
 				settings.showAllTab,
 				settings.showTrashTab,
 				settings.showPinnedTab,
+				settings.categoryOrder,
 			)
 			// ! defaultCategoryからディレクトリ名を取得。
 			const defaultCategoryConfig = settings.categories.find(
@@ -839,6 +841,14 @@ export class MemologSidebar extends ItemView {
 		} else {
 			await this.loadMemos()
 		}
+	}
+
+	// ! カテゴリ順序変更処理。
+	private async handleCategoryOrderChange(newOrder: string[]): Promise<void> {
+		// ! 設定を更新。
+		await this.plugin.settingsManager.updateGlobalSettings({
+			categoryOrder: newOrder,
+		})
 	}
 
 	// ! 日付選択処理。

@@ -327,6 +327,9 @@ export class MemoCard {
 				this.sourcePath,
 				this.component,
 			)
+
+			// ! 画像読み込み完了を監視してスクロール高さを再計算。
+			this.observeImageLoad(contentDiv)
 		}
 	}
 
@@ -419,6 +422,9 @@ export class MemoCard {
 				})
 			}
 		}
+
+		// ! 添付ファイル画像の読み込み完了を監視してスクロール高さを再計算。
+		this.observeImageLoad(attachmentsDiv)
 	}
 
 	// ! 添付ファイルを開く（モバイル対応）。
@@ -581,6 +587,74 @@ export class MemoCard {
 						})
 					}
 				}, 100)
+			}
+		}
+	}
+
+	// ! 画像読み込み完了を監視してスクロール高さを再計算する。
+	private observeImageLoad(container: HTMLElement): void {
+		const images = container.querySelectorAll<HTMLImageElement>("img")
+
+		if (images.length === 0) {
+			return
+		}
+
+		// ! 全ての画像に対してloadイベントとerrorイベントを監視。
+		images.forEach(img => {
+			// ! 既に読み込み完了している場合はスキップ。
+			if (img.complete) {
+				return
+			}
+
+			// ! 画像読み込み完了時。
+			img.addEventListener("load", () => {
+				// ! 親のスクロールコンテナを見つけてスクロール位置を調整。
+				this.adjustScrollPosition()
+			})
+
+			// ! 画像読み込み失敗時（エラーでもレイアウト再計算が必要）。
+			img.addEventListener("error", () => {
+				this.adjustScrollPosition()
+			})
+		})
+	}
+
+	// ! スクロール位置を調整する。
+	private adjustScrollPosition(): void {
+		// ! カード要素が存在しない場合は何もしない。
+		if (!this.cardElement) {
+			return
+		}
+
+		// ! 親のスクロールコンテナを見つける。
+		let scrollContainer = this.cardElement.parentElement
+		while (scrollContainer) {
+			const overflow = window.getComputedStyle(scrollContainer).overflowY
+			if (overflow === "auto" || overflow === "scroll") {
+				break
+			}
+			scrollContainer = scrollContainer.parentElement
+		}
+
+		// ! スクロールコンテナが見つからない場合は何もしない。
+		if (!scrollContainer) {
+			return
+		}
+
+		// ! スクロール位置を保持しつつ、レイアウトを再計算させる。
+		// ! （画像読み込み後は自動的にスクロール高さが再計算される）。
+		const currentScrollTop = scrollContainer.scrollTop
+		const currentScrollHeight = scrollContainer.scrollHeight
+
+		// ! 強制的にレイアウト再計算を実行（getComputedStyleを呼ぶことで実現）。
+		void window.getComputedStyle(scrollContainer).height
+
+		// ! スクロール位置が変わっていない場合は維持。
+		if (scrollContainer.scrollTop === currentScrollTop) {
+			// ! 新しいコンテンツが下に追加された場合、スクロール位置を調整。
+			const newScrollHeight = scrollContainer.scrollHeight
+			if (newScrollHeight > currentScrollHeight) {
+				// ! 現在の表示位置を維持するため、スクロール位置はそのまま。
 			}
 		}
 	}

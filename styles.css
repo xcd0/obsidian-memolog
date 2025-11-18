@@ -609,6 +609,8 @@
 	border-radius: 4px;
 	margin: 0.5rem 0;
 	display: block;
+	/* 画像読み込み前のレイアウトシフトを防ぐ */
+	min-height: 100px;
 }
 
 /* Markdownコード要素のスタイル */
@@ -690,6 +692,9 @@
 	border-radius: 6px;
 	cursor: pointer;
 	transition: transform 0.2s ease;
+	/* 画像読み込み前のレイアウトシフトを防ぐ */
+	min-height: 150px;
+	background-color: var(--background-secondary);
 }
 
 .memolog-attachment-image:hover {

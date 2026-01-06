@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian"
+import { App, TFile, TFolder } from "obsidian"
 import { DEFAULT_GLOBAL_SETTINGS, GlobalSettings, LocalSettings } from "../types"
 import {
 	sanitizeCategoryName,
@@ -211,8 +211,15 @@ export class SettingsManager {
 
 			// ! ディレクトリが存在しない場合は作成。
 			const dir = this.app.vault.getAbstractFileByPath(dirPath)
-			if (!dir) {
-				await this.app.vault.createFolder(dirPath)
+			if (!(dir instanceof TFolder)) {
+				try {
+					await this.app.vault.createFolder(dirPath)
+				} catch (e) {
+					// ! フォルダが既に存在する場合のエラーは無視する。
+					if (!(e instanceof Error && e.message.includes("Folder already exists"))) {
+						throw e
+					}
+				}
 			}
 
 			const content = JSON.stringify(this.globalSettings, null, "\t")
